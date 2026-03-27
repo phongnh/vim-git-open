@@ -9,6 +9,7 @@ A Vim plugin to open git resources (files, branches, commits, PRs/MRs) in your b
 - Open current file at current commit with line numbers
 - Open current commit
 - Open pull requests (GitHub/Codeberg) or merge requests (GitLab)
+- Open the last change (PR/MR or commit) for the current file
 - Auto-detect provider from git remote URL
 - Support for custom domain mappings
 - Line number support (single line or visual selection range)
@@ -61,6 +62,7 @@ cp -r vim-git-open/autoload ~/.vim/
 | `:OpenGitCommit` | Open the current commit |
 | `:OpenGitPR [number]` | Open pull request (GitHub/Codeberg). Auto-parses from commit if no number given |
 | `:OpenGitMR [number]` | Open merge request (GitLab). Auto-parses from commit if no number given |
+| `:OpenGitFileLastChange` | Open the PR/MR or commit that last changed the current file |
 
 ### Line Number Support
 
@@ -155,6 +157,11 @@ let g:vim_git_open_browser_command = 'firefox'
 
 " Auto-parse MR from commit message (e.g., "Merge !234")
 :OpenGitMR
+
+" Open the last change for current file
+" If the file's latest commit has a PR/MR number, opens that PR/MR
+" Otherwise, opens the commit
+:OpenGitFileLastChange
 ```
 
 ### Example Keymaps
@@ -179,6 +186,9 @@ nnoremap <leader>gc :OpenGitCommit<CR>
 " Open PR/MR
 nnoremap <leader>gp :OpenGitPR<CR>
 nnoremap <leader>gm :OpenGitMR<CR>
+
+" Open last change for current file
+nnoremap <leader>gl :OpenGitFileLastChange<CR>
 ```
 
 ## How It Works

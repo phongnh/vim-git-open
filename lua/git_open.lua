@@ -384,6 +384,48 @@ function M.open_mr(mr_number)
   open_browser(url)
 end
 
+function M.open_file_last_change()
+  local info = get_repo_info()
+  if not info then
+    return
+  end
+  
+  -- Get the file path relative to git root
+  local file_path = get_file_path()
+  if not file_path then
+    vim.api.nvim_echo({{'Current file is not in a git repository', 'ErrorMsg'}}, true, {})
+    return
+  end
+  
+  -- Get the latest commit hash for this file
+  local commit = git_command('log -1 --format=%H -- ' .. vim.fn.shellescape(file_path))
+  if not commit or commit == '' then
+    vim.api.nvim_echo({{'No commits found for current file', 'ErrorMsg'}}, true, {})
+    return
+  end
+  
+  -- Get the commit message
+  local message = git_command('log -1 --format=%B ' .. commit)
+  
+  -- Try to parse PR/MR number from commit message
+  local pr_mr_number = parse_pr_mr_from_message(message, info.provider)
+  
+  local url
+  if pr_mr_number then
+    -- Open PR or MR if found
+    if info.provider == 'GitLab' then
+      url = build_url(info.provider, info.base_url, info.path, 'mr', pr_mr_number)
+    else
+      url = build_url(info.provider, info.base_url, info.path, 'pr', pr_mr_number)
+    end
+  else
+    -- Otherwise, open the commit
+    url = build_url(info.provider, info.base_url, info.path, 'commit', commit)
+  end
+  
+  open_browser(url)
+end
+
 function M.setup(opts)
   opts = opts or {}
   

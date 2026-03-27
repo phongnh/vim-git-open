@@ -39,6 +39,7 @@ command! -nargs=0 -range OpenGitFile <line1>,<line2>call git_open#open_file()
 command! -nargs=0 OpenGitCommit call git_open#open_commit()
 command! -nargs=? OpenGitPR call git_open#open_pr(<q-args>)
 command! -nargs=? OpenGitMR call git_open#open_mr(<q-args>)
+command! -nargs=0 OpenGitFileLastChange call git_open#open_file_last_change()
 
 " Restore cpoptions
 let &cpoptions = s:save_cpo

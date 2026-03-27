@@ -405,6 +405,48 @@ function! git_open#open_mr(...) abort
     call s:open_browser(l:url)
 endfunction
 
+" Open last change (PR/MR or commit) for current file
+function! git_open#open_file_last_change() abort
+    let l:info = s:get_repo_info()
+    if empty(l:info)
+        return
+    endif
+    
+    " Get the file path relative to git root
+    let l:file_path = s:get_file_path()
+    if empty(l:file_path)
+        echoerr 'Current file is not in a git repository'
+        return
+    endif
+    
+    " Get the latest commit hash for this file
+    let l:commit = s:git_command('log -1 --format=%H -- ' . shellescape(l:file_path))
+    if empty(l:commit)
+        echoerr 'No commits found for current file'
+        return
+    endif
+    
+    " Get the commit message
+    let l:message = s:git_command('log -1 --format=%B ' . l:commit)
+    
+    " Try to parse PR/MR number from commit message
+    let l:pr_mr_number = s:parse_pr_mr_from_message(l:message, l:info.provider)
+    
+    if !empty(l:pr_mr_number)
+        " Open PR or MR if found
+        if l:info.provider ==# 'GitLab'
+            let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'mr', l:pr_mr_number)
+        else
+            let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'pr', l:pr_mr_number)
+        endif
+    else
+        " Otherwise, open the commit
+        let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit', l:commit)
+    endif
+    
+    call s:open_browser(l:url)
+endfunction
+
 " Restore cpoptions
 let &cpoptions = s:save_cpo
 unlet s:save_cpo

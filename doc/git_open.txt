@@ -29,6 +29,7 @@ Features:
   - Open current file at current commit with line numbers
   - Open current commit
   - Open pull requests (GitHub/Codeberg) or merge requests (GitLab)
+  - Open the last change (PR/MR or commit) for the current file
   - Auto-detect provider from git remote URL
   - Support for custom domain mappings
   - Line number support (single line or visual selection range)
@@ -112,6 +113,18 @@ Manual installation:
     If [number] is provided, opens that specific MR.
     If [number] is not provided, attempts to parse the MR number from the
     current commit message (looks for !123 format).
+
+                                                    *:OpenGitFileLastChange*
+:OpenGitFileLastChange
+    Open the last change (PR/MR or commit) for the current file.
+    
+    This command finds the latest commit that modified the current file,
+    then checks if the commit message contains a PR/MR number:
+      - If a PR/MR number is found, opens that PR/MR
+      - Otherwise, opens the commit itself
+    
+    This is useful for quickly jumping to the pull/merge request that
+    introduced changes to the file you're currently editing.
 
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*
@@ -198,6 +211,11 @@ Working with PRs/MRs:~
     
     " Auto-parse MR from commit message
     :OpenGitMR
+    
+    " Open the last change for current file
+    " If the file's latest commit has a PR/MR, opens that PR/MR
+    " Otherwise, opens the commit
+    :OpenGitFileLastChange
 <
 
 Recommended keymaps:~
@@ -219,6 +237,9 @@ Recommended keymaps:~
     " Open PR/MR
     nnoremap <leader>gp :OpenGitPR<CR>
     nnoremap <leader>gm :OpenGitMR<CR>
+    
+    " Open last change for current file
+    nnoremap <leader>gl :OpenGitFileLastChange<CR>
 <
 
 Enterprise configuration:~
@@ -255,6 +276,7 @@ Neovim Lua configuration:~
     vim.keymap.set('n', '<leader>gc', '<cmd>OpenGitCommit<CR>')
     vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitPR<CR>')
     vim.keymap.set('n', '<leader>gm', '<cmd>OpenGitMR<CR>')
+    vim.keymap.set('n', '<leader>gl', '<cmd>OpenGitFileLastChange<CR>')
 <
 
 ==============================================================================

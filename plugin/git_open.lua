@@ -36,3 +36,7 @@ end, { nargs = '?' })
 vim.api.nvim_create_user_command('OpenGitMR', function(opts)
   git_open.open_mr(opts.args)
 end, { nargs = '?' })
+
+vim.api.nvim_create_user_command('OpenGitFileLastChange', function()
+  git_open.open_file_last_change()
+end, {})

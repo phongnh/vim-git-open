@@ -392,3 +392,45 @@ export def OpenMR(mr_arg: string = '')
     var url = BuildUrl(info.provider, info.base_url, info.path, 'mr', mr_number)
     OpenBrowser(url)
 enddef
+
+export def OpenFileLastChange()
+    var info = GetRepoInfo()
+    if empty(info)
+        return
+    endif
+    
+    # Get the file path relative to git root
+    var file_path = GetFilePath()
+    if empty(file_path)
+        echoerr 'Current file is not in a git repository'
+        return
+    endif
+    
+    # Get the latest commit hash for this file
+    var commit = GitCommand('log -1 --format=%H -- ' .. shellescape(file_path))
+    if empty(commit)
+        echoerr 'No commits found for current file'
+        return
+    endif
+    
+    # Get the commit message
+    var message = GitCommand('log -1 --format=%B ' .. commit)
+    
+    # Try to parse PR/MR number from commit message
+    var pr_mr_number = ParsePrMrFromMessage(message, info.provider)
+    
+    var url: string
+    if !empty(pr_mr_number)
+        # Open PR or MR if found
+        if info.provider ==# 'GitLab'
+            url = BuildUrl(info.provider, info.base_url, info.path, 'mr', pr_mr_number)
+        else
+            url = BuildUrl(info.provider, info.base_url, info.path, 'pr', pr_mr_number)
+        endif
+    else
+        # Otherwise, open the commit
+        url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
+    endif
+    
+    OpenBrowser(url)
+enddef

@@ -1,5 +1,52 @@
 # vim-git-open - CHANGELOG
 
+## Version 1.1.0
+
+### New Features
+
+#### OpenGitFileLastChange Command
+- **New command: `:OpenGitFileLastChange`** - Opens the last change (PR/MR or commit) for the current file
+- Finds the latest commit that modified the current file
+- If the commit message contains a PR/MR number, opens that PR/MR
+- Otherwise, opens the commit itself
+- Useful for quickly jumping to the pull/merge request that introduced changes to the file
+
+#### Examples
+```vim
+" Open the last change for current file
+:OpenGitFileLastChange
+
+" If the file's latest commit message is "Fix bug (#456)", opens PR #456
+" If the commit message has no PR/MR, opens the commit page
+```
+
+### Updated Files
+- `autoload/git_open.vim` - Added `open_file_last_change()` function
+- `plugin/git_open.vim` - Added `:OpenGitFileLastChange` command
+- `vim9/autoload/git_open.vim` - Added `OpenFileLastChange()` function
+- `vim9/plugin/git_open.vim` - Added `:OpenGitFileLastChange` command
+- `lua/git_open.lua` - Added `open_file_last_change()` function
+- `plugin/git_open.lua` - Added `:OpenGitFileLastChange` command (moved from lua_plugin/)
+- `README.md` - Documented new command
+- `doc/git_open.txt` - Updated help documentation
+- `.opencode/conversation-log.md` - Updated with new feature details
+
+### Implementation Details
+The command executes the following logic:
+1. Gets the file path relative to git root
+2. Runs `git log -1 --format=%H -- <file>` to get latest commit hash
+3. Runs `git log -1 --format=%B <commit>` to get commit message
+4. Attempts to parse PR/MR number from commit message
+5. Opens PR/MR if found, otherwise opens commit
+
+### All Three Implementations
+Feature is available in:
+- Legacy Vimscript (Vim 7.0+)
+- Vim9script (Vim 9.0+)
+- Lua (Neovim 0.5+)
+
+---
+
 ## Version 1.0.0
 
 ### Features

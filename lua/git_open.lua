@@ -13,7 +13,12 @@ local function get_git_root()
   if git_dir == '' then
     return nil
   end
-  return vim.fn.fnamemodify(git_dir, ':h')
+  -- Get absolute path to .git directory, then get its parent
+  local abs_git_dir = vim.fn.fnamemodify(git_dir, ':p')
+  -- Remove trailing slash and .git
+  abs_git_dir = abs_git_dir:gsub('/$', '')
+  local root = vim.fn.fnamemodify(abs_git_dir, ':h')
+  return root
 end
 
 local function git_command(args)

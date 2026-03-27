@@ -1,0 +1,318 @@
+*git_open.txt*  Open git resources in browser
+
+Author:  Phong Nguyen
+License: MIT
+Version: 1.0.0
+
+==============================================================================
+CONTENTS                                                   *git-open-contents*
+
+    1. Introduction .......................... |git-open-introduction|
+    2. Requirements .......................... |git-open-requirements|
+    3. Installation .......................... |git-open-installation|
+    4. Commands .............................. |git-open-commands|
+    5. Configuration ......................... |git-open-configuration|
+    6. Examples .............................. |git-open-examples|
+    7. Troubleshooting ....................... |git-open-troubleshooting|
+    8. Contributing .......................... |git-open-contributing|
+    9. License ............................... |git-open-license|
+
+==============================================================================
+1. INTRODUCTION                                        *git-open-introduction*
+
+vim-git-open is a Vim plugin that allows you to open git resources in your
+browser. It supports GitHub, GitLab, Codeberg, and self-managed instances.
+
+Features:
+  - Open repository home page
+  - Open current branch view
+  - Open current file at current commit with line numbers
+  - Open current commit
+  - Open pull requests (GitHub/Codeberg) or merge requests (GitLab)
+  - Auto-detect provider from git remote URL
+  - Support for custom domain mappings
+  - Line number support (single line or visual selection range)
+  - Works with legacy Vim, Vim9script, and Neovim (Lua)
+
+==============================================================================
+2. REQUIREMENTS                                        *git-open-requirements*
+
+- Vim 7.0+ (for legacy Vimscript version)
+- Vim 9.0+ (for Vim9script version)
+- Neovim 0.5+ (for Lua version)
+- Git installed and configured
+- A git repository with a remote configured
+
+==============================================================================
+3. INSTALLATION                                        *git-open-installation*
+
+Using vim-plug: >
+    Plug 'phongnh/vim-git-open'
+<
+
+Using packer.nvim (Neovim): >
+    use 'phongnh/vim-git-open'
+<
+
+Using lazy.nvim (Neovim): >
+    { 'phongnh/vim-git-open' }
+<
+
+Manual installation:
+    Copy the files to your .vim directory (or ~/.config/nvim for Neovim)
+
+==============================================================================
+4. COMMANDS                                                *git-open-commands*
+
+                                                              *:OpenGitRepo*
+:OpenGitRepo
+    Open the repository home page in your browser.
+
+                                                            *:OpenGitBranch*
+:OpenGitBranch
+    Open the current branch in your browser.
+
+                                                              *:OpenGitFile*
+:[range]OpenGitFile
+    Open the current file at the current commit in your browser.
+    
+    Automatically includes the current line number in the URL.
+    In visual mode or with a range, opens the file with line range.
+    
+    Examples: >
+        " Open file at current line
+        :OpenGitFile
+        
+        " Open file with line range (lines 10-20)
+        :10,20OpenGitFile
+        
+        " Or select lines in visual mode and:
+        :'<,'>OpenGitFile
+<
+    Line number formats:
+      - GitHub/Codeberg: Uses #L10 or #L10-L20 for ranges
+      - GitLab: Uses #L10 or #L10-20 for ranges
+
+                                                            *:OpenGitCommit*
+:OpenGitCommit
+    Open the current commit in your browser.
+
+                                                                *:OpenGitPR*
+:OpenGitPR [number]
+    Open a pull request in your browser (GitHub/Codeberg).
+    
+    If [number] is provided, opens that specific PR.
+    If [number] is not provided, attempts to parse the PR number from the
+    current commit message (looks for #123 format).
+
+                                                                *:OpenGitMR*
+:OpenGitMR [number]
+    Open a merge request in your browser (GitLab).
+    
+    If [number] is provided, opens that specific MR.
+    If [number] is not provided, attempts to parse the MR number from the
+    current commit message (looks for !123 format).
+
+==============================================================================
+5. CONFIGURATION                                      *git-open-configuration*
+
+                                            *g:vim_git_open_browser_command*
+g:vim_git_open_browser_command
+    The command used to open URLs in the browser.
+    
+    Default: Auto-detected based on OS
+      - macOS: 'open'
+      - Linux: 'xdg-open'
+      - Windows: 'start'
+    
+    Example: >
+        let g:vim_git_open_browser_command = 'firefox'
+<
+
+                                                  *g:vim_git_open_domains*
+g:vim_git_open_domains
+    A dictionary mapping custom git domains to their web URLs.
+    Use this for self-hosted Git instances.
+    
+    Default: {}
+    
+    Example: >
+        let g:vim_git_open_domains = {
+            \ 'git.company.com': 'https://github.company.com',
+            \ 'gitlab.internal': 'https://gitlab.internal.com',
+            \ }
+<
+    Note: If no protocol (http:// or https://) is specified in the URL,
+    https:// will be used by default.
+
+                                                *g:vim_git_open_providers*
+g:vim_git_open_providers
+    A dictionary specifying the provider type for custom domains.
+    Use this to override automatic provider detection.
+    
+    Default: {}
+    
+    Supported provider values:
+      - 'GitHub'   - Uses GitHub URL structure
+      - 'GitLab'   - Uses GitLab URL structure
+      - 'Codeberg' - Uses Codeberg/GitHub URL structure
+    
+    Example: >
+        let g:vim_git_open_providers = {
+            \ 'git.company.com': 'GitHub',
+            \ 'gitlab.internal': 'GitLab',
+            \ }
+<
+
+==============================================================================
+6. EXAMPLES                                                *git-open-examples*
+
+Basic usage:~
+>
+    " Open repository home page
+    :OpenGitRepo
+    
+    " Open current branch
+    :OpenGitBranch
+    
+    " Open current file in browser (includes current line number)
+    :OpenGitFile
+    
+    " Open file with line range (select lines 10-20 in visual mode)
+    :'<,'>OpenGitFile
+    
+    " Open current commit
+    :OpenGitCommit
+<
+
+Working with PRs/MRs:~
+>
+    " Open specific PR number
+    :OpenGitPR 123
+    
+    " Auto-parse PR from commit message
+    :OpenGitPR
+    
+    " Open specific MR number (GitLab)
+    :OpenGitMR 789
+    
+    " Auto-parse MR from commit message
+    :OpenGitMR
+<
+
+Recommended keymaps:~
+>
+    " Open repository
+    nnoremap <leader>go :OpenGitRepo<CR>
+    
+    " Open current branch
+    nnoremap <leader>gb :OpenGitBranch<CR>
+    
+    " Open current file (normal mode - current line)
+    nnoremap <leader>gf :OpenGitFile<CR>
+    " Visual mode - line range
+    vnoremap <leader>gf :OpenGitFile<CR>
+    
+    " Open current commit
+    nnoremap <leader>gc :OpenGitCommit<CR>
+    
+    " Open PR/MR
+    nnoremap <leader>gp :OpenGitPR<CR>
+    nnoremap <leader>gm :OpenGitMR<CR>
+<
+
+Enterprise configuration:~
+>
+    " Map internal git server to external GitHub Enterprise
+    let g:vim_git_open_domains = {
+        \ 'git.mycompany.com': 'https://github.mycompany.com',
+        \ 'gitlab.internal': 'https://gitlab.mycompany.com',
+        \ }
+    
+    " Specify providers for custom domains
+    let g:vim_git_open_providers = {
+        \ 'git.mycompany.com': 'GitHub',
+        \ 'gitlab.internal': 'GitLab',
+        \ }
+<
+
+Neovim Lua configuration:~
+>
+    require('git_open').setup({
+        domains = {
+            ['git.company.com'] = 'https://github.company.com',
+        },
+        providers = {
+            ['git.company.com'] = 'GitHub',
+        },
+        browser_command = 'open',
+    })
+    
+    -- Keymaps
+    vim.keymap.set('n', '<leader>go', '<cmd>OpenGitRepo<CR>')
+    vim.keymap.set('n', '<leader>gb', '<cmd>OpenGitBranch<CR>')
+    vim.keymap.set('n', '<leader>gf', '<cmd>OpenGitFile<CR>')
+    vim.keymap.set('n', '<leader>gc', '<cmd>OpenGitCommit<CR>')
+    vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitPR<CR>')
+    vim.keymap.set('n', '<leader>gm', '<cmd>OpenGitMR<CR>')
+<
+
+==============================================================================
+7. TROUBLESHOOTING                                  *git-open-troubleshooting*
+
+"Not a git repository" error~
+
+Make sure you're inside a git repository with a configured remote:
+>
+    git remote -v
+<
+
+Browser doesn't open~
+
+Check your browser command:
+>
+    :echo g:vim_git_open_browser_command
+<
+
+Set it manually if needed:
+>
+    let g:vim_git_open_browser_command = 'google-chrome'
+<
+
+Wrong provider detected~
+
+Manually specify the provider:
+>
+    let g:vim_git_open_providers = {'your.domain': 'GitLab'}
+<
+
+Remote URL not recognized~
+
+The plugin supports these URL formats:
+  - SSH: git@github.com:user/repo.git
+  - SSH: ssh://git@github.com/user/repo.git
+  - HTTPS: https://github.com/user/repo.git
+
+If your remote URL uses a different format, please open an issue.
+
+==============================================================================
+8. CONTRIBUTING                                        *git-open-contributing*
+
+Contributions are welcome! Please visit:
+https://github.com/phongnh/vim-git-open
+
+To contribute:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+==============================================================================
+9. LICENSE                                                  *git-open-license*
+
+MIT License
+
+Copyright (c) 2026 Phong Nguyen
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

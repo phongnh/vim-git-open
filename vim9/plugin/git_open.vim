@@ -9,6 +9,8 @@ if exists('g:loaded_git_open')
 endif
 g:loaded_git_open = 1
 
+import autoload 'git_open.vim' as GitOpen
+
 # User configuration
 if !exists('g:vim_git_open_domains')
     g:vim_git_open_domains = {}
@@ -34,12 +36,12 @@ if !exists('g:vim_git_open_browser_command')
 endif
 
 # Commands
-command! -nargs=0 OpenGitRepo git_open#OpenRepo()
-command! -nargs=0 OpenGitBranch git_open#OpenBranch()
-command! -nargs=0 -range OpenGitFile <line1>,<line2>git_open#OpenFile()
-command! -nargs=0 OpenGitCommit git_open#OpenCommit()
-command! -nargs=? OpenGitPR git_open#OpenPR(<q-args>)
-command! -nargs=? OpenGitMR git_open#OpenMR(<q-args>)
-command! -nargs=0 OpenGitFileLastChange git_open#OpenFileLastChange()
-command! -nargs=0 OpenGitMyPRs git_open#OpenMyPRs()
-command! -nargs=0 OpenGitPRs git_open#OpenPRs()
+command! -nargs=0 OpenGitRepo GitOpen.OpenRepo()
+command! -nargs=0 OpenGitBranch GitOpen.OpenBranch()
+command! -nargs=0 -range OpenGitFile <line1>,<line2>GitOpen.OpenFile()
+command! -nargs=0 OpenGitCommit GitOpen.OpenCommit()
+command! -nargs=? OpenGitPR GitOpen.OpenPR(<q-args>)
+command! -nargs=? OpenGitMR GitOpen.OpenMR(<q-args>)
+command! -nargs=0 OpenGitFileLastChange GitOpen.OpenFileLastChange()
+command! -nargs=0 OpenGitMyPRs GitOpen.OpenMyPRs()
+command! -nargs=0 OpenGitPRs GitOpen.OpenPRs()

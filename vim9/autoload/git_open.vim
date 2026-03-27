@@ -342,6 +342,16 @@ export def OpenRepo()
     OpenBrowser(url)
 enddef
 
+export def OpenBranch()
+    var info = GetRepoInfo()
+    if empty(info)
+        return
+    endif
+
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch')
+    OpenBrowser(url)
+enddef
+
 export def OpenMyPRs()
     var info = GetRepoInfo()
     if empty(info)

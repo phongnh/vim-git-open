@@ -64,6 +64,7 @@ cp -r vim-git-open/autoload ~/.vim/
 | `:OpenGitMR [number]` | Open merge request (GitLab). Auto-parses from commit if no number given |
 | `:OpenGitFileLastChange` | Open the PR/MR or commit that last changed the current file |
 | `:OpenGitMyPRs` | Open all my pull requests / merge requests for the current git provider |
+| `:OpenGitPRs` | Open the pull requests / merge requests page for the current repository |
 
 ### Line Number Support
 
@@ -173,9 +174,10 @@ export BROWSER=firefox
 :OpenGitFileLastChange
 
 " Open my PRs/MRs for current git provider
-" GitHub/Codeberg: opens https://<host>/pulls
-" GitLab: opens https://<host>/dashboard/merge_requests
 :OpenGitMyPRs
+
+" Open PRs/MRs page for current repository
+:OpenGitPRs
 ```
 
 ### Example Keymaps
@@ -206,6 +208,9 @@ nnoremap <leader>gl :OpenGitFileLastChange<CR>
 
 " Open my PRs/MRs
 nnoremap <leader>gP :OpenGitMyPRs<CR>
+
+" Open PRs/MRs for current repo
+nnoremap <leader>gR :OpenGitPRs<CR>
 ```
 
 ## How It Works

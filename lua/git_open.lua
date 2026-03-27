@@ -465,6 +465,24 @@ function M.open_my_prs()
   open_browser(url)
 end
 
+function M.open_prs()
+  local info = get_repo_info()
+  if not info then
+    return
+  end
+
+  local repo_url = info.base_url .. '/' .. info.path
+  local url
+  if info.provider == 'GitLab' then
+    url = repo_url .. '/-/merge_requests'
+  else
+    -- GitHub and Codeberg
+    url = repo_url .. '/pulls'
+  end
+
+  open_browser(url)
+end
+
 function M.setup(opts)
   opts = opts or {}
   

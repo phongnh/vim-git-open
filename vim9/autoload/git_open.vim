@@ -359,6 +359,24 @@ export def OpenMyPRs()
     OpenBrowser(url)
 enddef
 
+export def OpenPRs()
+    var info = GetRepoInfo()
+    if empty(info)
+        return
+    endif
+
+    var repo_url = info.base_url .. '/' .. info.path
+    var url: string
+    if info.provider ==# 'GitLab'
+        url = repo_url .. '/-/merge_requests'
+    else
+        # GitHub and Codeberg
+        url = repo_url .. '/pulls'
+    endif
+
+    OpenBrowser(url)
+enddef
+
 export def OpenFile() range
     var info = GetRepoInfo()
     if empty(info)

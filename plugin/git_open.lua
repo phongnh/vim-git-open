@@ -44,3 +44,7 @@ end, {})
 vim.api.nvim_create_user_command('OpenGitMyPRs', function()
   git_open.open_my_prs()
 end, {})
+
+vim.api.nvim_create_user_command('OpenGitPRs', function()
+  git_open.open_prs()
+end, {})

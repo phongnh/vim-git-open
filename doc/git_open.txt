@@ -136,6 +136,14 @@ Manual installation:
 
     This is useful for quickly reviewing all open PRs/MRs assigned to you.
 
+                                                        *:OpenGitPRs*
+:OpenGitPRs
+    Open the pull requests / merge requests page for the current repository.
+
+    The URL opened depends on the provider:
+      - GitHub/Codeberg: https://<host>/<user>/<repo>/pulls
+      - GitLab:          https://<host>/<user>/<repo>/-/merge_requests
+
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*
 
@@ -234,6 +242,9 @@ Working with PRs/MRs:~
 
     " Open my PRs/MRs for current git provider
     :OpenGitMyPRs
+
+    " Open PRs/MRs page for current repository
+    :OpenGitPRs
 <
 
 Recommended keymaps:~
@@ -261,6 +272,9 @@ Recommended keymaps:~
 
     " Open my PRs/MRs
     nnoremap <leader>gP :OpenGitMyPRs<CR>
+
+    " Open PRs/MRs for current repo
+    nnoremap <leader>gR :OpenGitPRs<CR>
 <
 
 Enterprise configuration:~
@@ -299,6 +313,7 @@ Neovim Lua configuration:~
     vim.keymap.set('n', '<leader>gm', '<cmd>OpenGitMR<CR>')
     vim.keymap.set('n', '<leader>gl', '<cmd>OpenGitFileLastChange<CR>')
     vim.keymap.set('n', '<leader>gP', '<cmd>OpenGitMyPRs<CR>')
+    vim.keymap.set('n', '<leader>gR', '<cmd>OpenGitPRs<CR>')
 <
 
 ==============================================================================

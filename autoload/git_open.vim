@@ -118,7 +118,19 @@ function! s:get_relative_path() abort
     endif
     
     let l:abs_path = expand('%:p')
-    let l:rel_path = substitute(l:abs_path, '^' . l:git_root . '/', '', '')
+    
+    " Ensure git_root ends with /
+    if l:git_root !~# '/$'
+        let l:git_root = l:git_root . '/'
+    endif
+    
+    " Check if abs_path starts with git_root using string comparison
+    if strpart(l:abs_path, 0, len(l:git_root)) ==# l:git_root
+        return strpart(l:abs_path, len(l:git_root))
+    endif
+    
+    " Fallback: try regex method with proper escaping
+    let l:rel_path = substitute(l:abs_path, '^' . escape(l:git_root, '\/.*[]^$~') . '/', '', '')
     return l:rel_path
 endfunction
 
@@ -201,7 +213,7 @@ function! s:build_github_url(base_url, path, type, ...) abort
         let l:branch = a:0 > 0 ? a:1 : s:get_current_branch()
         return l:url . '/tree/' . l:branch
     elseif a:type ==# 'file'
-        let l:file = a:0 > 0 ? a:1 : s:get_relative_path()
+        let l:file = (a:0 > 0 && !empty(a:1)) ? a:1 : s:get_relative_path()
         let l:commit = s:get_current_commit()
         let l:file_url = l:url . '/blob/' . l:commit . '/' . l:file
         
@@ -236,7 +248,7 @@ function! s:build_gitlab_url(base_url, path, type, ...) abort
         let l:branch = a:0 > 0 ? a:1 : s:get_current_branch()
         return l:url . '/-/tree/' . l:branch
     elseif a:type ==# 'file'
-        let l:file = a:0 > 0 ? a:1 : s:get_relative_path()
+        let l:file = (a:0 > 0 && !empty(a:1)) ? a:1 : s:get_relative_path()
         let l:commit = s:get_current_commit()
         let l:file_url = l:url . '/-/blob/' . l:commit . '/' . l:file
         

@@ -124,7 +124,19 @@ def GetRelativePath(): string
     endif
     
     var abs_path = expand('%:p')
-    var rel_path = substitute(abs_path, '^' .. git_root .. '/', '', '')
+    
+    # Ensure git_root ends with /
+    if git_root !~# '/$'
+        git_root = git_root .. '/'
+    endif
+    
+    # Check if abs_path starts with git_root using string comparison
+    if strpart(abs_path, 0, len(git_root)) ==# git_root
+        return strpart(abs_path, len(git_root))
+    endif
+    
+    # Fallback: try regex method with proper escaping
+    var rel_path = substitute(abs_path, '^' .. escape(git_root, '\/.*[]^$~') .. '/', '', '')
     return rel_path
 enddef
 
@@ -206,7 +218,7 @@ def BuildGithubUrl(base_url: string, path: string, type: string, ...extra: list<
         var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
         return url .. '/tree/' .. branch
     elseif type ==# 'file'
-        var file = len(extra) > 0 ? extra[0] : GetRelativePath()
+        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
         var commit = GetCurrentCommit()
         var file_url = url .. '/blob/' .. commit .. '/' .. file
         
@@ -240,7 +252,7 @@ def BuildGitlabUrl(base_url: string, path: string, type: string, ...extra: list<
         var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
         return url .. '/-/tree/' .. branch
     elseif type ==# 'file'
-        var file = len(extra) > 0 ? extra[0] : GetRelativePath()
+        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
         var commit = GetCurrentCommit()
         var file_url = url .. '/-/blob/' .. commit .. '/' .. file
         

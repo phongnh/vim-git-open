@@ -11,6 +11,15 @@
 - Otherwise, opens the commit itself
 - Useful for quickly jumping to the pull/merge request that introduced changes to the file
 
+#### $BROWSER Environment Variable Support
+- **Browser detection now checks `$BROWSER` first** before falling back to OS defaults
+- Detection order:
+  1. `g:vim_git_open_browser_command` (user override in config)
+  2. `$BROWSER` environment variable (if set)
+  3. OS-specific defaults (open/xdg-open/start)
+- Follows standard Unix convention for browser selection
+- Works across all three implementations
+
 #### Examples
 ```vim
 " Open the last change for current file
@@ -20,14 +29,24 @@
 " If the commit message has no PR/MR, opens the commit page
 ```
 
+```bash
+# Set browser via environment variable
+export BROWSER=firefox
+```
+
+### Bug Fixes
+- Fixed undefined function errors in `OpenGitFileLastChange`:
+  - Corrected `get_file_path()` → `get_relative_path()`
+  - Added `parse_pr_mr_number()` helper function for message parsing
+
 ### Updated Files
-- `autoload/git_open.vim` - Added `open_file_last_change()` function
-- `plugin/git_open.vim` - Added `:OpenGitFileLastChange` command
-- `vim9/autoload/git_open.vim` - Added `OpenFileLastChange()` function
-- `vim9/plugin/git_open.vim` - Added `:OpenGitFileLastChange` command
-- `lua/git_open.lua` - Added `open_file_last_change()` function
+- `autoload/git_open.vim` - Added `open_file_last_change()` and `parse_pr_mr_number()` functions
+- `plugin/git_open.vim` - Added `:OpenGitFileLastChange` command, $BROWSER support
+- `vim9/autoload/git_open.vim` - Added `OpenFileLastChange()` and `ParsePrMrNumber()` functions
+- `vim9/plugin/git_open.vim` - Added `:OpenGitFileLastChange` command, $BROWSER support
+- `lua/git_open.lua` - Added `open_file_last_change()` and `parse_pr_mr_number()` functions, $BROWSER support
 - `plugin/git_open.lua` - Added `:OpenGitFileLastChange` command (moved from lua_plugin/)
-- `README.md` - Documented new command
+- `README.md` - Documented new command and $BROWSER support
 - `doc/git_open.txt` - Updated help documentation
 - `.opencode/conversation-log.md` - Updated with new feature details
 
@@ -39,8 +58,13 @@ The command executes the following logic:
 4. Attempts to parse PR/MR number from commit message
 5. Opens PR/MR if found, otherwise opens commit
 
+Browser detection priority:
+1. User config (`g:vim_git_open_browser_command`)
+2. Environment variable (`$BROWSER`)
+3. OS default (open/xdg-open/start)
+
 ### All Three Implementations
-Feature is available in:
+All features available in:
 - Legacy Vimscript (Vim 7.0+)
 - Vim9script (Vim 9.0+)
 - Lua (Neovim 0.5+)

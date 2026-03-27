@@ -21,7 +21,10 @@ if !exists('g:vim_git_open_providers')
 endif
 
 if !exists('g:vim_git_open_browser_command')
-    if has('mac') || has('macunix')
+    " Check for $BROWSER environment variable first
+    if !empty($BROWSER)
+        let g:vim_git_open_browser_command = $BROWSER
+    elseif has('mac') || has('macunix')
         let g:vim_git_open_browser_command = 'open'
     elseif has('unix')
         let g:vim_git_open_browser_command = 'xdg-open'

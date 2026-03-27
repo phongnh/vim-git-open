@@ -110,15 +110,23 @@ Supported provider values:
 
 ### Custom Browser Command
 
-By default, the plugin detects your OS and uses the appropriate command:
-- macOS: `open`
-- Linux: `xdg-open`
-- Windows: `start`
+By default, the plugin detects your browser in this order:
+1. `$BROWSER` environment variable (if set)
+2. OS-specific default:
+   - macOS: `open`
+   - Linux: `xdg-open`
+   - Windows: `start`
 
-To override:
+To override, set:
 
 ```vim
 let g:vim_git_open_browser_command = 'firefox'
+```
+
+Or set the `$BROWSER` environment variable in your shell:
+
+```bash
+export BROWSER=firefox
 ```
 
 ## Usage Examples

@@ -446,7 +446,11 @@ function M.setup(opts)
   if opts.browser_command then
     vim.g.vim_git_open_browser_command = opts.browser_command
   elseif not vim.g.vim_git_open_browser_command then
-    if vim.fn.has('mac') == 1 or vim.fn.has('macunix') == 1 then
+    -- Check for $BROWSER environment variable first
+    local browser_env = vim.fn.getenv('BROWSER')
+    if browser_env and browser_env ~= vim.NIL and browser_env ~= '' then
+      vim.g.vim_git_open_browser_command = browser_env
+    elseif vim.fn.has('mac') == 1 or vim.fn.has('macunix') == 1 then
       vim.g.vim_git_open_browser_command = 'open'
     elseif vim.fn.has('unix') == 1 then
       vim.g.vim_git_open_browser_command = 'xdg-open'

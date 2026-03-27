@@ -133,13 +133,18 @@ Manual installation:
 g:vim_git_open_browser_command
     The command used to open URLs in the browser.
     
-    Default: Auto-detected based on OS
-      - macOS: 'open'
-      - Linux: 'xdg-open'
-      - Windows: 'start'
+    Default: Auto-detected in this order:
+      1. $BROWSER environment variable (if set)
+      2. OS-specific default:
+         - macOS: 'open'
+         - Linux: 'xdg-open'
+         - Windows: 'start'
     
     Example: >
         let g:vim_git_open_browser_command = 'firefox'
+<
+    You can also set the $BROWSER environment variable: >
+        export BROWSER=firefox
 <
 
                                                   *g:vim_git_open_domains*

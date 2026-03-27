@@ -29,7 +29,12 @@ def GetGitRoot(): string
     if empty(git_dir)
         return ''
     endif
-    return fnamemodify(git_dir, ':h')
+    # Get absolute path to .git directory, then get its parent
+    var abs_git_dir = fnamemodify(git_dir, ':p')
+    # Remove trailing slash and .git
+    abs_git_dir = substitute(abs_git_dir, '/$', '', '')
+    var root = fnamemodify(abs_git_dir, ':h')
+    return root
 enddef
 
 def GitCommand(args: string): string

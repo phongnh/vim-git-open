@@ -16,7 +16,12 @@ function! s:get_git_root() abort
     if empty(l:git_dir)
         return ''
     endif
-    return fnamemodify(l:git_dir, ':h')
+    " Get absolute path to .git directory, then get its parent
+    let l:abs_git_dir = fnamemodify(l:git_dir, ':p')
+    " Remove trailing slash and .git
+    let l:abs_git_dir = substitute(l:abs_git_dir, '/$', '', '')
+    let l:root = fnamemodify(l:abs_git_dir, ':h')
+    return l:root
 endfunction
 
 " Execute git command in the git root

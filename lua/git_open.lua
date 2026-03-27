@@ -150,9 +150,9 @@ local function format_line_anchor(provider, line_info)
   end
 end
 
-local function parse_pr_mr_from_commit(provider)
-  local commit_msg = git_command('log -1 --pretty=%B')
-  if not commit_msg then
+-- Parse PR/MR number from a given message
+local function parse_pr_mr_number(message, provider)
+  if not message then
     return nil
   end
   
@@ -165,8 +165,13 @@ local function parse_pr_mr_from_commit(provider)
     pattern = '#(%d+)'
   end
   
-  local number = commit_msg:match(pattern)
+  local number = message:match(pattern)
   return number
+end
+
+local function parse_pr_mr_from_commit(provider)
+  local commit_msg = git_command('log -1 --pretty=%B')
+  return parse_pr_mr_number(commit_msg, provider)
 end
 
 -- ============================================================================
@@ -408,7 +413,7 @@ function M.open_file_last_change()
   local message = git_command('log -1 --format=%B ' .. commit)
   
   -- Try to parse PR/MR number from commit message
-  local pr_mr_number = parse_pr_mr_from_message(message, info.provider)
+  local pr_mr_number = parse_pr_mr_number(message, info.provider)
   
   local url
   if pr_mr_number then

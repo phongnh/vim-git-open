@@ -165,16 +165,15 @@ def FormatLineAnchor(provider: string, line_info: any): string
     endif
 enddef
 
-def ParsePrMrFromCommit(provider: string): string
-    var commit_msg = GitCommand('log -1 --pretty=%B')
-    
+# Parse PR/MR number from a given message
+def ParsePrMrNumber(message: string, provider: string): string
     var match_result: list<string>
     if provider ==# 'GitLab'
         # GitLab uses !1234
-        match_result = matchlist(commit_msg, '!\(\d\+\)')
+        match_result = matchlist(message, '!\(\d\+\)')
     else
         # GitHub/Codeberg use #1234
-        match_result = matchlist(commit_msg, '#\(\d\+\)')
+        match_result = matchlist(message, '#\(\d\+\)')
     endif
     
     if !empty(match_result)
@@ -182,6 +181,11 @@ def ParsePrMrFromCommit(provider: string): string
     endif
     
     return ''
+enddef
+
+def ParsePrMrFromCommit(provider: string): string
+    var commit_msg = GitCommand('log -1 --pretty=%B')
+    return ParsePrMrNumber(commit_msg, provider)
 enddef
 
 # ============================================================================
@@ -417,7 +421,7 @@ export def OpenFileLastChange()
     var message = GitCommand('log -1 --format=%B ' .. commit)
     
     # Try to parse PR/MR number from commit message
-    var pr_mr_number = ParsePrMrFromMessage(message, info.provider)
+    var pr_mr_number = ParsePrMrNumber(message, info.provider)
     
     var url: string
     if !empty(pr_mr_number)

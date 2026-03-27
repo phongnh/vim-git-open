@@ -160,15 +160,14 @@ function! s:format_line_anchor(provider, line_info) abort
 endfunction
 
 " Parse PR/MR number from commit message
-function! s:parse_pr_mr_from_commit(provider) abort
-    let l:commit_msg = s:git_command('log -1 --pretty=%B')
-    
+" Parse PR/MR number from a given message
+function! s:parse_pr_mr_number(message, provider) abort
     if a:provider ==# 'GitLab'
         " GitLab uses !1234
-        let l:match = matchlist(l:commit_msg, '!\(\d\+\)')
+        let l:match = matchlist(a:message, '!\(\d\+\)')
     else
         " GitHub/Codeberg use #1234
-        let l:match = matchlist(l:commit_msg, '#\(\d\+\)')
+        let l:match = matchlist(a:message, '#\(\d\+\)')
     endif
     
     if !empty(l:match)
@@ -176,6 +175,11 @@ function! s:parse_pr_mr_from_commit(provider) abort
     endif
     
     return ''
+endfunction
+
+function! s:parse_pr_mr_from_commit(provider) abort
+    let l:commit_msg = s:git_command('log -1 --pretty=%B')
+    return s:parse_pr_mr_number(l:commit_msg, a:provider)
 endfunction
 
 " ============================================================================
@@ -430,7 +434,7 @@ function! git_open#open_file_last_change() abort
     let l:message = s:git_command('log -1 --format=%B ' . l:commit)
     
     " Try to parse PR/MR number from commit message
-    let l:pr_mr_number = s:parse_pr_mr_from_message(l:message, l:info.provider)
+    let l:pr_mr_number = s:parse_pr_mr_number(l:message, l:info.provider)
     
     if !empty(l:pr_mr_number)
         " Open PR or MR if found

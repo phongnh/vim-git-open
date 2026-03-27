@@ -391,7 +391,7 @@ function M.open_file_last_change()
   end
   
   -- Get the file path relative to git root
-  local file_path = get_file_path()
+  local file_path = get_relative_path()
   if not file_path then
     vim.api.nvim_echo({{'Current file is not in a git repository', 'ErrorMsg'}}, true, {})
     return

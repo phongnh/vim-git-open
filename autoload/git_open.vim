@@ -413,7 +413,7 @@ function! git_open#open_file_last_change() abort
     endif
     
     " Get the file path relative to git root
-    let l:file_path = s:get_file_path()
+    let l:file_path = s:get_relative_path()
     if empty(l:file_path)
         echoerr 'Current file is not in a git repository'
         return

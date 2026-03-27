@@ -400,7 +400,7 @@ export def OpenFileLastChange()
     endif
     
     # Get the file path relative to git root
-    var file_path = GetFilePath()
+    var file_path = GetRelativePath()
     if empty(file_path)
         echoerr 'Current file is not in a git repository'
         return

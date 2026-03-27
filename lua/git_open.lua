@@ -106,7 +106,19 @@ local function get_relative_path()
   end
   
   local abs_path = vim.fn.expand('%:p')
-  local rel_path = abs_path:gsub('^' .. vim.pesc(git_root) .. '/', '')
+  
+  -- Ensure git_root ends with /
+  if not git_root:match('/$') then
+    git_root = git_root .. '/'
+  end
+  
+  -- Check if abs_path starts with git_root
+  if abs_path:sub(1, #git_root) == git_root then
+    return abs_path:sub(#git_root + 1)
+  end
+  
+  -- Fallback: try original method
+  local rel_path = abs_path:gsub('^' .. vim.pesc(git_root), '')
   return rel_path
 end
 

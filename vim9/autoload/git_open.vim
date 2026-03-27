@@ -342,13 +342,20 @@ export def OpenRepo()
     OpenBrowser(url)
 enddef
 
-export def OpenBranch()
+export def OpenMyPRs()
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
-    
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch')
+
+    var url: string
+    if info.provider ==# 'GitLab'
+        url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER')
+    else
+        # GitHub and Codeberg
+        url = info.base_url .. '/pulls'
+    endif
+
     OpenBrowser(url)
 enddef
 

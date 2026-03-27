@@ -448,6 +448,23 @@ function M.open_file_last_change()
   open_browser(url)
 end
 
+function M.open_my_prs()
+  local info = get_repo_info()
+  if not info then
+    return
+  end
+
+  local url
+  if info.provider == 'GitLab' then
+    url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. (vim.fn.expand('$USER') or '')
+  else
+    -- GitHub and Codeberg
+    url = info.base_url .. '/pulls'
+  end
+
+  open_browser(url)
+end
+
 function M.setup(opts)
   opts = opts or {}
   

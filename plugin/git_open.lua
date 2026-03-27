@@ -40,3 +40,7 @@ end, { nargs = '?' })
 vim.api.nvim_create_user_command('OpenGitFileLastChange', function()
   git_open.open_file_last_change()
 end, {})
+
+vim.api.nvim_create_user_command('OpenGitMyPRs', function()
+  git_open.open_my_prs()
+end, {})

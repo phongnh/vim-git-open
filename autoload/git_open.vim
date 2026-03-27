@@ -468,6 +468,23 @@ function! git_open#open_file_last_change() abort
     call s:open_browser(l:url)
 endfunction
 
+" Open my pull requests / merge requests for current git provider
+function! git_open#open_my_prs() abort
+    let l:info = s:get_repo_info()
+    if empty(l:info)
+        return
+    endif
+
+    if l:info.provider ==# 'GitLab'
+        let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER')
+    else
+        " GitHub and Codeberg
+        let l:url = l:info.base_url . '/pulls'
+    endif
+
+    call s:open_browser(l:url)
+endfunction
+
 " Restore cpoptions
 let &cpoptions = s:save_cpo
 unlet s:save_cpo

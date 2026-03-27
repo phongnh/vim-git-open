@@ -126,6 +126,16 @@ Manual installation:
     This is useful for quickly jumping to the pull/merge request that
     introduced changes to the file you're currently editing.
 
+                                                        *:OpenGitMyPRs*
+:OpenGitMyPRs
+    Open all your pull requests / merge requests for the current git provider.
+
+    The URL opened depends on the provider:
+      - GitHub/Codeberg: https://<host>/pulls
+      - GitLab:          https://<host>/dashboard/merge_requests
+
+    This is useful for quickly reviewing all open PRs/MRs assigned to you.
+
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*
 
@@ -221,6 +231,9 @@ Working with PRs/MRs:~
     " If the file's latest commit has a PR/MR, opens that PR/MR
     " Otherwise, opens the commit
     :OpenGitFileLastChange
+
+    " Open my PRs/MRs for current git provider
+    :OpenGitMyPRs
 <
 
 Recommended keymaps:~
@@ -245,6 +258,9 @@ Recommended keymaps:~
     
     " Open last change for current file
     nnoremap <leader>gl :OpenGitFileLastChange<CR>
+
+    " Open my PRs/MRs
+    nnoremap <leader>gP :OpenGitMyPRs<CR>
 <
 
 Enterprise configuration:~
@@ -282,6 +298,7 @@ Neovim Lua configuration:~
     vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitPR<CR>')
     vim.keymap.set('n', '<leader>gm', '<cmd>OpenGitMR<CR>')
     vim.keymap.set('n', '<leader>gl', '<cmd>OpenGitFileLastChange<CR>')
+    vim.keymap.set('n', '<leader>gP', '<cmd>OpenGitMyPRs<CR>')
 <
 
 ==============================================================================

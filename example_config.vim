@@ -24,17 +24,17 @@
 
 " Map custom git domains to their web URLs
 let g:vim_git_open_domains = {
-    \ 'git.company.com': 'https://github.company.com',
-    \ 'gitlab.internal': 'https://gitlab.internal.com',
-    \ 'code.example.org': 'https://code.example.org',
-    \ }
+            \ 'git.company.com': 'https://github.company.com',
+            \ 'gitlab.internal': 'https://gitlab.internal.com',
+            \ 'code.example.org': 'https://code.example.org',
+            \ }
 
 " Specify provider type for custom domains
 let g:vim_git_open_providers = {
-    \ 'git.company.com': 'GitHub',
-    \ 'gitlab.internal': 'GitLab',
-    \ 'code.example.org': 'Codeberg',
-    \ }
+            \ 'git.company.com': 'GitHub',
+            \ 'gitlab.internal': 'GitLab',
+            \ 'code.example.org': 'Codeberg',
+            \ }
 
 " -----------------------------------------------------------------------------
 " Keymaps (Recommended)

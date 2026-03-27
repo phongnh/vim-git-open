@@ -5,6 +5,13 @@
 if exists('g:loaded_git_open') || &compatible || has('nvim')
     finish
 endif
+
+" Use Vim9script implementation if available, otherwise fall back to legacy
+if has('vim9script')
+    source <sfile>:p:h:h/vim9/plugin/git_open.vim
+    finish
+endif
+
 let g:loaded_git_open = 1
 
 " Save cpoptions

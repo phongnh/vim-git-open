@@ -2,7 +2,7 @@
 " Maintainer:   Phong Nguyen
 " Version:      1.0.0
 
-if exists('g:loaded_git_open') || &compatible
+if exists('g:loaded_git_open') || &compatible || has('nvim')
     finish
 endif
 let g:loaded_git_open = 1

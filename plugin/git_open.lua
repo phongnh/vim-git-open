@@ -270,5 +270,5 @@ end
 vim.api.nvim_create_autocmd('VimEnter', {
   group = vim.api.nvim_create_augroup('git_open_multi_remote', { clear = true }),
   once = true,
-  callback = register_multi_remote_commands,
+  callback = function() vim.schedule(register_multi_remote_commands) end,
 })

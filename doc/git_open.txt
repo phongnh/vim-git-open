@@ -11,11 +11,12 @@ CONTENTS                                                   *git-open-contents*
     2. Requirements .......................... |git-open-requirements|
     3. Installation .......................... |git-open-installation|
     4. Commands .............................. |git-open-commands|
-    5. Configuration ......................... |git-open-configuration|
-    6. Examples .............................. |git-open-examples|
-    7. Troubleshooting ....................... |git-open-troubleshooting|
-    8. Contributing .......................... |git-open-contributing|
-    9. License ............................... |git-open-license|
+    5. Multi-Remote Commands ................. |git-open-multi-remote|
+    6. Configuration ......................... |git-open-configuration|
+    7. Examples .............................. |git-open-examples|
+    8. Troubleshooting ....................... |git-open-troubleshooting|
+    9. Contributing .......................... |git-open-contributing|
+   10. License ............................... |git-open-license|
 
 ==============================================================================
 1. INTRODUCTION                                        *git-open-introduction*
@@ -279,7 +280,129 @@ the browser. With [!], the URL is copied to the clipboard instead.
       4. First remote returned by `git remote`
 
 ==============================================================================
-5. CONFIGURATION                                      *git-open-configuration*
+5. MULTI-REMOTE COMMANDS                                 *git-open-multi-remote*
+
+When a repository has non-origin remotes configured, the plugin scans them at
+startup, detects each one's provider, and registers provider-named commands
+for each.
+
+Commands are registered once at |VimEnter|. If the repository has no
+non-origin remotes, no extra commands are created.
+
+If two non-origin remotes resolve to the same provider (e.g. two GitHub
+remotes), the last remote scanned wins and a warning is printed at startup.
+
+GitHub remote commands ~                              *git-open-github-cmds*
+
+These commands are registered when a non-origin remote points to GitHub.
+
+                                                          *:OpenGitHubRepo*
+:OpenGitHubRepo[!]
+    Open (or copy) the GitHub repository home page.
+
+                                                        *:OpenGitHubBranch*
+:OpenGitHubBranch[!] [branch]
+    Open (or copy) a branch on GitHub.
+    In normal mode with no argument, opens the current branch.
+    In visual mode, uses the selected text as the branch name.
+
+                                                          *:OpenGitHubFile*
+:[range]OpenGitHubFile[!] [ref]
+    Open (or copy) the current file on GitHub at the given ref, or HEAD.
+    Supports line ranges.
+
+                                                        *:OpenGitHubCommit*
+:OpenGitHubCommit[!] [commit]
+    Open (or copy) a commit on GitHub. Defaults to HEAD.
+    In visual mode, uses the selected text as the commit hash.
+
+                                                            *:OpenGitHubPR*
+:OpenGitHubPR[!] [number]
+    Open (or copy) a GitHub pull request. If [number] is omitted, attempts
+    to parse the PR number from the current commit message.
+
+                                                           *:OpenGitHubPRs*
+:OpenGitHubPRs[!] [state]
+    Open (or copy) the GitHub pull requests page for the repository.
+    Optional state: -open, -closed, -merged, -all
+
+                                                         *:OpenGitHubMyPRs*
+:OpenGitHubMyPRs[!] [state]
+    Open (or copy) my GitHub pull requests.
+    Optional state: -open, -closed, -merged, -all
+
+GitLab remote commands ~                              *git-open-gitlab-cmds*
+
+These commands are registered when a non-origin remote points to GitLab.
+
+                                                          *:OpenGitLabRepo*
+:OpenGitLabRepo[!]
+    Open (or copy) the GitLab repository home page.
+
+                                                        *:OpenGitLabBranch*
+:OpenGitLabBranch[!] [branch]
+    Open (or copy) a branch on GitLab.
+
+                                                          *:OpenGitLabFile*
+:[range]OpenGitLabFile[!] [ref]
+    Open (or copy) the current file on GitLab at the given ref, or HEAD.
+
+                                                        *:OpenGitLabCommit*
+:OpenGitLabCommit[!] [commit]
+    Open (or copy) a commit on GitLab. Defaults to HEAD.
+
+                                                            *:OpenGitLabMR*
+:OpenGitLabMR[!] [number]
+    Open (or copy) a GitLab merge request. If [number] is omitted, attempts
+    to parse the MR number from the current commit message.
+
+                                                           *:OpenGitLabMRs*
+:OpenGitLabMRs[!] [state]
+    Open (or copy) the GitLab merge requests page for the repository.
+    Optional state: -open, -closed, -merged, -all
+
+                                                         *:OpenGitLabMyMRs*
+:OpenGitLabMyMRs[!] [state]
+    Open (or copy) my GitLab merge requests.
+    Optional state: -open, -closed, -merged, -all, -search, -search=<state>
+
+Codeberg remote commands ~                          *git-open-codeberg-cmds*
+
+These commands are registered when a non-origin remote points to Codeberg.
+
+                                                        *:OpenCodebergRepo*
+:OpenCodebergRepo[!]
+    Open (or copy) the Codeberg repository home page.
+
+                                                      *:OpenCodebergBranch*
+:OpenCodebergBranch[!] [branch]
+    Open (or copy) a branch on Codeberg.
+
+                                                        *:OpenCodebergFile*
+:[range]OpenCodebergFile[!] [ref]
+    Open (or copy) the current file on Codeberg at the given ref, or HEAD.
+
+                                                      *:OpenCodebergCommit*
+:OpenCodebergCommit[!] [commit]
+    Open (or copy) a commit on Codeberg. Defaults to HEAD.
+
+                                                          *:OpenCodebergPR*
+:OpenCodebergPR[!] [number]
+    Open (or copy) a Codeberg pull request. If [number] is omitted, attempts
+    to parse the PR number from the current commit message.
+
+                                                         *:OpenCodebergPRs*
+:OpenCodebergPRs[!] [state]
+    Open (or copy) the Codeberg pull requests page for the repository.
+    Optional state: -open, -closed, -merged, -all
+
+                                                       *:OpenCodebergMyPRs*
+:OpenCodebergMyPRs[!] [state]
+    Open (or copy) my Codeberg pull requests.
+    Optional state: -open, -closed, -merged, -all
+
+==============================================================================
+6. CONFIGURATION                                      *git-open-configuration*
 
                                             *g:vim_git_open_browser_command*
 g:vim_git_open_browser_command
@@ -386,7 +509,7 @@ b:vim_git_open_remote
     next command.
 
 ==============================================================================
-6. EXAMPLES                                                *git-open-examples*
+7. EXAMPLES                                                *git-open-examples*
 
 Basic usage:~
 >
@@ -540,7 +663,7 @@ Neovim Lua configuration:~
 <
 
 ==============================================================================
-7. TROUBLESHOOTING                                  *git-open-troubleshooting*
+8. TROUBLESHOOTING                                  *git-open-troubleshooting*
 
 "Not a git repository" error in fugitive buffers~
 
@@ -601,7 +724,7 @@ The plugin supports these URL formats:
 If your remote URL uses a different format, please open an issue.
 
 ==============================================================================
-8. CONTRIBUTING                                        *git-open-contributing*
+9. CONTRIBUTING                                        *git-open-contributing*
 
 Contributions are welcome! Please visit:
 https://github.com/phongnh/vim-git-open
@@ -613,7 +736,7 @@ To contribute:
 4. Submit a pull request
 
 ==============================================================================
-9. LICENSE                                                  *git-open-license*
+10. LICENSE                                                 *git-open-license*
 
 MIT License
 

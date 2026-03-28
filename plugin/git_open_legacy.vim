@@ -63,6 +63,11 @@ function! s:register_multi_remote_commands() abort
         return
     endif
 
+    " Skip remotes that share the same domain as origin — they would produce
+    " identical provider-named commands for an already-covered hosting service.
+    let l:origin_info = git_open#legacy#get_repo_info()
+    let l:origin_domain = empty(l:origin_info) ? '' : l:origin_info.domain
+
     let l:provider_remote = {}
     let l:provider_domain = {}
     let l:overwritten = []
@@ -70,6 +75,10 @@ function! s:register_multi_remote_commands() abort
     for l:r in l:remotes
         let l:info = git_open#legacy#get_repo_info_for_remote(l:r)
         if empty(l:info)
+            continue
+        endif
+        " Same domain as origin → already covered by the origin-based commands
+        if !empty(l:origin_domain) && l:info.domain ==# l:origin_domain
             continue
         endif
         let l:p = l:info.provider

@@ -143,7 +143,7 @@ def FormatLineAnchor(provider: string, line_info: any): string
         return ''
     endif
     
-    var line_str = string(line_info)
+    var line_str = '' .. line_info
     
     if provider ==# 'GitLab'
         # GitLab uses #L10 or #L10-20

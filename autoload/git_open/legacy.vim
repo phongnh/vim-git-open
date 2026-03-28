@@ -434,32 +434,25 @@ function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
     return filter(l:result, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction
 
-function! git_open#legacy#complete_gitk_args(arglead, cmdline, cursorpos) abort
-    " Branches (local first, sorted by -committerdate)
+function! git_open#legacy#complete_gitk_branch(arglead, cmdline, cursorpos) abort
+    " Local branches (plain name), then remote branches with full remote/ prefix
     let l:local_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
-    let l:remote_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
-    let l:branches = []
-    if !empty(l:local_raw)
-        let l:branches += split(l:local_raw, '\n')
-    endif
-    if !empty(l:remote_raw)
-        let l:branches += filter(split(l:remote_raw, '\n'), 'v:val !=# ''HEAD''')
-    endif
+    let l:remote_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
     let l:seen = {}
     let l:result = []
-    for l:b in l:branches
-        if !has_key(l:seen, l:b)
-            let l:seen[l:b] = 1
-            call add(l:result, l:b)
-        endif
-    endfor
-    " Tracked files/dirs
-    let l:files_raw = s:git_command('ls-files')
-    if !empty(l:files_raw)
-        for l:f in split(l:files_raw, '\n')
-            if !has_key(l:seen, l:f)
-                let l:seen[l:f] = 1
-                call add(l:result, l:f)
+    if !empty(l:local_raw)
+        for l:b in split(l:local_raw, '\n')
+            if !has_key(l:seen, l:b)
+                let l:seen[l:b] = 1
+                call add(l:result, l:b)
+            endif
+        endfor
+    endif
+    if !empty(l:remote_raw)
+        for l:b in filter(split(l:remote_raw, '\n'), 'v:val !~# ''/HEAD$''')
+            if !has_key(l:seen, l:b)
+                let l:seen[l:b] = 1
+                call add(l:result, l:b)
             endif
         endfor
     endif

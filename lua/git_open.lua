@@ -456,33 +456,26 @@ function M.complete_branch(arglead)
   return vim.fn.matchfuzzy(result, arglead)
 end
 
-function M.complete_gitk_args(arglead)
-  local git_root = get_git_root()
-  -- Local branches sorted by most recent commit
-  local branches_raw = git_root and vim.trim(vim.fn.system(
-    string.format("git -C %s for-each-ref --sort=-committerdate --format='%%(refname:lstrip=2)' refs/heads/",
-      vim.fn.shellescape(git_root))
-  )) or ''
-  -- Tracked files
-  local files_raw = git_root and vim.trim(vim.fn.system(
-    string.format('git -C %s ls-files', vim.fn.shellescape(git_root))
-  )) or ''
+function M.complete_gitk_branch(arglead)
+  -- Local branches (plain name), then remote branches with full remote/ prefix
+  local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+  local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
 
   local seen = {}
   local result = {}
-  if branches_raw ~= '' then
-    for _, b in ipairs(vim.split(branches_raw, '\n', { plain = true, trimempty = true })) do
+  if local_raw and local_raw ~= '' then
+    for _, b in ipairs(vim.split(local_raw, '\n', { plain = true, trimempty = true })) do
       if not seen[b] then
         seen[b] = true
         table.insert(result, b)
       end
     end
   end
-  if files_raw ~= '' then
-    for _, f in ipairs(vim.split(files_raw, '\n', { plain = true, trimempty = true })) do
-      if not seen[f] then
-        seen[f] = true
-        table.insert(result, f)
+  if remote_raw and remote_raw ~= '' then
+    for _, b in ipairs(vim.split(remote_raw, '\n', { plain = true, trimempty = true })) do
+      if not b:match('/HEAD$') and not seen[b] then
+        seen[b] = true
+        table.insert(result, b)
       end
     end
   end

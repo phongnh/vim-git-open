@@ -411,32 +411,26 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
     return matchfuzzy(result, arglead)
 enddef
 
-export def CompleteGitkArgs(arglead: string, cmdline: string, cursorpos: number): list<string>
-    # Branches (local first, sorted by -committerdate)
+export def CompleteGitkBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
+    # Local branches (plain name), then remote branches with full remote/ prefix
+    # e.g. main, origin/main, origin/feature
     var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
-    var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
-    var branches: list<string> = []
+    var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
+    var result: list<string> = []
+    var seen: dict<bool> = {}
     if !empty(local_raw)
-        branches += split(local_raw, '\n')
+        for b in split(local_raw, '\n')
+            if !has_key(seen, b)
+                seen[b] = true
+                result->add(b)
+            endif
+        endfor
     endif
     if !empty(remote_raw)
-        branches += filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD')
-    endif
-    var seen: dict<bool> = {}
-    var result: list<string> = []
-    for b in branches
-        if !has_key(seen, b)
-            seen[b] = true
-            result->add(b)
-        endif
-    endfor
-    # Tracked files/dirs
-    var files_raw = GitCommand('ls-files')
-    if !empty(files_raw)
-        for f in split(files_raw, '\n')
-            if !has_key(seen, f)
-                seen[f] = true
-                result->add(f)
+        for b in filter(split(remote_raw, '\n'), (_, v) => v !~# '/HEAD$')
+            if !has_key(seen, b)
+                seen[b] = true
+                result->add(b)
             endif
         endfor
     endif
@@ -445,8 +439,6 @@ export def CompleteGitkArgs(arglead: string, cmdline: string, cursorpos: number)
     endif
     return matchfuzzy(result, arglead)
 enddef
-
-
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
     var flags = ['-open', '-closed', '-merged', '-all']
     if empty(arglead)

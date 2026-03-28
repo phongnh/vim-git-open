@@ -338,17 +338,16 @@ enddef
 # ============================================================================
 
 export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
-    # Local branches: refs/heads/ → bare name (lstrip=2 removes "refs/heads/")
-    var local_raw = GitCommand("for-each-ref --format='%(refname:lstrip=2)' refs/heads/")
-    # Remote branches: refs/remotes/ → bare name (lstrip=3 removes "refs/remotes/<remote>/")
-    var remote_raw = GitCommand("for-each-ref --format='%(refname:lstrip=3)' refs/remotes/")
+    # Local branches sorted by most recent commit (-committerdate)
+    var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+    # Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
+    var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
 
     var branches: list<string> = []
     if !empty(local_raw)
         branches += split(local_raw, '\n')
     endif
     if !empty(remote_raw)
-        # Filter out HEAD entries from remote tracking
         branches += filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD')
     endif
 
@@ -365,7 +364,7 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
     if empty(arglead)
         return result
     endif
-    return filter(result, (_, v) => v =~# '^' .. escape(arglead, '\/.*[]^$~'))
+    return matchfuzzy(result, arglead)
 enddef
 
 # ============================================================================

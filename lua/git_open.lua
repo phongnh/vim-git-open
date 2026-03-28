@@ -336,10 +336,10 @@ end
 -- ============================================================================
 
 function M.complete_branch(arglead)
-  -- Local branches: refs/heads/ → bare name (lstrip=2)
-  local local_raw = git_command("for-each-ref --format='%(refname:lstrip=2)' refs/heads/")
-  -- Remote branches: refs/remotes/ → bare name (lstrip=3 removes refs/remotes/<remote>/)
-  local remote_raw = git_command("for-each-ref --format='%(refname:lstrip=3)' refs/remotes/")
+  -- Local branches sorted by most recent commit (-committerdate)
+  local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+  -- Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
+  local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
 
   local branches = {}
   if local_raw and local_raw ~= '' then
@@ -368,9 +368,7 @@ function M.complete_branch(arglead)
   if not arglead or arglead == '' then
     return result
   end
-  return vim.tbl_filter(function(b)
-    return b:sub(1, #arglead) == arglead
-  end, result)
+  return vim.fn.matchfuzzy(result, arglead)
 end
 
 -- ============================================================================

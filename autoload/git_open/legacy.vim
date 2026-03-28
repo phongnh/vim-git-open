@@ -358,10 +358,10 @@ endfunction
 " ============================================================================
 
 function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
-    " Local branches: refs/heads/ → bare name (lstrip=2)
-    let l:local_raw = s:git_command("for-each-ref --format='%(refname:lstrip=2)' refs/heads/")
-    " Remote branches: refs/remotes/ → bare name (lstrip=3 removes refs/remotes/<remote>/)
-    let l:remote_raw = s:git_command("for-each-ref --format='%(refname:lstrip=3)' refs/remotes/")
+    " Local branches sorted by most recent commit (-committerdate)
+    let l:local_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+    " Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
+    let l:remote_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
 
     let l:branches = []
     if !empty(l:local_raw)
@@ -383,6 +383,9 @@ function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
 
     if empty(a:arglead)
         return l:result
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(l:result, a:arglead)
     endif
     return filter(l:result, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction

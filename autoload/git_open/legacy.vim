@@ -354,6 +354,22 @@ function! s:get_repo_info() abort
 endfunction
 
 " ============================================================================
+" Completion Functions
+" ============================================================================
+
+function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
+    let l:branches_raw = s:git_command('branch --all --format=%(refname:short)')
+    if empty(l:branches_raw)
+        return []
+    endif
+    let l:branches = split(l:branches_raw, '\n')
+    if empty(a:arglead)
+        return l:branches
+    endif
+    return filter(l:branches, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
+" ============================================================================
 " Public API Functions
 " ============================================================================
 

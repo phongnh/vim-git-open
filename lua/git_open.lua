@@ -332,6 +332,24 @@ local function get_repo_info()
 end
 
 -- ============================================================================
+-- Completion Functions
+-- ============================================================================
+
+function M.complete_branch(arglead)
+  local branches_raw = git_command('branch --all --format=%(refname:short)')
+  if not branches_raw or branches_raw == '' then
+    return {}
+  end
+  local branches = vim.split(branches_raw, '\n', { plain = true, trimempty = true })
+  if not arglead or arglead == '' then
+    return branches
+  end
+  return vim.tbl_filter(function(b)
+    return b:sub(1, #arglead) == arglead
+  end, branches)
+end
+
+-- ============================================================================
 -- Public API Functions
 -- ============================================================================
 

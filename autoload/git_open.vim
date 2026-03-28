@@ -334,6 +334,22 @@ def GetRepoInfo(): dict<string>
 enddef
 
 # ============================================================================
+# Completion Functions
+# ============================================================================
+
+export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
+    var branches_raw = GitCommand('branch --all --format=%(refname:short)')
+    if empty(branches_raw)
+        return []
+    endif
+    var branches = split(branches_raw, '\n')
+    if empty(arglead)
+        return branches
+    endif
+    return filter(branches, (_, v) => v =~# '^' .. escape(arglead, '\/.*[]^$~'))
+enddef
+
+# ============================================================================
 # Public API Functions
 # ============================================================================
 

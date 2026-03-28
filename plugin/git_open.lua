@@ -19,11 +19,20 @@ end, { bang = true })
 
 vim.api.nvim_create_user_command('OpenGitBranch', function(opts)
   git_open.open_branch(opts.args ~= '' and opts.args or nil, opts.bang)
-end, { bang = true, nargs = '?' })
+end, {
+  bang = true,
+  nargs = '?',
+  complete = function(arglead) return git_open.complete_branch(arglead) end,
+})
 
 vim.api.nvim_create_user_command('OpenGitFile', function(opts)
   git_open.open_file(opts.line1, opts.line2, opts.args ~= '' and opts.args or nil, opts.bang)
-end, { bang = true, nargs = '?', range = true })
+end, {
+  bang = true,
+  nargs = '?',
+  range = true,
+  complete = function(arglead) return git_open.complete_branch(arglead) end,
+})
 
 vim.api.nvim_create_user_command('OpenGitCommit', function(opts)
   git_open.open_commit(opts.args ~= '' and opts.args or nil, opts.bang)

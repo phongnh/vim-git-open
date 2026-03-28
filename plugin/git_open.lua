@@ -70,8 +70,9 @@ end, {
 })
 
 vim.api.nvim_create_user_command('OpenGitkFile', function(opts)
-  git_open.open_gitk_file(opts.args ~= '' and opts.args or nil)
+  git_open.open_gitk_file(opts.args ~= '' and opts.args or nil, opts.bang)
 end, {
+  bang = true,
   nargs = '*',
   complete = function(arglead) return git_open.complete_gitk_args(arglead) end,
 })

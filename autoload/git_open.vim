@@ -694,7 +694,7 @@ export def OpenGitk(args_str: string = '')
     LaunchGitk(empty(args_str) ? [] : split(args_str), git_root)
 enddef
 
-export def OpenGitkFile(opts_str: string = '')
+export def OpenGitkFile(opts_str: string = '', history: bool = false)
     var git_root = GetGitRoot()
     if empty(git_root)
         Warn('git-open: not a git repository')
@@ -705,9 +705,8 @@ export def OpenGitkFile(opts_str: string = '')
         return
     endif
     var rel_path = GetRelativePath()
-    # Resolve full rename history
-    var all_paths = GetGitkOldPaths(rel_path)
+    var paths = history ? GetGitkOldPaths(rel_path) : [rel_path]
     var extra_args = empty(opts_str) ? [] : split(opts_str)
-    LaunchGitk(extra_args + ['--'] + all_paths, git_root)
+    LaunchGitk(extra_args + ['--'] + paths, git_root)
 enddef
 

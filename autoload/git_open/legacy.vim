@@ -733,11 +733,12 @@ function! git_open#legacy#open_gitk_file(...) abort
         call s:warn('git-open: no file in current buffer')
         return
     endif
+    let l:opts_str = a:0 > 0 ? a:1 : ''
+    let l:history  = a:0 > 1 ? a:2 : 0
     let l:rel_path = s:get_relative_path()
-    " Resolve full rename history
-    let l:all_paths = s:get_gitk_old_paths(l:rel_path)
-    let l:extra_args = a:0 > 0 && !empty(a:1) ? split(a:1) : []
-    call s:launch_gitk(l:extra_args + ['--'] + l:all_paths, l:git_root)
+    let l:paths = l:history ? s:get_gitk_old_paths(l:rel_path) : [l:rel_path]
+    let l:extra_args = empty(l:opts_str) ? [] : split(l:opts_str)
+    call s:launch_gitk(l:extra_args + ['--'] + l:paths, l:git_root)
 endfunction
 
 " Restore cpoptions

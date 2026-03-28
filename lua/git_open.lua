@@ -692,7 +692,7 @@ function M.open_gitk(args_str)
   launch_gitk(args, git_root)
 end
 
-function M.open_gitk_file(opts_str)
+function M.open_gitk_file(opts_str, history)
   local git_root = get_git_root()
   if not git_root then
     warn('git-open: not a git repository')
@@ -703,13 +703,12 @@ function M.open_gitk_file(opts_str)
     return
   end
   local rel_path = get_relative_path()
-  -- Resolve full rename history
-  local all_paths = get_gitk_old_paths(rel_path, git_root)
+  local paths = history and get_gitk_old_paths(rel_path, git_root) or { rel_path }
   local extra_args = (opts_str and opts_str ~= '') and vim.split(opts_str, '%s+') or {}
   local args = {}
   for _, a in ipairs(extra_args) do table.insert(args, a) end
   table.insert(args, '--')
-  for _, p in ipairs(all_paths) do table.insert(args, p) end
+  for _, p in ipairs(paths) do table.insert(args, p) end
   launch_gitk(args, git_root)
 end
 

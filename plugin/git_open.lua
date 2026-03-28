@@ -258,6 +258,7 @@ local function register_multi_remote_commands()
   for _, msg in ipairs(overwritten) do
     vim.api.nvim_echo({{ msg, 'WarningMsg' }}, true, {})
   end
+  vim.cmd('redraw!')
 end
 
 vim.api.nvim_create_autocmd('VimEnter', {

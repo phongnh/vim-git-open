@@ -167,6 +167,7 @@ def RegisterMultiRemoteCommands()
         echom msg
         echohl None
     endfor
+    redraw!
 enddef
 
 augroup git_open_multi_remote

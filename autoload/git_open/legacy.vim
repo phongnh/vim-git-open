@@ -564,9 +564,9 @@ function! git_open#legacy#open_my_requests(...) abort
     if l:info.provider ==# 'GitLab'
         let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER') . (empty(l:state) ? '' : '&' . l:state[1:])
     elseif l:info.provider ==# 'GitHub'
-        " Scope to author:@me; append state filter into q param when specified
-        let l:q = empty(l:state) ? '?q=author%3A%40me' : l:state . '+author%3A%40me'
-        let l:url = l:info.base_url . '/pulls' . l:q
+        " No flag/-open: /pulls is already scoped to current user when logged in
+        " With state flag: append author:@me to keep scoped to current user
+        let l:url = l:info.base_url . '/pulls' . (empty(l:state) ? '' : l:state . '+author%3A%40me')
     else
         " Codeberg: state is already a full query string or empty
         let l:url = l:info.base_url . '/pulls' . l:state

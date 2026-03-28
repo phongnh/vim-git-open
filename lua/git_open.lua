@@ -336,17 +336,41 @@ end
 -- ============================================================================
 
 function M.complete_branch(arglead)
-  local branches_raw = git_command("branch --all --format='%(refname:short)'")
-  if not branches_raw or branches_raw == '' then
-    return {}
+  -- Local branches: refs/heads/ → bare name (lstrip=2)
+  local local_raw = git_command("for-each-ref --format='%(refname:lstrip=2)' refs/heads/")
+  -- Remote branches: refs/remotes/ → bare name (lstrip=3 removes refs/remotes/<remote>/)
+  local remote_raw = git_command("for-each-ref --format='%(refname:lstrip=3)' refs/remotes/")
+
+  local branches = {}
+  if local_raw and local_raw ~= '' then
+    for _, b in ipairs(vim.split(local_raw, '\n', { plain = true, trimempty = true })) do
+      table.insert(branches, b)
+    end
   end
-  local branches = vim.split(branches_raw, '\n', { plain = true, trimempty = true })
+  if remote_raw and remote_raw ~= '' then
+    for _, b in ipairs(vim.split(remote_raw, '\n', { plain = true, trimempty = true })) do
+      if b ~= 'HEAD' then
+        table.insert(branches, b)
+      end
+    end
+  end
+
+  -- Deduplicate while preserving order (local branches first)
+  local seen = {}
+  local result = {}
+  for _, b in ipairs(branches) do
+    if not seen[b] then
+      seen[b] = true
+      table.insert(result, b)
+    end
+  end
+
   if not arglead or arglead == '' then
-    return branches
+    return result
   end
   return vim.tbl_filter(function(b)
     return b:sub(1, #arglead) == arglead
-  end, branches)
+  end, result)
 end
 
 -- ============================================================================

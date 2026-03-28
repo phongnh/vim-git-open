@@ -358,15 +358,33 @@ endfunction
 " ============================================================================
 
 function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
-    let l:branches_raw = s:git_command("branch --all --format='%(refname:short)'")
-    if empty(l:branches_raw)
-        return []
+    " Local branches: refs/heads/ → bare name (lstrip=2)
+    let l:local_raw = s:git_command("for-each-ref --format='%(refname:lstrip=2)' refs/heads/")
+    " Remote branches: refs/remotes/ → bare name (lstrip=3 removes refs/remotes/<remote>/)
+    let l:remote_raw = s:git_command("for-each-ref --format='%(refname:lstrip=3)' refs/remotes/")
+
+    let l:branches = []
+    if !empty(l:local_raw)
+        let l:branches += split(l:local_raw, '\n')
     endif
-    let l:branches = split(l:branches_raw, '\n')
+    if !empty(l:remote_raw)
+        let l:branches += filter(split(l:remote_raw, '\n'), 'v:val !=# ''HEAD''')
+    endif
+
+    " Deduplicate while preserving order (local branches first)
+    let l:seen = {}
+    let l:result = []
+    for l:b in l:branches
+        if !has_key(l:seen, l:b)
+            let l:seen[l:b] = 1
+            call add(l:result, l:b)
+        endif
+    endfor
+
     if empty(a:arglead)
-        return l:branches
+        return l:result
     endif
-    return filter(l:branches, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+    return filter(l:result, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction
 
 " ============================================================================

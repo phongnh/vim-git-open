@@ -338,7 +338,7 @@ enddef
 # ============================================================================
 
 export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
-    var branches_raw = GitCommand('branch --all --format=%(refname:short)')
+    var branches_raw = GitCommand("branch --all --format='%(refname:short)'")
     if empty(branches_raw)
         return []
     endif

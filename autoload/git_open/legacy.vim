@@ -358,7 +358,7 @@ endfunction
 " ============================================================================
 
 function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
-    let l:branches_raw = s:git_command('branch --all --format=%(refname:short)')
+    let l:branches_raw = s:git_command("branch --all --format='%(refname:short)'")
     if empty(l:branches_raw)
         return []
     endif

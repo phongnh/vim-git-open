@@ -336,7 +336,7 @@ end
 -- ============================================================================
 
 function M.complete_branch(arglead)
-  local branches_raw = git_command('branch --all --format=%(refname:short)')
+  local branches_raw = git_command("branch --all --format='%(refname:short)'")
   if not branches_raw or branches_raw == '' then
     return {}
   end

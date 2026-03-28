@@ -381,13 +381,16 @@ enddef
 # Completion Functions
 # ============================================================================
 
-def UniqueAdd(seen: dict<bool>, result: list<string>, items: list<string>)
+def Unique(items: list<string>): list<string>
+    var seen: dict<bool> = {}
+    var result: list<string> = []
     for item in items
         if !has_key(seen, item)
             seen[item] = true
             result->add(item)
         endif
     endfor
+    return result
 enddef
 
 def FuzzyFilter(result: list<string>, arglead: string): list<string>
@@ -402,11 +405,9 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
     var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
     # Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
     var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
-    var seen: dict<bool> = {}
-    var result: list<string> = []
-    UniqueAdd(seen, result, empty(local_raw) ? [] : split(local_raw, '\n'))
-    UniqueAdd(seen, result, empty(remote_raw) ? [] : filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD'))
-    return FuzzyFilter(result, arglead)
+    var local = empty(local_raw) ? [] : split(local_raw, '\n')
+    var remote = empty(remote_raw) ? [] : filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD')
+    return FuzzyFilter(Unique(local + remote), arglead)
 enddef
 
 export def CompleteGitkBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
@@ -414,21 +415,17 @@ export def CompleteGitkBranch(arglead: string, cmdline: string, cursorpos: numbe
     # e.g. main, origin/main, origin/feature
     var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
     var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
-    var seen: dict<bool> = {}
-    var result: list<string> = []
-    UniqueAdd(seen, result, empty(local_raw) ? [] : split(local_raw, '\n'))
-    UniqueAdd(seen, result, empty(remote_raw) ? [] : filter(split(remote_raw, '\n'), (_, v) => v !~# '/HEAD$'))
-    return FuzzyFilter(result, arglead)
+    var local = empty(local_raw) ? [] : split(local_raw, '\n')
+    var remote = empty(remote_raw) ? [] : filter(split(remote_raw, '\n'), (_, v) => v !~# '/HEAD$')
+    return FuzzyFilter(Unique(local + remote), arglead)
 enddef
 
 export def CompleteGitkArgs(arglead: string, cmdline: string, cursorpos: number): list<string>
     # Branches (local plain + remote with prefix) then tracked files
-    var seen: dict<bool> = {}
-    var result: list<string> = []
-    UniqueAdd(seen, result, CompleteGitkBranch('', '', 0))
+    var branches = CompleteGitkBranch('', '', 0)
     var files_raw = GitCommand('ls-files')
-    UniqueAdd(seen, result, empty(files_raw) ? [] : split(files_raw, '\n'))
-    return FuzzyFilter(result, arglead)
+    var files = empty(files_raw) ? [] : split(files_raw, '\n')
+    return FuzzyFilter(Unique(branches + files), arglead)
 enddef
 
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>

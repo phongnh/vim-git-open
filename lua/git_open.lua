@@ -383,13 +383,16 @@ end
 -- Completion Functions
 -- ============================================================================
 
-local function unique_add(seen, result, items)
+local function unique(items)
+  local seen = {}
+  local result = {}
   for _, item in ipairs(items) do
     if not seen[item] then
       seen[item] = true
       table.insert(result, item)
     end
   end
+  return result
 end
 
 local function fuzzy_filter(result, arglead)
@@ -441,48 +444,36 @@ function M.complete_branch(arglead)
   local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
   -- Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
   local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
-
-  local seen = {}
-  local result = {}
-  if local_raw and local_raw ~= '' then
-    unique_add(seen, result, vim.split(local_raw, '\n', { plain = true, trimempty = true }))
-  end
-  if remote_raw and remote_raw ~= '' then
-    local remotes = vim.tbl_filter(function(b) return b ~= 'HEAD' end,
-      vim.split(remote_raw, '\n', { plain = true, trimempty = true }))
-    unique_add(seen, result, remotes)
-  end
-  return fuzzy_filter(result, arglead)
+  local local_branches = (local_raw and local_raw ~= '')
+    and vim.split(local_raw, '\n', { plain = true, trimempty = true }) or {}
+  local remote_branches = (remote_raw and remote_raw ~= '')
+    and vim.tbl_filter(function(b) return b ~= 'HEAD' end,
+        vim.split(remote_raw, '\n', { plain = true, trimempty = true })) or {}
+  local combined = vim.list_extend(vim.list_extend({}, local_branches), remote_branches)
+  return fuzzy_filter(unique(combined), arglead)
 end
 
 function M.complete_gitk_branch(arglead)
   -- Local branches (plain name), then remote branches with full remote/ prefix
   local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
   local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
-
-  local seen = {}
-  local result = {}
-  if local_raw and local_raw ~= '' then
-    unique_add(seen, result, vim.split(local_raw, '\n', { plain = true, trimempty = true }))
-  end
-  if remote_raw and remote_raw ~= '' then
-    local remotes = vim.tbl_filter(function(b) return not b:match('/HEAD$') end,
-      vim.split(remote_raw, '\n', { plain = true, trimempty = true }))
-    unique_add(seen, result, remotes)
-  end
-  return fuzzy_filter(result, arglead)
+  local local_branches = (local_raw and local_raw ~= '')
+    and vim.split(local_raw, '\n', { plain = true, trimempty = true }) or {}
+  local remote_branches = (remote_raw and remote_raw ~= '')
+    and vim.tbl_filter(function(b) return not b:match('/HEAD$') end,
+        vim.split(remote_raw, '\n', { plain = true, trimempty = true })) or {}
+  local combined = vim.list_extend(vim.list_extend({}, local_branches), remote_branches)
+  return fuzzy_filter(unique(combined), arglead)
 end
 
 function M.complete_gitk_args(arglead)
   -- Branches (local plain + remote with prefix) then tracked files
-  local seen = {}
-  local result = {}
-  unique_add(seen, result, M.complete_gitk_branch(''))
+  local branches = M.complete_gitk_branch('')
   local files_raw = git_command('ls-files')
-  if files_raw and files_raw ~= '' then
-    unique_add(seen, result, vim.split(files_raw, '\n', { plain = true, trimempty = true }))
-  end
-  return fuzzy_filter(result, arglead)
+  local files = (files_raw and files_raw ~= '')
+    and vim.split(files_raw, '\n', { plain = true, trimempty = true }) or {}
+  local combined = vim.list_extend(vim.list_extend({}, branches), files)
+  return fuzzy_filter(unique(combined), arglead)
 end
 
 function M.complete_request_state(arglead)

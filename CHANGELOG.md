@@ -1,5 +1,42 @@
 # vim-git-open - CHANGELOG
 
+## Version 1.4.0
+
+### New Features
+
+#### Multi-Remote Support
+- **Provider-named commands** are now automatically registered at startup for each non-origin remote
+- At `VimEnter`, the plugin scans all configured remotes (excluding `origin`), detects the provider for each, and registers a full set of commands scoped to that remote
+- **GitHub remote commands**: `OpenGitHubRepo[!]`, `OpenGitHubBranch[!]`, `OpenGitHubFile[!]`, `OpenGitHubCommit[!]`, `OpenGitHubPR[!]`, `OpenGitHubPRs[!]`, `OpenGitHubMyPRs[!]`
+- **GitLab remote commands**: `OpenGitLabRepo[!]`, `OpenGitLabBranch[!]`, `OpenGitLabFile[!]`, `OpenGitLabCommit[!]`, `OpenGitLabMR[!]`, `OpenGitLabMRs[!]`, `OpenGitLabMyMRs[!]`
+- **Codeberg remote commands**: `OpenCodebergRepo[!]`, `OpenCodebergBranch[!]`, `OpenCodebergFile[!]`, `OpenCodebergCommit[!]`, `OpenCodebergPR[!]`, `OpenCodebergPRs[!]`, `OpenCodebergMyPRs[!]`
+- Commands are only registered for providers actually present in the repo — no extra commands for providers with no remote
+- If two non-origin remotes resolve to the same provider, last-one-wins; a warning is printed at startup identifying which remote/domain the commands now point to and which was overwritten
+- All commands support bang (`!`) for clipboard copy, visual mode for branch/commit selection, line range for file commands, and state flags for PR/MR listing — identical to the origin equivalents
+- Tab-completion for branch names and state flags is wired to all provider-named commands
+
+### Internal
+
+#### ParseRemoteUrl Refactor
+- `ParseRemoteUrl` (all three implementations) now accepts a `remote_name` parameter (default `'origin'`) instead of hardcoding `remote.origin.url`
+- `GetRepoInfo` / `get_repo_info` explicitly passes `'origin'` — behaviour is identical to before
+- New `GetAllRemotes` / `get_all_remotes`: returns list of all remote names excluding `origin`
+- New `GetRepoInfoForRemote` / `get_repo_info_for_remote`: like `GetRepoInfo` but for a named remote; no error on missing remote (caller handles it)
+- New per-remote public API functions: `OpenRepoForRemote`, `OpenBranchForRemote`, `OpenFileForRemote`, `OpenCommitForRemote`, `OpenRequestForRemote`, `OpenRequestsForRemote`, `OpenMyRequestsForRemote`
+- These are thin wrappers — all URL-building logic stays in the existing `BuildUrl` / `BuildGithubUrl` / `BuildGitlabUrl` functions
+
+### Updated Files
+- `autoload/git_open.vim` — `ParseRemoteUrl` refactor; new `GetAllRemotes`, `GetRepoInfoForRemote`, per-remote API functions
+- `autoload/git_open/legacy.vim` — same; new public functions exposed via `git_open#legacy#` namespace
+- `lua/git_open.lua` — same; new `M.get_all_remotes`, `M.get_repo_info_for_remote`, per-remote API functions
+- `plugin/git_open.vim` — dynamic command registration via `execute` + `VimEnter` autocommand
+- `plugin/git_open_legacy.vim` — same; commands use `git_open#legacy#*` functions
+- `plugin/git_open.lua` — dynamic command registration via `nvim_create_user_command` + `VimEnter` autocmd
+- `README.md` — new "Multi-remote support" section with command tables
+- `doc/git_open.txt` — new section 5 documenting all provider-named commands
+
+---
+
 ## Version 1.3.0
 
 ### New Features

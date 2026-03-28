@@ -214,10 +214,10 @@ the browser. With [!], the URL is copied to the clipboard instead.
         :OpenGitk --all
 <
 
-                                                           *:OpenGitkFile*
+                                                            *:OpenGitkFile*
 :OpenGitkFile[!]
-    Launch gitk for the current file: `gitk -- <current-file>`.
-    With [!], adds `--follow` to trace history across renames.
+    Launch gitk for the current file: gitk -- <current-file>.
+    With [!], adds --follow to trace history across renames.
 
     Requires gitk to be installed and in PATH.
 
@@ -231,23 +231,8 @@ the browser. With [!], the URL is copied to the clipboard instead.
 
                                                     *:OpenGitkFileHistory*
 :OpenGitkFileHistory [files...]
-    Launch gitk showing the full rename history of the current file (or
-    given space-separated [files]).  For each file, all historical paths
-    are resolved via "git log --follow --name-only", then merged and
-    deduplicated.  gitk is invoked with all resolved paths.
-
-    Useful when a file has been renamed multiple times and you want the
-    complete history in a single gitk view.
-
-    Requires gitk to be installed and in PATH.
-
-    Examples: >
-        " Full history of the current buffer across all renames
-        :OpenGitkFileHistory
-
-        " Full history for specific files
-        :OpenGitkFileHistory path/to/file.txt other/file.go
-<
+    Launch gitk with the full rename history of the current file (or given
+    [files]).  Resolves all historical paths via "git log --follow".
 
                                                                     *:Gitk*
 :Gitk [args]

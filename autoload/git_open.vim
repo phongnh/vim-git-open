@@ -22,16 +22,19 @@ enddef
 
 def GetGitRoot(): string
     # Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
-    # (fugitiveblame, fugitive://, etc.). Use call() so the name is resolved
-    # at runtime — Vim9script compiles all bare names at load time.
-    if exists('*FugitiveGitDir')
+    # (fugitiveblame, fugitive://, etc.).
+    # exists('*FugitiveGitDir') is resolved at compile time inside a def and
+    # always returns false for late-loaded plugins. Use try/call() instead so
+    # the lookup happens at runtime on every call.
+    try
         var gitdir = '' .. call('FugitiveGitDir', [])
         if !empty(gitdir)
             var root = fnamemodify(gitdir, ':h')
             Debug('GetGitRoot (FugitiveGitDir): ' .. root)
             return root
         endif
-    endif
+    catch
+    endtry
     # Step 2: finddir from the current buffer's directory
     var git_dir = finddir('.git', expand('%:p:h') .. ';')
     if !empty(git_dir)

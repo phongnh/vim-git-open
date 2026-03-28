@@ -15,6 +15,13 @@ def Warn(msg: string)
 enddef
 
 def GetGitRoot(): string
+    # Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
+    if exists('*FugitiveWorkTree')
+        var ft = FugitiveWorkTree()
+        if !empty(ft)
+            return ft
+        endif
+    endif
     var git_dir = finddir('.git', expand('%:p:h') .. ';')
     if empty(git_dir)
         return ''

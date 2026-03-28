@@ -13,6 +13,13 @@ local function warn(msg)
 end
 
 local function get_git_root()
+  -- Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
+  if vim.fn.exists('*FugitiveWorkTree') == 1 then
+    local ft = vim.fn.FugitiveWorkTree()
+    if ft and ft ~= '' then
+      return ft
+    end
+  end
   local git_dir = vim.fn.finddir('.git', vim.fn.expand('%:p:h') .. ';')
   if git_dir == '' then
     return nil

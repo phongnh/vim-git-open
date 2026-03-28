@@ -18,6 +18,13 @@ endfunction
 
 " Get the git root directory
 function! s:get_git_root() abort
+    " Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
+    if exists('*FugitiveWorkTree')
+        let l:ft = FugitiveWorkTree()
+        if !empty(l:ft)
+            return l:ft
+        endif
+    endif
     let l:git_dir = finddir('.git', expand('%:p:h') . ';')
     if empty(l:git_dir)
         return ''

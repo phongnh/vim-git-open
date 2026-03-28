@@ -343,7 +343,7 @@ end
 --   branch view: /src/branch/{branch}
 --   file at commit: /src/commit/{commit}/{file}
 --   file at branch: /src/branch/{branch}/{file}
---   single PR/issue: /issues/{number}  (not /pull/)
+--   single PR: /pulls/{number}  (not /pull/)
 --   commit: /commit/{hash}  (same as GitHub)
 local function build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
   local url = base_url .. '/' .. path
@@ -375,7 +375,7 @@ local function build_codeberg_url(base_url, path, url_type, extra, line_info, re
       warn('No PR number specified')
       return nil
     end
-    return url .. '/issues/' .. extra
+    return url .. '/pulls/' .. extra
   end
 
   return url

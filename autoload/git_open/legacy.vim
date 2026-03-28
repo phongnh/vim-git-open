@@ -376,7 +376,7 @@ endfunction
 "   branch view: /src/branch/{branch}
 "   file at commit: /src/commit/{commit}/{file}
 "   file at branch: /src/branch/{branch}/{file}
-"   single PR/issue: /issues/{number}  (not /pull/)
+"   single PR: /pulls/{number}  (not /pull/)
 "   commit: /commit/{hash}  (same as GitHub)
 function! s:build_codeberg_url(base_url, path, type, ...) abort
     let l:url = a:base_url . '/' . a:path
@@ -409,7 +409,7 @@ function! s:build_codeberg_url(base_url, path, type, ...) abort
             call s:warn('No PR number specified')
             return ''
         endif
-        return l:url . '/issues/' . l:pr
+        return l:url . '/pulls/' . l:pr
     endif
 
     return l:url

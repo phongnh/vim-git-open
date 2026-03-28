@@ -335,7 +335,7 @@ enddef
 #   branch view: /src/branch/{branch}
 #   file at commit: /src/commit/{commit}/{file}
 #   file at branch: /src/branch/{branch}/{file}
-#   single PR/issue: /issues/{number}  (not /pull/)
+#   single PR: /pulls/{number}  (not /pull/)
 #   commit: /commit/{hash}  (same as GitHub)
 def BuildCodebergUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
     var url = base_url .. '/' .. path
@@ -368,7 +368,7 @@ def BuildCodebergUrl(base_url: string, path: string, type: string, ...extra: lis
             Warn('No PR number specified')
             return ''
         endif
-        return url .. '/issues/' .. pr
+        return url .. '/pulls/' .. pr
     endif
 
     return url

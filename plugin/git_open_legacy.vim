@@ -164,6 +164,7 @@ function! s:register_multi_remote_commands() abort
         echom l:msg
         echohl None
     endfor
+    redraw!
 endfunction
 
 augroup git_open_multi_remote

@@ -95,6 +95,7 @@ def GetCurrentRemote(git_root: string): string
     return b:vim_git_open_remote
 enddef
 
+# ParseRemoteUrl: uses per-buffer remote resolution (GetCurrentRemote)
 def ParseRemoteUrl(): dict<string>
     var git_root = GetGitRoot()
     var remote_name = empty(git_root) ? '' : GetCurrentRemote(git_root)
@@ -464,10 +465,71 @@ def OpenOrCopy(url: string, copy: bool)
     endif
 enddef
 
-def GetRepoInfo(): dict<string>
+export def GetRepoInfo(): dict<string>
     var remote = ParseRemoteUrl()
     if empty(remote)
         Warn('Not a git repository or no remote configured')
+        return {}
+    endif
+    
+    var provider = DetectProvider(remote.domain)
+    var base_url = GetBaseUrl(remote.domain)
+    
+    return {
+        domain: remote.domain,
+        path: remote.path,
+        provider: provider,
+        base_url: base_url
+    }
+enddef
+
+# ParseRemoteUrlForName: fetches remote URL for a specific named remote (bypasses per-buffer resolution)
+def ParseRemoteUrlForName(remote_name: string): dict<string>
+    var remote = GitCommand('config --get remote.' .. remote_name .. '.url')
+    if empty(remote)
+        return {}
+    endif
+    
+    var result: dict<string> = {domain: '', path: ''}
+    
+    # Handle SSH URLs: git@github.com:user/repo.git
+    var ssh_match = matchlist(remote, '^\(git@\|ssh://git@\)\([^:/]\+\)[:/]\(.*\)\.git$')
+    if !empty(ssh_match)
+        result.domain = ssh_match[2]
+        result.path = ssh_match[3]
+        return result
+    endif
+    
+    # Handle HTTPS URLs: https://github.com/user/repo.git
+    var https_match = matchlist(remote, '^https\?://\([^/]\+\)/\(.*\)\.git$')
+    if !empty(https_match)
+        result.domain = https_match[1]
+        result.path = https_match[2]
+        return result
+    endif
+    
+    # Handle HTTPS without .git: https://github.com/user/repo
+    var https_no_git = matchlist(remote, '^https\?://\([^/]\+\)/\(.*\)$')
+    if !empty(https_no_git)
+        result.domain = https_no_git[1]
+        result.path = https_no_git[2]
+        return result
+    endif
+    
+    return {}
+enddef
+
+export def GetAllRemotes(): list<string>
+    var output = GitCommand('remote')
+    if empty(output)
+        return []
+    endif
+    return filter(split(output, '\n'), (_, v) => v !=# 'origin')
+enddef
+
+export def GetRepoInfoForRemote(remote_name: string): dict<string>
+    var remote = ParseRemoteUrlForName(remote_name)
+    if empty(remote)
         return {}
     endif
     
@@ -794,6 +856,158 @@ export def OpenFileLastChange(copy: bool = false)
         url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
     endif
     
+    OpenOrCopy(url, copy)
+enddef
+
+# ============================================================================
+# Per-Remote Public API Functions
+# ============================================================================
+
+export def OpenRepoForRemote(remote_name: string, copy: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'repo')
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenBranchForRemote(remote_name: string, branch_arg: string = '', copy: bool = false, visual: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    var branch = branch_arg
+    if empty(branch) && visual
+        branch = GetVisualSelection()
+    endif
+    if empty(branch)
+        branch = GetCurrentBranch()
+    endif
+
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch)
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenFileForRemote(remote_name: string, line1: number, line2: number, ref_arg: string = '', copy: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    if empty(expand('%'))
+        Warn('No file in current buffer')
+        return
+    endif
+
+    var line_range = GetLineRange(line1, line2)
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range, ref_arg)
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenCommitForRemote(remote_name: string, commit_arg: string = '', copy: bool = false, visual: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    var commit = commit_arg
+    if empty(commit) && visual
+        commit = GetVisualSelection()
+    endif
+    if empty(commit)
+        commit = GetCurrentCommit()
+    endif
+
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenRequestForRemote(remote_name: string, req_arg: string = '', copy: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    var number = !empty(req_arg) ? req_arg : ParsePrMrFromCommit(info.provider)
+
+    if empty(number)
+        Warn('No request number specified and could not parse from commit message')
+        return
+    endif
+
+    var type = info.provider ==# 'GitLab' ? 'mr' : 'pr'
+    var url = BuildUrl(info.provider, info.base_url, info.path, type, number)
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenRequestsForRemote(remote_name: string, state_arg: string = '', copy: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    var state = ParseRequestState(state_arg, info.provider)
+    var repo_url = info.base_url .. '/' .. info.path
+    var url: string
+    if info.provider ==# 'GitLab'
+        url = repo_url .. '/-/merge_requests' .. state
+    else
+        url = repo_url .. '/pulls' .. state
+    endif
+
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenMyRequestsForRemote(remote_name: string, state_arg: string = '', copy: bool = false)
+    var info = GetRepoInfoForRemote(remote_name)
+    if empty(info)
+        Warn('No remote configured for: ' .. remote_name)
+        return
+    endif
+
+    var state = ParseRequestState(state_arg, info.provider)
+    var url: string
+    if info.provider ==# 'GitLab'
+        var arg = tolower(trim(state_arg))
+        if arg =~# '^-search'
+            var parts = split(arg, '=')
+            var search_state = len(parts) > 1 ? parts[1] : ''
+            var search_url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername()
+            if search_state ==# 'closed' || search_state ==# 'merged'
+                search_url ..= '&state=' .. search_state
+            elseif search_state ==# 'all'
+                search_url ..= '&state=all'
+            endif
+            url = search_url
+        elseif arg ==# '-closed' || arg ==# '-merged'
+            url = info.base_url .. '/dashboard/merge_requests/merged'
+        else
+            url = info.base_url .. '/dashboard/merge_requests'
+        endif
+    elseif info.provider ==# 'GitHub'
+        url = info.base_url .. '/pulls' .. (empty(state) ? '' : state .. '+author%3A%40me')
+    else
+        # Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
+        # -closed/-merged → ?type=created_by&state=closed
+        var cb_arg = tolower(trim(state_arg))
+        if cb_arg ==# '-closed' || cb_arg ==# '-merged'
+            url = info.base_url .. '/pulls?type=created_by&state=closed'
+        elseif cb_arg ==# '-all'
+            url = info.base_url .. '/pulls?type=created_by'
+        else
+            url = info.base_url .. '/pulls'
+        endif
+    endif
+
     OpenOrCopy(url, copy)
 enddef
 

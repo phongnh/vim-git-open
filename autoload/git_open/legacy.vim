@@ -94,7 +94,7 @@ function! s:get_current_remote(git_root) abort
     return b:vim_git_open_remote
 endfunction
 
-" Parse git remote URL
+" Parse remote URL using per-buffer remote resolution (GetCurrentRemote)
 function! s:parse_remote_url() abort
     let l:git_root = s:get_git_root()
     let l:remote_name = empty(l:git_root) ? '' : s:get_current_remote(l:git_root)
@@ -476,6 +476,61 @@ function! s:get_repo_info() abort
     let l:remote = s:parse_remote_url()
     if empty(l:remote)
         call s:warn('Not a git repository or no remote configured')
+        return {}
+    endif
+
+    let l:provider = s:detect_provider(l:remote.domain)
+    let l:base_url = s:get_base_url(l:remote.domain)
+
+    return {
+        \ 'domain': l:remote.domain,
+        \ 'path': l:remote.path,
+        \ 'provider': l:provider,
+        \ 'base_url': l:base_url
+        \ }
+endfunction
+
+" Parse remote URL for a specific named remote (bypasses per-buffer resolution)
+function! s:parse_remote_url_for_name(remote_name) abort
+    let l:remote = s:git_command('config --get remote.' . a:remote_name . '.url')
+    if empty(l:remote)
+        return {}
+    endif
+
+    let l:result = {}
+
+    " Handle SSH URLs: git@github.com:user/repo.git
+    let l:ssh_match = matchlist(l:remote, '^\(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
+    if !empty(l:ssh_match)
+        let l:result.domain = l:ssh_match[2]
+        let l:result.path = l:ssh_match[3]
+        return l:result
+    endif
+
+    " Handle HTTPS URLs: https://github.com/user/repo.git
+    let l:https_match = matchlist(l:remote, '^\(https\?://\)\([^/]\+\)/\(.*\)\(\.git\)\?$')
+    if !empty(l:https_match)
+        let l:result.domain = l:https_match[2]
+        let l:result.path = substitute(l:https_match[3], '\.git$', '', '')
+        return l:result
+    endif
+
+    return {}
+endfunction
+
+" Get all non-origin remote names
+function! s:get_all_remotes() abort
+    let l:output = s:git_command('remote')
+    if empty(l:output)
+        return []
+    endif
+    return filter(split(l:output, '\n'), 'v:val !=# ''origin''')
+endfunction
+
+" Get repository info for a specific remote
+function! s:get_repo_info_for_remote(remote_name) abort
+    let l:remote = s:parse_remote_url_for_name(a:remote_name)
+    if empty(l:remote)
         return {}
     endif
 
@@ -881,6 +936,164 @@ function! git_open#legacy#open_gitk_file(...) abort
     let l:paths = l:history ? s:get_gitk_old_paths(l:rel_path) : [l:rel_path]
     let l:extra_args = empty(l:opts_str) ? [] : split(l:opts_str)
     call s:launch_gitk(l:extra_args + ['--'] + l:paths, l:git_root)
+endfunction
+
+" ============================================================================
+" Multi-Remote Public API
+" ============================================================================
+
+function! git_open#legacy#get_all_remotes() abort
+    return s:get_all_remotes()
+endfunction
+
+function! git_open#legacy#get_repo_info_for_remote(remote_name) abort
+    return s:get_repo_info_for_remote(a:remote_name)
+endfunction
+
+function! git_open#legacy#get_repo_info() abort
+    return s:get_repo_info()
+endfunction
+
+function! git_open#legacy#open_repo_for_remote(remote_name, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'repo')
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
+endfunction
+
+function! git_open#legacy#open_branch_for_remote(remote_name, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    let l:branch = a:0 > 0 ? a:1 : ''
+    let l:copy   = a:0 > 1 && a:2
+    let l:visual = a:0 > 2 && a:3
+    if empty(l:branch) && l:visual
+        let l:branch = s:get_visual_selection()
+    endif
+    if empty(l:branch)
+        let l:branch = s:get_current_branch()
+    endif
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'branch', l:branch)
+    call s:open_or_copy(l:url, l:copy)
+endfunction
+
+function! git_open#legacy#open_file_for_remote(remote_name, line1, line2, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    if empty(expand('%'))
+        call s:warn('No file in current buffer')
+        return
+    endif
+    let l:line_range = s:get_line_range(a:line1, a:line2)
+    let l:ref  = a:0 > 0 ? a:1 : ''
+    let l:copy = a:0 > 1 && a:2
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'file', '', l:line_range, l:ref)
+    call s:open_or_copy(l:url, l:copy)
+endfunction
+
+function! git_open#legacy#open_commit_for_remote(remote_name, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    let l:commit = a:0 > 0 ? a:1 : ''
+    let l:copy   = a:0 > 1 && a:2
+    let l:visual = a:0 > 2 && a:3
+    if empty(l:commit) && l:visual
+        let l:commit = s:get_visual_selection()
+    endif
+    if empty(l:commit)
+        let l:commit = s:get_current_commit()
+    endif
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit', l:commit)
+    call s:open_or_copy(l:url, l:copy)
+endfunction
+
+function! git_open#legacy#open_request_for_remote(remote_name, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    let l:number = a:0 > 0 && !empty(a:1) ? a:1 : s:parse_pr_mr_from_commit(l:info.provider)
+    let l:copy   = a:0 > 1 && a:2
+    if empty(l:number)
+        call s:warn('No request number specified and could not parse from commit message')
+        return
+    endif
+    let l:type = l:info.provider ==# 'GitLab' ? 'mr' : 'pr'
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, l:type, l:number)
+    call s:open_or_copy(l:url, l:copy)
+endfunction
+
+function! git_open#legacy#open_requests_for_remote(remote_name, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '', l:info.provider)
+    let l:copy  = a:0 > 1 && a:2
+    let l:repo_url = l:info.base_url . '/' . l:info.path
+    if l:info.provider ==# 'GitLab'
+        let l:url = l:repo_url . '/-/merge_requests' . l:state
+    else
+        let l:url = l:repo_url . '/pulls' . l:state
+    endif
+    call s:open_or_copy(l:url, l:copy)
+endfunction
+
+function! git_open#legacy#open_my_requests_for_remote(remote_name, ...) abort
+    let l:info = s:get_repo_info_for_remote(a:remote_name)
+    if empty(l:info)
+        call s:warn('No remote configured for: ' . a:remote_name)
+        return
+    endif
+    let l:state_arg = a:0 > 0 ? a:1 : ''
+    let l:copy      = a:0 > 1 && a:2
+    let l:state = s:parse_request_state(l:state_arg, l:info.provider)
+    if l:info.provider ==# 'GitLab'
+        let l:arg = tolower(trim(l:state_arg))
+        if l:arg =~# '^-search'
+            let l:parts = split(l:arg, '=')
+            let l:search_state = len(l:parts) > 1 ? l:parts[1] : ''
+            let l:search_url = l:info.base_url . '/dashboard/merge_requests/search?author_username=' . s:get_gitlab_username()
+            if l:search_state ==# 'closed' || l:search_state ==# 'merged'
+                let l:search_url .= '&state=' . l:search_state
+            elseif l:search_state ==# 'all'
+                let l:search_url .= '&state=all'
+            endif
+            let l:url = l:search_url
+        elseif l:arg ==# '-closed' || l:arg ==# '-merged'
+            let l:url = l:info.base_url . '/dashboard/merge_requests/merged'
+        else
+            let l:url = l:info.base_url . '/dashboard/merge_requests'
+        endif
+    elseif l:info.provider ==# 'GitHub'
+        let l:url = l:info.base_url . '/pulls' . (empty(l:state) ? '' : l:state . '+author%3A%40me')
+    else
+        " Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
+        " -closed/-merged → ?type=created_by&state=closed
+        let l:cb_arg = tolower(trim(l:state_arg))
+        if l:cb_arg ==# '-closed' || l:cb_arg ==# '-merged'
+            let l:url = l:info.base_url . '/pulls?type=created_by&state=closed'
+        elseif l:cb_arg ==# '-all'
+            let l:url = l:info.base_url . '/pulls?type=created_by'
+        else
+            let l:url = l:info.base_url . '/pulls'
+        endif
+    endif
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
 " Restore cpoptions

@@ -487,6 +487,9 @@ export def OpenBranch(branch_arg: string = '', copy: bool = false, visual: bool 
     if empty(branch) && visual
         branch = GetVisualSelection()
     endif
+    if empty(branch)
+        branch = GetCurrentBranch()
+    endif
 
     var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch)
     OpenOrCopy(url, copy)
@@ -577,6 +580,9 @@ export def OpenCommit(commit_arg: string = '', copy: bool = false, visual: bool 
     var commit = commit_arg
     if empty(commit) && visual
         commit = GetVisualSelection()
+    endif
+    if empty(commit)
+        commit = GetCurrentCommit()
     endif
 
     var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)

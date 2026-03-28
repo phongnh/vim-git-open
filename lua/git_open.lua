@@ -532,6 +532,9 @@ function M.open_branch(branch, copy, visual)
   if (not ref or ref == '') and visual then
     ref = get_visual_selection()
   end
+  if not ref or ref == '' then
+    ref = get_current_branch()
+  end
 
   local url = build_url(info.provider, info.base_url, info.path, 'branch', ref)
   open_or_copy(url, copy)
@@ -564,6 +567,9 @@ function M.open_commit(commit, copy, visual)
   local ref = commit
   if (not ref or ref == '') and visual then
     ref = get_visual_selection()
+  end
+  if not ref or ref == '' then
+    ref = get_current_commit()
   end
 
   local url = build_url(info.provider, info.base_url, info.path, 'commit', ref)

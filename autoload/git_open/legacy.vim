@@ -508,6 +508,9 @@ function! git_open#legacy#open_branch(...) abort
     if empty(l:branch) && l:visual
         let l:branch = s:get_visual_selection()
     endif
+    if empty(l:branch)
+        let l:branch = s:get_current_branch()
+    endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'branch', l:branch)
     call s:open_or_copy(l:url, l:copy)
@@ -548,6 +551,9 @@ function! git_open#legacy#open_commit(...) abort
 
     if empty(l:commit) && l:visual
         let l:commit = s:get_visual_selection()
+    endif
+    if empty(l:commit)
+        let l:commit = s:get_current_commit()
     endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit', l:commit)

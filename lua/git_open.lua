@@ -420,7 +420,7 @@ function M.complete_branch(arglead)
 end
 
 function M.complete_request_state(arglead)
-  local flags = { '-open', '-closed', '-merged', '-all' }
+  local flags = { '-open', '-closed', '-merged', '-all', '-search' }
   if not arglead or arglead == '' then
     return flags
   end
@@ -551,8 +551,16 @@ function M.open_my_requests(state_arg, copy)
   local state = parse_request_state(state_arg, info.provider)
   local url
   if info.provider == 'GitLab' then
-    local base = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. get_gitlab_username()
-    url = base .. (state ~= '' and ('&' .. state:sub(2)) or '')
+    local arg = vim.trim(state_arg or ''):lower()
+    if arg == '-search' then
+      -- -search: use search page scoped to author + optional state filter
+      url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. get_gitlab_username()
+    elseif arg == '-closed' or arg == '-merged' then
+      url = info.base_url .. '/dashboard/merge_requests/merged'
+    else
+      -- no flag / -open / -all: use the default dashboard page
+      url = info.base_url .. '/dashboard/merge_requests'
+    end
   elseif info.provider == 'GitHub' then
     -- No flag/-open: /pulls is already scoped to current user when logged in
     -- With state flag: append author:@me to keep scoped to current user

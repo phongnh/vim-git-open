@@ -435,7 +435,7 @@ function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
 endfunction
 
 function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
-    let l:flags = ['-open', '-closed', '-merged', '-all']
+    let l:flags = ['-open', '-closed', '-merged', '-all', '-search']
     if empty(a:arglead)
         return l:flags
     endif
@@ -574,7 +574,16 @@ function! git_open#legacy#open_my_requests(...) abort
     let l:copy = a:0 > 1 && a:2
 
     if l:info.provider ==# 'GitLab'
-        let l:url = l:info.base_url . '/dashboard/merge_requests/search?author_username=' . s:get_gitlab_username() . (empty(l:state) ? '' : '&' . l:state[1:])
+        let l:arg = tolower(trim(a:0 > 0 ? a:1 : ''))
+        if l:arg ==# '-search'
+            " -search: use search page scoped to author + optional state filter
+            let l:url = l:info.base_url . '/dashboard/merge_requests/search?author_username=' . s:get_gitlab_username()
+        elseif l:arg ==# '-closed' || l:arg ==# '-merged'
+            let l:url = l:info.base_url . '/dashboard/merge_requests/merged'
+        else
+            " no flag / -open / -all: use the default dashboard page
+            let l:url = l:info.base_url . '/dashboard/merge_requests'
+        endif
     elseif l:info.provider ==# 'GitHub'
         " No flag/-open: /pulls is already scoped to current user when logged in
         " With state flag: append author:@me to keep scoped to current user

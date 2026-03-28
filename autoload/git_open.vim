@@ -412,7 +412,7 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
 enddef
 
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
-    var flags = ['-open', '-closed', '-merged', '-all']
+    var flags = ['-open', '-closed', '-merged', '-all', '-search']
     if empty(arglead)
         return flags
     endif
@@ -452,7 +452,16 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     var state = ParseRequestState(state_arg, info.provider)
     var url: string
     if info.provider ==# 'GitLab'
-        url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername() .. (empty(state) ? '' : '&' .. state[1 :])
+        var arg = tolower(trim(state_arg))
+        if arg ==# '-search'
+            # -search: use search page scoped to author + optional state filter
+            url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername()
+        elseif arg ==# '-closed' || arg ==# '-merged'
+            url = info.base_url .. '/dashboard/merge_requests/merged'
+        else
+            # no flag / -open / -all: use the default dashboard page
+            url = info.base_url .. '/dashboard/merge_requests'
+        endif
     elseif info.provider ==# 'GitHub'
         # No flag/-open: /pulls is already scoped to current user when logged in
         # With state flag: append author:@me to keep scoped to current user

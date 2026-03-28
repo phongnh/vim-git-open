@@ -263,10 +263,10 @@ enddef
 
 def BuildUrl(provider: string, base_url: string, path: string, type: string, ...extra: list<any>): string
     if provider ==# 'GitLab'
-        return BuildGitlabUrl(base_url, path, type, ...extra)
+        return call(BuildGitlabUrl, [base_url, path, type] + extra)
     else
         # Default to GitHub (includes Codeberg)
-        return BuildGithubUrl(base_url, path, type, ...extra)
+        return call(BuildGithubUrl, [base_url, path, type] + extra)
     endif
 enddef
 

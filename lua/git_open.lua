@@ -187,14 +187,16 @@ local function parse_pr_mr_from_commit(provider)
 end
 
 -- Parse state flag from command args: -open, -closed, -merged, -all
--- Returns '' (open/default), 'closed', 'all'
--- GitHub/Codeberg have no separate merged state: -merged maps to 'closed'
+-- Returns the query string suffix to append to the pulls URL (GitHub/Codeberg).
+-- -open / empty: '' (no query; /pulls defaults to open)
+-- -closed/-merged: '?q=is%3Apr+is%3Aclosed'
+-- -all:            '?q=is%3Apr'
 local function parse_request_state(args)
   local arg = vim.trim(args or ''):lower()
   if arg == '-closed' or arg == '-merged' then
-    return 'closed'
+    return '?q=is%3Apr+is%3Aclosed'
   elseif arg == '-all' then
-    return 'all'
+    return '?q=is%3Apr'
   end
   return ''
 end
@@ -518,11 +520,8 @@ function M.open_my_requests(state_arg, copy)
   if info.provider == 'GitLab' then
     url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. (vim.fn.expand('$USER') or '')
   else
-    -- GitHub and Codeberg
-    url = info.base_url .. '/pulls'
-    if state ~= '' then
-      url = url .. '?state=' .. state
-    end
+    -- GitHub and Codeberg: state is already a full query string or empty
+    url = info.base_url .. '/pulls' .. state
   end
 
   open_or_copy(url, copy)
@@ -540,11 +539,8 @@ function M.open_requests(state_arg, copy)
   if info.provider == 'GitLab' then
     url = repo_url .. '/-/merge_requests'
   else
-    -- GitHub and Codeberg
-    url = repo_url .. '/pulls'
-    if state ~= '' then
-      url = url .. '?state=' .. state
-    end
+    -- GitHub and Codeberg: state is already a full query string or empty
+    url = repo_url .. '/pulls' .. state
   end
 
   open_or_copy(url, copy)

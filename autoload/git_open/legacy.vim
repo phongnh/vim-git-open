@@ -196,14 +196,16 @@ function! s:parse_pr_mr_from_commit(provider) abort
 endfunction
 
 " Parse state flag from command args: -open, -closed, -merged, -all
-" Returns '' (open/default), 'closed', 'all'
-" GitHub/Codeberg have no separate merged state: -merged maps to 'closed'
+" Returns the query string suffix to append to the pulls URL (GitHub/Codeberg).
+" -open / empty: '' (no query; /pulls defaults to open)
+" -closed/-merged: '?q=is%3Apr+is%3Aclosed'
+" -all:            '?q=is%3Apr'
 function! s:parse_request_state(args) abort
     let l:arg = tolower(trim(a:args))
     if l:arg ==# '-closed' || l:arg ==# '-merged'
-        return 'closed'
+        return '?q=is%3Apr+is%3Aclosed'
     elseif l:arg ==# '-all'
-        return 'all'
+        return '?q=is%3Apr'
     endif
     return ''
 endfunction
@@ -545,11 +547,8 @@ function! git_open#legacy#open_my_requests(...) abort
     if l:info.provider ==# 'GitLab'
         let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER')
     else
-        " GitHub and Codeberg
-        let l:url = l:info.base_url . '/pulls'
-        if !empty(l:state)
-            let l:url .= '?state=' . l:state
-        endif
+        " GitHub and Codeberg: state is already a full query string or empty
+        let l:url = l:info.base_url . '/pulls' . l:state
     endif
 
     call s:open_or_copy(l:url, l:copy)
@@ -569,11 +568,8 @@ function! git_open#legacy#open_requests(...) abort
     if l:info.provider ==# 'GitLab'
         let l:url = l:repo_url . '/-/merge_requests'
     else
-        " GitHub and Codeberg
-        let l:url = l:repo_url . '/pulls'
-        if !empty(l:state)
-            let l:url .= '?state=' . l:state
-        endif
+        " GitHub and Codeberg: state is already a full query string or empty
+        let l:url = l:repo_url . '/pulls' . l:state
     endif
 
     call s:open_or_copy(l:url, l:copy)

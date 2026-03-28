@@ -187,14 +187,16 @@ def ParsePrMrFromCommit(provider: string): string
 enddef
 
 # Parse state flag from command args: -open, -closed, -merged, -all
-# Returns '' (open/default), 'closed', 'all'
-# GitHub/Codeberg have no separate merged state: -merged maps to 'closed'
+# Returns the query string suffix to append to the pulls URL (GitHub/Codeberg).
+# -open / empty: '' (no query; /pulls defaults to open)
+# -closed/-merged: '?q=is%3Apr+is%3Aclosed'
+# -all:            '?q=is%3Apr'
 def ParseRequestState(args: string): string
     var arg = tolower(trim(args))
     if arg ==# '-closed' || arg ==# '-merged'
-        return 'closed'
+        return '?q=is%3Apr+is%3Aclosed'
     elseif arg ==# '-all'
-        return 'all'
+        return '?q=is%3Apr'
     endif
     return ''
 enddef
@@ -423,11 +425,8 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     if info.provider ==# 'GitLab'
         url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER')
     else
-        # GitHub and Codeberg
-        url = info.base_url .. '/pulls'
-        if !empty(state)
-            url ..= '?state=' .. state
-        endif
+        # GitHub and Codeberg: state is already a full query string or empty
+        url = info.base_url .. '/pulls' .. state
     endif
 
     OpenOrCopy(url, copy)
@@ -445,11 +444,8 @@ export def OpenRequests(state_arg: string = '', copy: bool = false)
     if info.provider ==# 'GitLab'
         url = repo_url .. '/-/merge_requests'
     else
-        # GitHub and Codeberg
-        url = repo_url .. '/pulls'
-        if !empty(state)
-            url ..= '?state=' .. state
-        endif
+        # GitHub and Codeberg: state is already a full query string or empty
+        url = repo_url .. '/pulls' .. state
     endif
 
     OpenOrCopy(url, copy)

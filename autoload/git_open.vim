@@ -381,34 +381,32 @@ enddef
 # Completion Functions
 # ============================================================================
 
+def UniqueAdd(seen: dict<bool>, result: list<string>, items: list<string>)
+    for item in items
+        if !has_key(seen, item)
+            seen[item] = true
+            result->add(item)
+        endif
+    endfor
+enddef
+
+def FuzzyFilter(result: list<string>, arglead: string): list<string>
+    if empty(arglead)
+        return result
+    endif
+    return matchfuzzy(result, arglead)
+enddef
+
 export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
     # Local branches sorted by most recent commit (-committerdate)
     var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
     # Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
     var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
-
-    var branches: list<string> = []
-    if !empty(local_raw)
-        branches += split(local_raw, '\n')
-    endif
-    if !empty(remote_raw)
-        branches += filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD')
-    endif
-
-    # Deduplicate while preserving order (local branches first)
     var seen: dict<bool> = {}
     var result: list<string> = []
-    for b in branches
-        if !has_key(seen, b)
-            seen[b] = true
-            result->add(b)
-        endif
-    endfor
-
-    if empty(arglead)
-        return result
-    endif
-    return matchfuzzy(result, arglead)
+    UniqueAdd(seen, result, empty(local_raw) ? [] : split(local_raw, '\n'))
+    UniqueAdd(seen, result, empty(remote_raw) ? [] : filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD'))
+    return FuzzyFilter(result, arglead)
 enddef
 
 export def CompleteGitkBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
@@ -416,67 +414,30 @@ export def CompleteGitkBranch(arglead: string, cmdline: string, cursorpos: numbe
     # e.g. main, origin/main, origin/feature
     var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
     var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
-    var result: list<string> = []
     var seen: dict<bool> = {}
-    if !empty(local_raw)
-        for b in split(local_raw, '\n')
-            if !has_key(seen, b)
-                seen[b] = true
-                result->add(b)
-            endif
-        endfor
-    endif
-    if !empty(remote_raw)
-        for b in filter(split(remote_raw, '\n'), (_, v) => v !~# '/HEAD$')
-            if !has_key(seen, b)
-                seen[b] = true
-                result->add(b)
-            endif
-        endfor
-    endif
-    if empty(arglead)
-        return result
-    endif
-    return matchfuzzy(result, arglead)
+    var result: list<string> = []
+    UniqueAdd(seen, result, empty(local_raw) ? [] : split(local_raw, '\n'))
+    UniqueAdd(seen, result, empty(remote_raw) ? [] : filter(split(remote_raw, '\n'), (_, v) => v !~# '/HEAD$'))
+    return FuzzyFilter(result, arglead)
 enddef
 
 export def CompleteGitkArgs(arglead: string, cmdline: string, cursorpos: number): list<string>
     # Branches (local plain + remote with prefix) then tracked files
-    var result = CompleteGitkBranch('', '', 0)
     var seen: dict<bool> = {}
-    for b in result
-        seen[b] = true
-    endfor
+    var result: list<string> = []
+    UniqueAdd(seen, result, CompleteGitkBranch('', '', 0))
     var files_raw = GitCommand('ls-files')
-    if !empty(files_raw)
-        for f in split(files_raw, '\n')
-            if !has_key(seen, f)
-                seen[f] = true
-                result->add(f)
-            endif
-        endfor
-    endif
-    if empty(arglead)
-        return result
-    endif
-    return matchfuzzy(result, arglead)
+    UniqueAdd(seen, result, empty(files_raw) ? [] : split(files_raw, '\n'))
+    return FuzzyFilter(result, arglead)
 enddef
 
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
-    var flags = ['-open', '-closed', '-merged', '-all']
-    if empty(arglead)
-        return flags
-    endif
-    return matchfuzzy(flags, arglead)
+    return FuzzyFilter(['-open', '-closed', '-merged', '-all'], arglead)
 enddef
 
 export def CompleteMyRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
-    var flags = ['-open', '-closed', '-merged', '-all',
-                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all']
-    if empty(arglead)
-        return flags
-    endif
-    return matchfuzzy(flags, arglead)
+    return FuzzyFilter(['-open', '-closed', '-merged', '-all',
+                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], arglead)
 enddef
 
 # ============================================================================
@@ -658,7 +619,6 @@ def LaunchGitk(args: list<string>, git_root: string)
         Warn('git-open: gitk not found in PATH')
         return
     endif
-    echom 'git-open: gitk ' .. join(args->copy()->map((_, v) => shellescape(v))) .. '  (cwd: ' .. git_root .. ')'
     if exists(':Launch') == 2
         # Vim 9.2+ built-in cross-platform GUI launcher (plugin/openPlugin.vim)
         # :Launch does not support cwd, so temporarily cd to git root.

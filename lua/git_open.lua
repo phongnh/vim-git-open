@@ -383,6 +383,22 @@ end
 -- Completion Functions
 -- ============================================================================
 
+local function unique_add(seen, result, items)
+  for _, item in ipairs(items) do
+    if not seen[item] then
+      seen[item] = true
+      table.insert(result, item)
+    end
+  end
+end
+
+local function fuzzy_filter(result, arglead)
+  if not arglead or arglead == '' then
+    return result
+  end
+  return vim.fn.matchfuzzy(result, arglead)
+end
+
 -- ============================================================================
 -- Gitk Helper Functions
 -- ============================================================================
@@ -426,34 +442,17 @@ function M.complete_branch(arglead)
   -- Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
   local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
 
-  local branches = {}
-  if local_raw and local_raw ~= '' then
-    for _, b in ipairs(vim.split(local_raw, '\n', { plain = true, trimempty = true })) do
-      table.insert(branches, b)
-    end
-  end
-  if remote_raw and remote_raw ~= '' then
-    for _, b in ipairs(vim.split(remote_raw, '\n', { plain = true, trimempty = true })) do
-      if b ~= 'HEAD' then
-        table.insert(branches, b)
-      end
-    end
-  end
-
-  -- Deduplicate while preserving order (local branches first)
   local seen = {}
   local result = {}
-  for _, b in ipairs(branches) do
-    if not seen[b] then
-      seen[b] = true
-      table.insert(result, b)
-    end
+  if local_raw and local_raw ~= '' then
+    unique_add(seen, result, vim.split(local_raw, '\n', { plain = true, trimempty = true }))
   end
-
-  if not arglead or arglead == '' then
-    return result
+  if remote_raw and remote_raw ~= '' then
+    local remotes = vim.tbl_filter(function(b) return b ~= 'HEAD' end,
+      vim.split(remote_raw, '\n', { plain = true, trimempty = true }))
+    unique_add(seen, result, remotes)
   end
-  return vim.fn.matchfuzzy(result, arglead)
+  return fuzzy_filter(result, arglead)
 end
 
 function M.complete_gitk_branch(arglead)
@@ -464,63 +463,35 @@ function M.complete_gitk_branch(arglead)
   local seen = {}
   local result = {}
   if local_raw and local_raw ~= '' then
-    for _, b in ipairs(vim.split(local_raw, '\n', { plain = true, trimempty = true })) do
-      if not seen[b] then
-        seen[b] = true
-        table.insert(result, b)
-      end
-    end
+    unique_add(seen, result, vim.split(local_raw, '\n', { plain = true, trimempty = true }))
   end
   if remote_raw and remote_raw ~= '' then
-    for _, b in ipairs(vim.split(remote_raw, '\n', { plain = true, trimempty = true })) do
-      if not b:match('/HEAD$') and not seen[b] then
-        seen[b] = true
-        table.insert(result, b)
-      end
-    end
+    local remotes = vim.tbl_filter(function(b) return not b:match('/HEAD$') end,
+      vim.split(remote_raw, '\n', { plain = true, trimempty = true }))
+    unique_add(seen, result, remotes)
   end
-
-  if not arglead or arglead == '' then
-    return result
-  end
-  return vim.fn.matchfuzzy(result, arglead)
+  return fuzzy_filter(result, arglead)
 end
 
 function M.complete_gitk_args(arglead)
   -- Branches (local plain + remote with prefix) then tracked files
-  local result = M.complete_gitk_branch('')
   local seen = {}
-  for _, b in ipairs(result) do seen[b] = true end
+  local result = {}
+  unique_add(seen, result, M.complete_gitk_branch(''))
   local files_raw = git_command('ls-files')
   if files_raw and files_raw ~= '' then
-    for _, f in ipairs(vim.split(files_raw, '\n', { plain = true, trimempty = true })) do
-      if not seen[f] then
-        seen[f] = true
-        table.insert(result, f)
-      end
-    end
+    unique_add(seen, result, vim.split(files_raw, '\n', { plain = true, trimempty = true }))
   end
-  if not arglead or arglead == '' then
-    return result
-  end
-  return vim.fn.matchfuzzy(result, arglead)
+  return fuzzy_filter(result, arglead)
 end
 
 function M.complete_request_state(arglead)
-  local flags = { '-open', '-closed', '-merged', '-all' }
-  if not arglead or arglead == '' then
-    return flags
-  end
-  return vim.fn.matchfuzzy(flags, arglead)
+  return fuzzy_filter({ '-open', '-closed', '-merged', '-all' }, arglead)
 end
 
 function M.complete_my_request_state(arglead)
-  local flags = { '-open', '-closed', '-merged', '-all',
-    '-search', '-search=open', '-search=closed', '-search=merged', '-search=all' }
-  if not arglead or arglead == '' then
-    return flags
-  end
-  return vim.fn.matchfuzzy(flags, arglead)
+  return fuzzy_filter({ '-open', '-closed', '-merged', '-all',
+    '-search', '-search=open', '-search=closed', '-search=merged', '-search=all' }, arglead)
 end
 
 -- ============================================================================

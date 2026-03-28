@@ -401,37 +401,35 @@ endfunction
 " Completion Functions
 " ============================================================================
 
+function! s:unique_add(seen, result, items) abort
+    for l:item in a:items
+        if !has_key(a:seen, l:item)
+            let a:seen[l:item] = 1
+            call add(a:result, l:item)
+        endif
+    endfor
+endfunction
+
+function! s:fuzzy_filter(result, arglead) abort
+    if empty(a:arglead)
+        return a:result
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(a:result, a:arglead)
+    endif
+    return filter(copy(a:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
 function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
     " Local branches sorted by most recent commit (-committerdate)
     let l:local_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
     " Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
     let l:remote_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
-
-    let l:branches = []
-    if !empty(l:local_raw)
-        let l:branches += split(l:local_raw, '\n')
-    endif
-    if !empty(l:remote_raw)
-        let l:branches += filter(split(l:remote_raw, '\n'), 'v:val !=# ''HEAD''')
-    endif
-
-    " Deduplicate while preserving order (local branches first)
     let l:seen = {}
     let l:result = []
-    for l:b in l:branches
-        if !has_key(l:seen, l:b)
-            let l:seen[l:b] = 1
-            call add(l:result, l:b)
-        endif
-    endfor
-
-    if empty(a:arglead)
-        return l:result
-    endif
-    if exists('*matchfuzzy')
-        return matchfuzzy(l:result, a:arglead)
-    endif
-    return filter(l:result, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+    call s:unique_add(l:seen, l:result, empty(l:local_raw) ? [] : split(l:local_raw, '\n'))
+    call s:unique_add(l:seen, l:result, empty(l:remote_raw) ? [] : filter(split(l:remote_raw, '\n'), 'v:val !=# ''HEAD'''))
+    return s:fuzzy_filter(l:result, a:arglead)
 endfunction
 
 function! git_open#legacy#complete_gitk_branch(arglead, cmdline, cursorpos) abort
@@ -440,77 +438,28 @@ function! git_open#legacy#complete_gitk_branch(arglead, cmdline, cursorpos) abor
     let l:remote_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
     let l:seen = {}
     let l:result = []
-    if !empty(l:local_raw)
-        for l:b in split(l:local_raw, '\n')
-            if !has_key(l:seen, l:b)
-                let l:seen[l:b] = 1
-                call add(l:result, l:b)
-            endif
-        endfor
-    endif
-    if !empty(l:remote_raw)
-        for l:b in filter(split(l:remote_raw, '\n'), 'v:val !~# ''/HEAD$''')
-            if !has_key(l:seen, l:b)
-                let l:seen[l:b] = 1
-                call add(l:result, l:b)
-            endif
-        endfor
-    endif
-    if empty(a:arglead)
-        return l:result
-    endif
-    if exists('*matchfuzzy')
-        return matchfuzzy(l:result, a:arglead)
-    endif
-    return filter(copy(l:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+    call s:unique_add(l:seen, l:result, empty(l:local_raw) ? [] : split(l:local_raw, '\n'))
+    call s:unique_add(l:seen, l:result, empty(l:remote_raw) ? [] : filter(split(l:remote_raw, '\n'), 'v:val !~# ''/HEAD$'''))
+    return s:fuzzy_filter(l:result, a:arglead)
 endfunction
 
 function! git_open#legacy#complete_gitk_args(arglead, cmdline, cursorpos) abort
     " Branches (local plain + remote with prefix) then tracked files
-    let l:result = git_open#legacy#complete_gitk_branch('', '', 0)
     let l:seen = {}
-    for l:b in l:result
-        let l:seen[l:b] = 1
-    endfor
+    let l:result = []
+    call s:unique_add(l:seen, l:result, git_open#legacy#complete_gitk_branch('', '', 0))
     let l:files_raw = s:git_command('ls-files')
-    if !empty(l:files_raw)
-        for l:f in split(l:files_raw, '\n')
-            if !has_key(l:seen, l:f)
-                let l:seen[l:f] = 1
-                call add(l:result, l:f)
-            endif
-        endfor
-    endif
-    if empty(a:arglead)
-        return l:result
-    endif
-    if exists('*matchfuzzy')
-        return matchfuzzy(l:result, a:arglead)
-    endif
-    return filter(copy(l:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+    call s:unique_add(l:seen, l:result, empty(l:files_raw) ? [] : split(l:files_raw, '\n'))
+    return s:fuzzy_filter(l:result, a:arglead)
 endfunction
 
 function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
-    let l:flags = ['-open', '-closed', '-merged', '-all']
-    if empty(a:arglead)
-        return l:flags
-    endif
-    if exists('*matchfuzzy')
-        return matchfuzzy(l:flags, a:arglead)
-    endif
-    return filter(copy(l:flags), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+    return s:fuzzy_filter(['-open', '-closed', '-merged', '-all'], a:arglead)
 endfunction
 
 function! git_open#legacy#complete_my_request_state(arglead, cmdline, cursorpos) abort
-    let l:flags = ['-open', '-closed', '-merged', '-all',
-                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all']
-    if empty(a:arglead)
-        return l:flags
-    endif
-    if exists('*matchfuzzy')
-        return matchfuzzy(l:flags, a:arglead)
-    endif
-    return filter(copy(l:flags), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+    return s:fuzzy_filter(['-open', '-closed', '-merged', '-all',
+                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], a:arglead)
 endfunction
 
 " ============================================================================

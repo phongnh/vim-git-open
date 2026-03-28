@@ -98,21 +98,14 @@ Manual installation:
 :OpenGitCommit
     Open the current commit in your browser.
 
-                                                                *:OpenGitPR*
-:OpenGitPR [number]
-    Open a pull request in your browser (GitHub/Codeberg).
-    
-    If [number] is provided, opens that specific PR.
-    If [number] is not provided, attempts to parse the PR number from the
-    current commit message (looks for #123 format).
+                                                            *:OpenGitRequest*
+:OpenGitRequest [number]
+    Open a pull request (GitHub/Codeberg) or merge request (GitLab) in your
+    browser. The type is auto-detected based on the git provider.
 
-                                                                *:OpenGitMR*
-:OpenGitMR [number]
-    Open a merge request in your browser (GitLab).
-    
-    If [number] is provided, opens that specific MR.
-    If [number] is not provided, attempts to parse the MR number from the
-    current commit message (looks for !123 format).
+    If [number] is provided, opens that specific PR/MR.
+    If [number] is not provided, attempts to parse the number from the
+    current commit message (looks for #123 or !123 format).
 
                                                     *:OpenGitFileLastChange*
 :OpenGitFileLastChange
@@ -126,8 +119,8 @@ Manual installation:
     This is useful for quickly jumping to the pull/merge request that
     introduced changes to the file you're currently editing.
 
-                                                        *:OpenGitMyPRs*
-:OpenGitMyPRs
+                                                        *:OpenGitMyRequests*
+:OpenGitMyRequests
     Open all your pull requests / merge requests for the current git provider.
 
     The URL opened depends on the provider:
@@ -136,8 +129,8 @@ Manual installation:
 
     This is useful for quickly reviewing all open PRs/MRs assigned to you.
 
-                                                        *:OpenGitPRs*
-:OpenGitPRs
+                                                        *:OpenGitRequests*
+:OpenGitRequests
     Open the pull requests / merge requests page for the current repository.
 
     The URL opened depends on the provider:
@@ -223,28 +216,22 @@ Basic usage:~
 
 Working with PRs/MRs:~
 >
-    " Open specific PR number
-    :OpenGitPR 123
-    
-    " Auto-parse PR from commit message
-    :OpenGitPR
-    
-    " Open specific MR number (GitLab)
-    :OpenGitMR 789
-    
-    " Auto-parse MR from commit message
-    :OpenGitMR
-    
+    " Open specific PR/MR number (auto-detects provider)
+    :OpenGitRequest 123
+
+    " Auto-parse PR/MR from commit message
+    :OpenGitRequest
+
     " Open the last change for current file
     " If the file's latest commit has a PR/MR, opens that PR/MR
     " Otherwise, opens the commit
     :OpenGitFileLastChange
 
     " Open my PRs/MRs for current git provider
-    :OpenGitMyPRs
+    :OpenGitMyRequests
 
     " Open PRs/MRs page for current repository
-    :OpenGitPRs
+    :OpenGitRequests
 <
 
 Recommended keymaps:~
@@ -263,18 +250,17 @@ Recommended keymaps:~
     " Open current commit
     nnoremap <leader>gc :OpenGitCommit<CR>
     
-    " Open PR/MR
-    nnoremap <leader>gp :OpenGitPR<CR>
-    nnoremap <leader>gm :OpenGitMR<CR>
-    
+    " Open PR/MR (auto-detects provider)
+    nnoremap <leader>gp :OpenGitRequest<CR>
+
     " Open last change for current file
     nnoremap <leader>gl :OpenGitFileLastChange<CR>
 
     " Open my PRs/MRs
-    nnoremap <leader>gP :OpenGitMyPRs<CR>
+    nnoremap <leader>gP :OpenGitMyRequests<CR>
 
     " Open PRs/MRs for current repo
-    nnoremap <leader>gR :OpenGitPRs<CR>
+    nnoremap <leader>gR :OpenGitRequests<CR>
 <
 
 Enterprise configuration:~
@@ -309,11 +295,10 @@ Neovim Lua configuration:~
     vim.keymap.set('n', '<leader>gb', '<cmd>OpenGitBranch<CR>')
     vim.keymap.set('n', '<leader>gf', '<cmd>OpenGitFile<CR>')
     vim.keymap.set('n', '<leader>gc', '<cmd>OpenGitCommit<CR>')
-    vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitPR<CR>')
-    vim.keymap.set('n', '<leader>gm', '<cmd>OpenGitMR<CR>')
+    vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitRequest<CR>')
     vim.keymap.set('n', '<leader>gl', '<cmd>OpenGitFileLastChange<CR>')
-    vim.keymap.set('n', '<leader>gP', '<cmd>OpenGitMyPRs<CR>')
-    vim.keymap.set('n', '<leader>gR', '<cmd>OpenGitPRs<CR>')
+    vim.keymap.set('n', '<leader>gP', '<cmd>OpenGitMyRequests<CR>')
+    vim.keymap.set('n', '<leader>gR', '<cmd>OpenGitRequests<CR>')
 <
 
 ==============================================================================

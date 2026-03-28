@@ -339,7 +339,7 @@ export def OpenBranch()
     OpenBrowser(url)
 enddef
 
-export def OpenMyPRs()
+export def OpenMyRequests()
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -356,7 +356,7 @@ export def OpenMyPRs()
     OpenBrowser(url)
 enddef
 
-export def OpenPRs()
+export def OpenRequests()
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -402,37 +402,21 @@ export def OpenCommit()
     OpenBrowser(url)
 enddef
 
-export def OpenPR(pr_arg: string = '')
+export def OpenRequest(req_arg: string = '')
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
-    
-    var pr_number = !empty(pr_arg) ? pr_arg : ParsePrMrFromCommit(info.provider)
-    
-    if empty(pr_number)
-        echoerr 'No PR number specified and could not parse from commit message'
-        return
-    endif
-    
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'pr', pr_number)
-    OpenBrowser(url)
-enddef
 
-export def OpenMR(mr_arg: string = '')
-    var info = GetRepoInfo()
-    if empty(info)
+    var number = !empty(req_arg) ? req_arg : ParsePrMrFromCommit(info.provider)
+
+    if empty(number)
+        echoerr 'No request number specified and could not parse from commit message'
         return
     endif
-    
-    var mr_number = !empty(mr_arg) ? mr_arg : ParsePrMrFromCommit(info.provider)
-    
-    if empty(mr_number)
-        echoerr 'No MR number specified and could not parse from commit message'
-        return
-    endif
-    
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'mr', mr_number)
+
+    var type = info.provider ==# 'GitLab' ? 'mr' : 'pr'
+    var url = BuildUrl(info.provider, info.base_url, info.path, type, number)
     OpenBrowser(url)
 enddef
 

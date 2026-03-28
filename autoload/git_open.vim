@@ -394,38 +394,21 @@ function! git_open#open_commit() abort
 endfunction
 
 " Open pull request (GitHub/Codeberg)
-function! git_open#open_pr(...) abort
+function! git_open#open_request(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
     endif
-    
-    let l:pr_number = a:0 > 0 && !empty(a:1) ? a:1 : s:parse_pr_mr_from_commit(l:info.provider)
-    
-    if empty(l:pr_number)
-        echoerr 'No PR number specified and could not parse from commit message'
-        return
-    endif
-    
-    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'pr', l:pr_number)
-    call s:open_browser(l:url)
-endfunction
 
-" Open merge request (GitLab)
-function! git_open#open_mr(...) abort
-    let l:info = s:get_repo_info()
-    if empty(l:info)
+    let l:number = a:0 > 0 && !empty(a:1) ? a:1 : s:parse_pr_mr_from_commit(l:info.provider)
+
+    if empty(l:number)
+        echoerr 'No request number specified and could not parse from commit message'
         return
     endif
-    
-    let l:mr_number = a:0 > 0 && !empty(a:1) ? a:1 : s:parse_pr_mr_from_commit(l:info.provider)
-    
-    if empty(l:mr_number)
-        echoerr 'No MR number specified and could not parse from commit message'
-        return
-    endif
-    
-    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'mr', l:mr_number)
+
+    let l:type = l:info.provider ==# 'GitLab' ? 'mr' : 'pr'
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, l:type, l:number)
     call s:open_browser(l:url)
 endfunction
 
@@ -472,7 +455,7 @@ function! git_open#open_file_last_change() abort
 endfunction
 
 " Open my pull requests / merge requests for current git provider
-function! git_open#open_my_prs() abort
+function! git_open#open_my_requests() abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
@@ -489,7 +472,7 @@ function! git_open#open_my_prs() abort
 endfunction
 
 " Open pull requests / merge requests page for current repository
-function! git_open#open_prs() abort
+function! git_open#open_requests() abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return

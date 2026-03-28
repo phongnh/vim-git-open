@@ -53,11 +53,10 @@ command! -nargs=0 OpenGitRepo call git_open#open_repo()
 command! -nargs=0 OpenGitBranch call git_open#open_branch()
 command! -nargs=0 -range OpenGitFile <line1>,<line2>call git_open#open_file()
 command! -nargs=0 OpenGitCommit call git_open#open_commit()
-command! -nargs=? OpenGitPR call git_open#open_pr(<q-args>)
-command! -nargs=? OpenGitMR call git_open#open_mr(<q-args>)
+command! -nargs=? OpenGitRequest call git_open#open_request(<q-args>)
 command! -nargs=0 OpenGitFileLastChange call git_open#open_file_last_change()
-command! -nargs=0 OpenGitMyPRs call git_open#open_my_prs()
-command! -nargs=0 OpenGitPRs call git_open#open_prs()
+command! -nargs=0 OpenGitMyRequests call git_open#open_my_requests()
+command! -nargs=0 OpenGitRequests call git_open#open_requests()
 
 " Restore cpoptions
 let &cpoptions = s:save_cpo

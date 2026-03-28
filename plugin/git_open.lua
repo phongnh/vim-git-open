@@ -29,22 +29,18 @@ vim.api.nvim_create_user_command('OpenGitCommit', function()
   git_open.open_commit()
 end, {})
 
-vim.api.nvim_create_user_command('OpenGitPR', function(opts)
-  git_open.open_pr(opts.args)
-end, { nargs = '?' })
-
-vim.api.nvim_create_user_command('OpenGitMR', function(opts)
-  git_open.open_mr(opts.args)
+vim.api.nvim_create_user_command('OpenGitRequest', function(opts)
+  git_open.open_request(opts.args)
 end, { nargs = '?' })
 
 vim.api.nvim_create_user_command('OpenGitFileLastChange', function()
   git_open.open_file_last_change()
 end, {})
 
-vim.api.nvim_create_user_command('OpenGitMyPRs', function()
-  git_open.open_my_prs()
+vim.api.nvim_create_user_command('OpenGitMyRequests', function()
+  git_open.open_my_requests()
 end, {})
 
-vim.api.nvim_create_user_command('OpenGitPRs', function()
-  git_open.open_prs()
+vim.api.nvim_create_user_command('OpenGitRequests', function()
+  git_open.open_requests()
 end, {})

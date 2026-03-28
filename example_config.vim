@@ -53,17 +53,15 @@ vnoremap <leader>gf :OpenGitFile<CR>
 " Open current commit
 nnoremap <leader>gc :OpenGitCommit<CR>
 
-" Open PR/MR
-nnoremap <leader>gp :OpenGitPR<CR>
-nnoremap <leader>gm :OpenGitMR<CR>
+" Open PR/MR (auto-detects provider)
+nnoremap <leader>gp :OpenGitRequest<CR>
 
 " Alternative keymaps with git prefix
 " nnoremap <leader>gor :OpenGitRepo<CR>
 " nnoremap <leader>gob :OpenGitBranch<CR>
 " nnoremap <leader>gof :OpenGitFile<CR>
 " nnoremap <leader>goc :OpenGitCommit<CR>
-" nnoremap <leader>gop :OpenGitPR<CR>
-" nnoremap <leader>gom :OpenGitMR<CR>
+" nnoremap <leader>gop :OpenGitRequest<CR>
 
 " -----------------------------------------------------------------------------
 " Lua Configuration (Neovim only)
@@ -94,6 +92,5 @@ nnoremap <leader>gm :OpenGitMR<CR>
 " vim.keymap.set('n', '<leader>gf', '<cmd>OpenGitFile<CR>', { desc = 'Open Git File' })
 " vim.keymap.set('v', '<leader>gf', '<cmd>OpenGitFile<CR>', { desc = 'Open Git File (range)' })
 " vim.keymap.set('n', '<leader>gc', '<cmd>OpenGitCommit<CR>', { desc = 'Open Git Commit' })
-" vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitPR<CR>', { desc = 'Open Git PR' })
-" vim.keymap.set('n', '<leader>gm', '<cmd>OpenGitMR<CR>', { desc = 'Open Git MR' })
+" vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitRequest<CR>', { desc = 'Open Git Request' })
 " EOF

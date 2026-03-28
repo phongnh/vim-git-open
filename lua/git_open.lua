@@ -367,43 +367,24 @@ function M.open_commit()
   open_browser(url)
 end
 
-function M.open_pr(pr_number)
+function M.open_request(number)
   local info = get_repo_info()
   if not info then
     return
   end
-  
-  local pr = pr_number
-  if not pr or pr == '' then
-    pr = parse_pr_mr_from_commit(info.provider)
-  end
-  
-  if not pr or pr == '' then
-    vim.api.nvim_err_writeln('No PR number specified and could not parse from commit message')
-    return
-  end
-  
-  local url = build_url(info.provider, info.base_url, info.path, 'pr', pr)
-  open_browser(url)
-end
 
-function M.open_mr(mr_number)
-  local info = get_repo_info()
-  if not info then
+  local req = number
+  if not req or req == '' then
+    req = parse_pr_mr_from_commit(info.provider)
+  end
+
+  if not req or req == '' then
+    vim.api.nvim_err_writeln('No request number specified and could not parse from commit message')
     return
   end
-  
-  local mr = mr_number
-  if not mr or mr == '' then
-    mr = parse_pr_mr_from_commit(info.provider)
-  end
-  
-  if not mr or mr == '' then
-    vim.api.nvim_err_writeln('No MR number specified and could not parse from commit message')
-    return
-  end
-  
-  local url = build_url(info.provider, info.base_url, info.path, 'mr', mr)
+
+  local type = info.provider == 'GitLab' and 'mr' or 'pr'
+  local url = build_url(info.provider, info.base_url, info.path, type, req)
   open_browser(url)
 end
 
@@ -449,7 +430,7 @@ function M.open_file_last_change()
   open_browser(url)
 end
 
-function M.open_my_prs()
+function M.open_my_requests()
   local info = get_repo_info()
   if not info then
     return
@@ -466,7 +447,7 @@ function M.open_my_prs()
   open_browser(url)
 end
 
-function M.open_prs()
+function M.open_requests()
   local info = get_repo_info()
   if not info then
     return

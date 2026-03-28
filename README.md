@@ -60,11 +60,10 @@ cp -r vim-git-open/autoload ~/.vim/
 | `:OpenGitBranch` | Open the current branch in browser |
 | `:OpenGitFile` | Open the current file at current commit (supports line numbers) |
 | `:OpenGitCommit` | Open the current commit |
-| `:OpenGitPR [number]` | Open pull request (GitHub/Codeberg). Auto-parses from commit if no number given |
-| `:OpenGitMR [number]` | Open merge request (GitLab). Auto-parses from commit if no number given |
+| `:OpenGitRequest [number]` | Open pull/merge request (auto-detects provider). Auto-parses from commit if no number given |
 | `:OpenGitFileLastChange` | Open the PR/MR or commit that last changed the current file |
-| `:OpenGitMyPRs` | Open all my pull requests / merge requests for the current git provider |
-| `:OpenGitPRs` | Open the pull requests / merge requests page for the current repository |
+| `:OpenGitMyRequests` | Open all my pull requests / merge requests for the current git provider |
+| `:OpenGitRequests` | Open the pull requests / merge requests page for the current repository |
 
 ### Line Number Support
 
@@ -153,20 +152,14 @@ export BROWSER=firefox
 :OpenGitCommit
 ```
 
-### Working with PRs/MRs
+### Working with Requests (PRs/MRs)
 
 ```vim
-" Open specific PR number
-:OpenGitPR 123
+" Open specific PR/MR number (auto-detects provider)
+:OpenGitRequest 123
 
-" Auto-parse PR from commit message (e.g., "Fix bug (#456)")
-:OpenGitPR
-
-" Open specific MR number (GitLab)
-:OpenGitMR 789
-
-" Auto-parse MR from commit message (e.g., "Merge !234")
-:OpenGitMR
+" Auto-parse PR/MR from commit message (e.g., "Fix bug (#456)" or "Merge !234")
+:OpenGitRequest
 
 " Open the last change for current file
 " If the file's latest commit has a PR/MR number, opens that PR/MR
@@ -174,10 +167,10 @@ export BROWSER=firefox
 :OpenGitFileLastChange
 
 " Open my PRs/MRs for current git provider
-:OpenGitMyPRs
+:OpenGitMyRequests
 
 " Open PRs/MRs page for current repository
-:OpenGitPRs
+:OpenGitRequests
 ```
 
 ### Example Keymaps
@@ -199,18 +192,17 @@ vnoremap <leader>gf :OpenGitFile<CR>
 " Open current commit
 nnoremap <leader>gc :OpenGitCommit<CR>
 
-" Open PR/MR
-nnoremap <leader>gp :OpenGitPR<CR>
-nnoremap <leader>gm :OpenGitMR<CR>
+" Open PR/MR (auto-detects provider)
+nnoremap <leader>gp :OpenGitRequest<CR>
 
 " Open last change for current file
 nnoremap <leader>gl :OpenGitFileLastChange<CR>
 
 " Open my PRs/MRs
-nnoremap <leader>gP :OpenGitMyPRs<CR>
+nnoremap <leader>gP :OpenGitMyRequests<CR>
 
 " Open PRs/MRs for current repo
-nnoremap <leader>gR :OpenGitPRs<CR>
+nnoremap <leader>gR :OpenGitRequests<CR>
 ```
 
 ## How It Works

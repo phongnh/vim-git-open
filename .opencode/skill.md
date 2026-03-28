@@ -178,7 +178,12 @@ enddef
 " ParseRequestState(state_arg, provider) returns URL query string
 " GitHub:   '-closed' → '?q=is%3Apr+is%3Aclosed'
 " GitLab:   '-closed' → '?state=closed'
-" Codeberg: '-closed' → '?state=closed'
+" Codeberg: '-closed' → '?state=closed'  (used by OpenRequests only)
+"
+" OpenMyRequests Codeberg assembles its own query — does NOT use ParseRequestState output:
+"   no flag / -open → /pulls
+"   -all            → /pulls?type=created_by
+"   -closed/-merged → /pulls?type=created_by&state=closed
 ```
 
 ### GetGitRoot — 3-Step Detection

@@ -368,6 +368,41 @@ The implementation (all 6 plugin files) was committed in the previous session as
 
 ---
 
+## Session 7: Codeberg OpenMyRequests and OpenRequests URL Fixes
+**Date:** 2026-03-28 (continued)
+
+### Fix: Codeberg file/branch URL paths (from Session 6 alpha work)
+- `/blob/` → `/src/commit/{hash}/` (at commit) or `/src/branch/{branch}/` (at branch)
+- `/tree/` → `/src/branch/{branch}` (branch view)
+- **Commit:** ed21d72
+
+### Fix: Codeberg single PR URL
+- `/pull/{n}` → `/pulls/{n}` (plural)
+- **Commit:** 4affced
+
+### Fix: ParseRequestState — remove Codeberg -all → ?state=all case
+- `-all` now returns `''` for Codeberg (falls through like GitHub/GitLab)
+- `-closed`/`-merged` still return `?state=closed`
+- **Commit:** 15a0778
+
+### Fix: OpenMyRequests Codeberg — correct URL assembly
+- Initial fix had `?state=closed&type=created_by` (wrong order) and all non-closed cases → `?type=created_by` (no flag and -open should be bare)
+- Final correct behaviour:
+  - no flag / `-open` → `/pulls`
+  - `-all` → `/pulls?type=created_by`
+  - `-closed` / `-merged` → `/pulls?type=created_by&state=closed`
+- **Discovery:** Codeberg `OpenMyRequests` assembles its own query string — `type=created_by` comes first, only present when a flag is given, `state=closed` appended after for -closed/-merged
+- **Commits:** 15a0778, c184550
+
+### Fix: OpenRequests Codeberg — already correct after ParseRequestState fix
+- No code changes needed: `-all` now returns `''` → bare `/pulls` ✓
+
+### Docs: Update doc/git_open.txt, .opencode files
+- `doc/git_open.txt`: expanded `:OpenGitMyRequests` entry with per-provider URLs and Codeberg state table
+- `.opencode/` files updated (this session)
+
+---
+
 ## Key Discoveries (Cumulative)
 
 1. `string()` in Vim9script adds quotes around numbers — use `'' .. value`
@@ -402,6 +437,7 @@ The implementation (all 6 plugin files) was committed in the previous session as
 30. `b:` variables are accessible from autoload functions — no special scoping needed
 31. Lazy remote resolution: resolve `b:vim_git_open_remote` on first use, not at startup
 32. `git remote` via `system()` for listing remotes — simpler than re-using `GitCommand`
+33. Codeberg `OpenMyRequests` assembles its own query string: `type=created_by` comes first, only appended when a non-default flag is given; no flag/`-open` → bare `/pulls`; `-all` → `?type=created_by`; `-closed`/`-merged` → `?type=created_by&state=closed`
 
 ---
 
@@ -491,3 +527,7 @@ The implementation (all 6 plugin files) was committed in the previous session as
 | b526b54 | Update docs and .opencode: remove OpenGitkFileHistory, fix OpenGitkFile! description |
 | 2bf7ece | feat: add per-buffer remote selection with :OpenGitRemote command |
 | (pending) | docs: update README, doc, example_config, .opencode for v1.4.0 |
+| ed21d72 | fix: correct Codeberg URL paths (src/commit, src/branch, issues) |
+| 4affced | fix: use /pulls/{n} for Codeberg single PR URL |
+| 15a0778 | fix: correct Codeberg OpenMyRequests URL (type=created_by, no state=all) |
+| c184550 | fix: type=created_by before state, no flag/-open returns bare /pulls |

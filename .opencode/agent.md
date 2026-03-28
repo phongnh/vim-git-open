@@ -126,7 +126,7 @@ redraw!
 14. **Branch completion** uses two `for-each-ref` calls: `lstrip=2` for local (`refs/heads/`), `lstrip=3` for remote (`refs/remotes/`) to get bare names without `origin/` prefix. Filter `HEAD`, deduplicate local-first, sort by `-committerdate`.
 15. **`matchfuzzy()`** is always available in Vim9script and Neovim/Lua. In legacy Vimscript, check `exists('*matchfuzzy')` and fall back to prefix-regexp filter.
 16. **GitHub PR state filtering**: `?state=closed` routes to the issues endpoint (treats PRs as issues). Must use `?q=is%3Apr+is%3Aclosed` search query to scope to PRs only.
-17. **Codeberg PR state filtering**: Uses Gitea's simple `?state=open|closed|all` param — no `is:pr` needed.
+    17. **Codeberg PR state filtering**: Uses Gitea's `?state=open|closed` param for `OpenRequests`. `OpenMyRequests` assembles its own query: `type=created_by` first, only when a non-default flag is given; no flag/`-open` → bare `/pulls`; `-all` → `?type=created_by`; `-closed`/`-merged` → `?type=created_by&state=closed`.
 18. **`ParseRequestState` takes provider as second arg** so GitHub, Codeberg, and GitLab can produce different query strings from the same flag.
 19. **GitLab state param uses `opened`** (not `open`) — `-open` flag is redundant (default), so it falls through to `return ''`.
 20. **GitHub `OpenGitMyRequests`**: no flag/`-open` → bare `/pulls` (GitHub defaults to current user); with state flag → append `+author%3A%40me` to the `q` param.
@@ -142,6 +142,7 @@ redraw!
     30. **`b:` variables are accessible from autoload functions** — `b:vim_git_open_remote` can be read and written directly inside `autoload/git_open.vim` and `autoload/git_open/legacy.vim` without any special scoping tricks.
     31. **Lazy remote resolution**: resolve `b:vim_git_open_remote` on first use inside each command (not at startup). Resolution order: `b:` cached → `g:` validated → `origin` if present → first remote from `git remote`.
     32. **`git remote` via `system()` not `GitCommand`**: for listing all remotes, call `system('git -C ' .. shellescape(root) .. ' remote')` and `split(output, '\n')` — simpler than re-using the existing `GitCommand` helper since no URL parsing is needed.
+    33. **Codeberg `OpenMyRequests` query assembly**: `type=created_by` comes first; only append it when a non-default flag is given. No flag/`-open` → bare `/pulls`; `-all` → `?type=created_by`; `-closed`/`-merged` → `?type=created_by&state=closed`. The Codeberg branch does NOT use the `state` output of `ParseRequestState`.
 
 ## Key Files
 

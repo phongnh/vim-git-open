@@ -180,8 +180,9 @@ the browser. With [!], the URL is copied to the clipboard instead.
     git provider.
 
     The URL opened depends on the provider:
-      - GitHub/Codeberg: https://<host>/pulls
-      - GitLab:          https://<host>/dashboard/merge_requests/search?author_username=<user>
+      - GitHub:   https://<host>/pulls
+      - Codeberg: https://<host>/pulls?type=created_by  (scoped to current user)
+      - GitLab:   https://<host>/dashboard/merge_requests/search?author_username=<user>
 
     For GitLab, the username is resolved via |g:vim_git_open_gitlab_username|.
     See that option for the full resolution order.
@@ -189,8 +190,13 @@ the browser. With [!], the URL is copied to the clipboard instead.
     Optional state flag:
       -open    Open PRs/MRs (default, same as no flag)
       -closed  Closed PRs/MRs
-      -merged  Merged PRs/MRs (GitLab only; maps to closed on Codeberg)
-      -all     All PRs/MRs regardless of state
+      -merged  Merged PRs/MRs (GitLab only; maps to closed on Codeberg/GitHub)
+      -all     All PRs/MRs regardless of state (Codeberg: adds ?type=created_by)
+
+    Codeberg state behaviour:
+      (no flag) / -open  →  /pulls
+      -all               →  /pulls?type=created_by
+      -closed / -merged  →  /pulls?type=created_by&state=closed
 
                                                          *:OpenGitRequests*
 :OpenGitRequests[!]

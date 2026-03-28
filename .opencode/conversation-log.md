@@ -1,217 +1,298 @@
 # vim-git-open Development Log
 
-This file contains a chronological log of all user requests, requirements, and implementation decisions during the development of vim-git-open.
+Chronological log of all user requests, requirements, and implementation decisions.
+
+---
 
 ## Session 1: Initial Setup and Complete Implementation
+**Date:** 2026-03-27
 
-### Date: 2026-03-27
+### Request 1: Project Overview
+- Provided summary of initial goals: build a Vim plugin to open git resources in browser
+- Three implementations: Legacy Vimscript, Vim9script, and Lua/Neovim
+- All core features completed and pushed to GitHub (77b3c5b)
 
----
+### Request 2: Switch Remote to SSH
+- Updated remote from HTTPS to SSH: `git@github.com:phongnh/vim-git-open.git`
+- Successfully pushed to GitHub
 
-### Request 1: Project Overview and Status Check
-**User Request:** "What did we do so far?"
-
-**Response:** Provided comprehensive summary of the vim-git-open project including:
-- Goal: Build a Vim plugin to open git resources in browser
-- Three implementations: Legacy Vimscript, Vim9script, and Lua
-- Status: Initial commit pushed to GitHub
-- All core features completed
-
----
-
-### Request 2: Update Git Remote to SSH
-**User Request:** "Use the ssh version instead git@github.com:phongnh/vim-git-open.git"
-
-**Actions Taken:**
-- Updated git remote URL from HTTPS to SSH format
-- Successfully pushed initial commit to GitHub
-- Repository now live at https://github.com/phongnh/vim-git-open.git
-
-**Commands Executed:**
-```bash
-git remote set-url origin git@github.com:phongnh/vim-git-open.git
-git push -u origin main
-```
-
----
-
-### Request 3: Improve Provider Detection and Neovim Loading
-**User Request:** "Based on my experience, if a host has github.com then it is GitHub provider, if a host has gitlab.com then it is GitLab provider, refine parse Git provider, take these cases into accounts."
-
-**User Request:** "Another improvement is about Neovim implementation. As far as I know Neovim support `plugin` loading with lua. Assume that if I move @lua_plugin/git_open.lua to @plugin/ folder it will be autoloaded by Neovim as well. However, if I do this, Neovim will loaded bot @plugin/git_open.vim as well - it loads both files. To prevent duplicate load, just add `!has('nvim')` to @plugin/git_open.vim to prevent it being loaded by Neovim?"
-
-**Analysis:**
-- Provider detection already using substring matching (working correctly)
-- Domains like `enterprise.github.com` or `gitlab.company.com` handled properly
-
-**Actions Taken:**
-1. Verified provider detection already works with substring matching:
-   - Vimscript uses `=~#` regex operator
-   - Lua uses `:match()` function
-   - No changes needed for provider detection
-
-2. Improved Neovim loading mechanism:
-   - Added `has('nvim')` guard to `plugin/git_open.vim` line 5
-   - Moved `lua_plugin/git_open.lua` to `plugin/git_open.lua`
-   - Removed `lua_plugin/` directory
-   - Now Neovim loads only Lua version, Vim loads only Vimscript version
-
-**Changes Made:**
-```vim
-# plugin/git_open.vim line 5
-if exists('g:loaded_git_open') || &compatible || has('nvim')
-    finish
-endif
-```
-
-**Commit:** 76dfcad - "Improve Neovim loading: prevent duplicate loading"
-
----
+### Request 3: Neovim Loading Improvement
+- Added `has('nvim')` guard to `plugin/git_open.vim` to prevent loading in Neovim
+- Moved `lua_plugin/git_open.lua` → `plugin/git_open.lua` for native Neovim autoload
+- **Commit:** 76dfcad
 
 ### Request 4: Save Conversation and Generate Skill/Agent Files
-**User Request:** 
-- "Save my chats with you to files, logs all my requests/requirements"
-- "Generate a skill and agent files for this project"
+- Created `.opencode/conversation-log.md`, `.opencode/skill.md`, `.opencode/agent.md`
+- **Commit:** 11a92c4
 
-**Actions In Progress:**
-- Creating this conversation log file
-- Generating skill configuration file
-- Generating agent configuration file
+### Request 5: Save Full Transcript
+- Created `.opencode/conversation-transcript.md`
+- **Commit:** 154759f
 
 ---
 
-## Key Requirements Summary
+## Session 2: Bug Fixes and Feature Additions
+**Date:** 2026-03-27 (continued)
 
-### Core Features
-1. **Six Commands:**
-   - `OpenGitRepo` - Open repository home page
-   - `OpenGitBranch` - Open current branch
-   - `OpenGitFile` - Open current file with line numbers
-   - `OpenGitCommit` - Open current commit
-   - `OpenGitPR [number]` - Open pull request
-   - `OpenGitMR [number]` - Open merge request
+### Fix: get_git_root in Lua
+- Lua `get_git_root()` was returning a path with `.git` suffix
+- Fixed to return the parent directory (absolute path without `.git`)
+- **Commit:** c15bf7d
 
-2. **Provider Support:**
-   - Auto-detect: GitHub, GitLab, Codeberg
-   - Support enterprise instances
-   - Custom domain mappings via `g:vim_git_open_domains`
-   - Provider override via `g:vim_git_open_providers`
-   - Substring matching for domains (e.g., `enterprise.github.com`)
+### Fix: get_relative_path in Lua
+- Used string comparison instead of regex for robustness
+- **Commit:** 204be87
 
-3. **Line Number Support:**
-   - Include current line in URL
-   - Support visual selection for ranges
-   - Provider-specific formats:
-     - GitHub/Codeberg: `#L10-L20`
-     - GitLab: `#L10-20`
+### Fix: get_git_root in Vimscript and Vim9script
+- **Commit:** d36d7eb
 
-4. **Remote URL Parsing:**
-   - SSH format: `git@github.com:user/repo.git`
-   - SSH format: `ssh://git@github.com/user/repo.git`
-   - HTTPS format: `https://github.com/user/repo.git`
+### Fix: OpenGitFile (Vimscript and Vim9script)
+- Two bugs fixed in line number handling
+- **Commit:** 566ddfc
 
-5. **Three Implementations:**
-   - Legacy Vimscript (Vim 7.0+) - `plugin/` and `autoload/`
-   - Vim9script (Vim 9.0+) - `vim9/plugin/` and `vim9/autoload/`
-   - Lua (Neovim) - `lua/git_open.lua` and `plugin/git_open.lua`
+### Feature: OpenGitFileLastChange (v1.1.0)
+- New command that opens the PR/MR or commit that last changed the current file
+- Added `parse_pr_mr_number()` helper
+- All three implementations updated
+- **Commits:** a04c0d8, 71089e0, 4459260
 
-### Code Style Preferences
-- **Vimscript/Vim9script:** 4-space indentation
-- **Lua:** 2-space indentation
-- All documentation examples follow same indentation rules
-- No emojis unless explicitly requested
+### Feature: $BROWSER environment variable support
+- Plugin now checks `$BROWSER` env var before OS defaults
+- **Commit:** 3e2f868
 
-### Loading Mechanism
-- **Vim/Classic Vim:** Loads Vimscript version from `plugin/git_open.vim`
-- **Neovim:** Loads Lua version from `plugin/git_open.lua`, skips Vimscript
-- Vimscript version has `has('nvim')` guard to prevent loading in Neovim
-- No duplicate loading
+### Feature: OpenGitMyPRs (v1.2.0)
+- New command to open current user's PRs/MRs
+- **Commit:** 336d147
 
-### User Preferences
-- User initially wanted auto-detection of Vim variant, then rolled back
-- User prefers to explain their own multi-version loading approach later
-- Current approach: separate implementations, no automatic detection
+### Feature: OpenGitPRs
+- New command to open repo's PR/MR listing page
+- **Commit:** ed2bdf8
+
+### Refactor: Dispatcher pattern for plugin loading
+- `plugin/git_open.vim` became a dispatcher that selects Vim9script or legacy
+- **Commit:** 123ec46
+
+### Fix: Vim9script loading and missing functions
+- **Commit:** be61a76
+
+### Fix: Vim9script type annotations
+- Removed unsupported `export type` declarations (Vim 9.2.250 incompatibility)
+- **Discovery:** `export type` keyword not supported in Vim 9.2.250
+- **Commit:** e6d1579
+
+### Fix: Terminal escape sequences in OpenBrowser
+- **Commit:** 2ca77a2
+
+### Refactor: Unify PR/MR into provider-agnostic interface
+- Merged `OpenGitPR` / `OpenGitMR` into single `OpenGitRequest` command
+- Auto-detects provider and uses appropriate URL structure
+- **Commit:** 649630c
+
+### Refactor: Restructure plugin — Vim9script default, legacy in autoload/git_open/legacy.vim
+- Vim9script is now the primary implementation
+- Legacy Vimscript moved to `autoload/git_open/legacy.vim`
+- **Commit:** 842a889
+
+### Fix: plugin/git_open.vim — move vim9script declaration after legacy guard
+- **Discovery:** `vim9script` at top of file errors on old Vim; `if !has('vim9script') | finish | endif` guard must come first
+- **Commit:** c6041e1
+
+### Fix: Vim9script variadic forwarding in BuildUrl
+- **Discovery:** Use `call(FuncRef, [args] + extra)` instead of `...extra` spread
+- **Commit:** 82d8ca2
+
+### Fix: Replace echoerr with friendly red messages
+- **Discovery:** `echoerr` shows stack trace; use `echohl ErrorMsg` + `echom` + `echohl None`
+- Applied to all three implementations
+- **Commit:** df4224b
+
+### Fix: OpenFile range — pass line1/line2 as explicit parameters
+- **Discovery:** `range` attribute invalid in Vim9script; use `-range` flag and pass `<line1>`, `<line2>` as args
+- **Discovery:** `<line1>,<line2>FuncCall()` syntax invalid in Vim9script (E1050)
+- **Discovery:** `mode()` always returns `'n'` inside `:` command; use `-range` + `<line1>`,`<line2>`
+- **Commit:** 46f792b
+
+### Fix: Quoted line numbers in OpenGitFile URL
+- **Discovery:** `string()` in Vim9script adds quotes around numbers; use `'' .. value` for plain coercion
+- **Commit:** 97a8a2b
+
+### Feature: Bang support — copy URL to clipboard instead of opening browser
+- Added `!` variant to all commands
+- **Discovery:** `<bang>0` evaluates to `0` (no bang) or `1` (bang used)
+- **Commit:** 45d8627
+
+### Feature: Optional args to OpenGitBranch, OpenGitFile, OpenGitCommit
+- `OpenGitBranch [branch]`, `OpenGitFile [ref]`, `OpenGitCommit [commit]`
+- **Discovery:** URL builder `file` type extra argument slots: `extra[0]` = file path, `extra[1]` = line info, `extra[2]` = ref
+- **Commit:** 059d717
+
+### Feature: Branch tab-completion for OpenGitBranch and OpenGitFile
+- **Commit:** 24194da
+
+### Fix: Branch completion — bare names without remote prefix
+- **Discovery:** `lstrip=2` for local (`refs/heads/`), `lstrip=3` for remote (`refs/remotes/`) to get bare names
+- **Commit:** 27d0e67, 14d51a5
+
+### Improve: Branch completion — sort by committerdate, use matchfuzzy
+- **Discovery:** `matchfuzzy()` always available in Vim9script and Neovim/Lua; check `exists('*matchfuzzy')` in legacy
+- **Commit:** 95c12c4
+
+### Docs: Update Versions section
+- Single branch, auto-loaded by implementation
+- **Commit:** 406770e
 
 ---
 
-## Technical Decisions
+## Session 3: State Filtering for Requests
+**Date:** 2026-03-28
 
-### Provider Detection Strategy
-- Use substring matching instead of exact matching
-- Check user-defined mappings first
-- Fall back to auto-detection for known providers
-- Default to GitHub for unknown providers
+### Feature: State flag for OpenGitRequests and OpenGitMyRequests (GitHub/Codeberg)
+- Added `-open`, `-closed`, `-merged`, `-all` flags to both commands
+- **Commit:** 26bc4da
 
-### Browser Command Detection
-- macOS: `open`
-- Linux: `xdg-open`
-- Windows: `start`
-- Configurable via `g:vim_git_open_browser_command`
+### Fix: GitHub/Codeberg pulls URL — use is:pr query param
+- **Discovery:** `?state=closed` routes to issues endpoint; must use `?q=is%3Apr+is%3Aclosed` for PRs
+- **Commit:** d67c734
 
-### Git Command Execution
-- Use `git -C <repo_root>` to ensure commands run from correct directory
-- Find git root using `.git` directory search
-- Trim trailing newlines from git output
+### Fix: Codeberg state filtering — pass provider to parse_request_state
+- **Discovery:** Codeberg uses `?state=open|closed|all` param (Gitea simple API); no `is:pr` needed
+- Fixed Lua `open_my_requests` and `open_requests` to pass `info.provider` to `parse_request_state`
+- **Commit:** 61d452c
 
-### PR/MR Number Parsing
-- GitHub/Codeberg: Parse `#123` from commit messages
-- GitLab: Parse `!123` from commit messages
-- Allow manual number specification via command argument
+### Feature: Tab-completion for state flags
+- Added `CompleteRequestState` / `complete_request_state` / `M.complete_request_state` in all three implementations
+- **Commit:** ee26d90
+
+### Feature: GitLab state filtering for OpenGitRequests/OpenGitMyRequests
+- Added `?state=merged|closed|all` to `ParseRequestState` for GitLab
+- **Discovery:** GitLab state param uses `opened` (not `open`); `-open` falls through to `''`
+- **Commit:** e4e6b2e
+
+### Refactor: Drop redundant GitLab -open case
+- `-open` is redundant for GitLab (default is already opened)
+- **Commit:** be49193
+
+### Fix: GitHub OpenGitMyRequests — author:@me injection
+- No flag / `-open` → bare `/pulls`; with state → append `+author%3A%40me` to `q` param
+- **Discovery:** GitHub `OpenGitMyRequests`: no flag/`-open` → bare `/pulls`; with state flag → append `+author%3A%40me`
+- **Commit:** 2db1cf5, 8f131c1, 314ec6c
+
+### Fix: Terminal escape sequences
+- `redraw` → `redraw!` in `OpenBrowser` and `CopyToClipboard` (Vim9script + legacy)
+- **Discovery:** `> /dev/null 2>&1` on browser `system()` call + `redraw!` before `echo` suppresses escape sequences
+- **Commit:** cb1412b
+
+### Feature: GetGitLabUsername helper
+- GitLab does not support `@me` alias — username must be resolved explicitly
+- Resolution order: `g:vim_git_open_gitlab_username` → `$GITLAB_USER` → `$GLAB_USER` → `$USER`
+- Added `GetGitLabUsername()` / `get_gitlab_username()` / `get_gitlab_username()` in all three implementations
+- **Commit:** c20be3b
+
+### Feature/Rework: GitLab OpenGitMyRequests — dashboard page routing
+- No flag / `-open` / `-all` → `/dashboard/merge_requests`
+- `-closed` / `-merged` → `/dashboard/merge_requests/merged`
+- `-search` → `/dashboard/merge_requests/search?author_username=<user>`
+- **Discovery:** GitLab dashboard page `/dashboard/merge_requests` shows MRs authored by current user by default
+- **Commits:** c0c9d91, 10f267a
+
+### Feature: CompleteMyRequestState — separate from CompleteRequestState
+- `CompleteMyRequestState` adds `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`
+- `CompleteRequestState` only has `-open`, `-closed`, `-merged`, `-all`
+- `-search=<state>` compound flag: split on `=`, append `&state=<value>` to search URL
+- **Discovery:** Separate completion functions needed; `-search` belongs only in MyRequests completion
+- **Commit:** 97348da
+
+### Docs: Update README usage section
+- Updated Commands table with `[state]` argument for OpenGitMyRequests and OpenGitRequests
+- Expanded "Working with Requests" examples to show state filtering and `-search` flag
+- **Commit:** 0ea5cd7
+
+---
+
+## Key Discoveries (Cumulative)
+
+1. `string()` in Vim9script adds quotes around numbers — use `'' .. value`
+2. Vim9script variadic forwarding: use `call(FuncRef, [args] + extra)`
+3. `range` attribute invalid in Vim9script — pass `<line1>` and `<line2>` as explicit args
+4. `<line1>,<line2>FuncCall()` syntax invalid in Vim9script (E1050)
+5. `mode()` always returns `'n'` inside `:` command
+6. `vim9script` at top of file errors on old Vim — guard must come first
+7. `echoerr` shows stack trace — use `echohl ErrorMsg` + `echom` + `echohl None`
+8. `> /dev/null 2>&1` + `redraw!` before `echo` suppresses terminal escape sequences
+9. `export type` keyword not supported in Vim 9.2.250
+10. `<bang>0` evaluates to `0` (no bang) or `1` (bang used)
+11. URL builder `file` extra slots: `extra[0]`=path, `extra[1]`=line info, `extra[2]`=ref
+12. Legacy Vimscript variadic args: `a:000` passed directly via `call()`
+13. `%(refname:short)` in zsh must be single-quoted to avoid glob interpretation
+14. Branch completion: `lstrip=2` for local, `lstrip=3` for remote bare names
+15. `matchfuzzy()` always available in Vim9script/Lua; check `exists('*matchfuzzy')` in legacy
+16. GitHub PR state filtering: must use `?q=is%3Apr+is%3Aclosed` (not `?state=closed`)
+17. Codeberg PR state filtering: uses `?state=open|closed|all` (Gitea simple API)
+18. `ParseRequestState` takes provider as second arg
+19. GitLab state param uses `opened` (not `open`)
+20. GitHub `OpenGitMyRequests`: no flag/`-open` → bare `/pulls`; with state → `+author%3A%40me`
+21. GitLab does not support `@me` alias — resolve username explicitly
+22. GitLab `OpenGitMyRequests` uses `/dashboard/merge_requests` family of URLs
+23. Separate `CompleteMyRequestState` needed; `-search` only belongs in MyRequests completion
+24. `-search=<state>` parsing: split on `=`, map second part to `&state=<value>`
 
 ---
 
 ## Repository Information
 
-**GitHub URL:** https://github.com/phongnh/vim-git-open.git
-**SSH URL:** git@github.com:phongnh/vim-git-open.git
-**Branch:** main
-**License:** MIT
-**Version:** 1.0.0
+- **SSH URL:** git@github.com:phongnh/vim-git-open.git
+- **Branch:** main
+- **License:** MIT
+- **Maintainer:** Phong Nguyen
 
-## Files Created
+## Commit History (All Sessions)
 
-### Core Plugin Files
-- `plugin/git_open.vim` - Vimscript plugin loader
-- `plugin/git_open.lua` - Lua plugin loader (Neovim)
-- `autoload/git_open.vim` - Vimscript core functionality (~410 lines)
-- `lua/git_open.lua` - Lua core functionality (~414 lines)
-- `vim9/plugin/git_open.vim` - Vim9script plugin loader
-- `vim9/autoload/git_open.vim` - Vim9script core functionality (~394 lines)
-
-### Documentation
-- `README.md` - Main documentation
-- `doc/git_open.txt` - Vim help documentation
-- `CONTRIBUTING.md` - Contribution guidelines
-- `CHANGELOG.md` - Version history
-- `example_config.vim` - Configuration examples
-
-### Repository Files
-- `LICENSE` - MIT License
-- `.gitignore` - Vim plugin ignores
-
----
-
-## Commits History
-
-1. **77b3c5b** - Initial commit with all plugin files and documentation
-2. **76dfcad** - Improve Neovim loading: prevent duplicate loading
-
----
-
-## Future Considerations
-
-1. User will explain preferred multi-version loading approach
-2. Possible git tags for version releases
-3. Possible vim.org plugin submission
-4. Testing on different Vim/Neovim versions
-5. Testing with different git hosting providers (GitHub Enterprise, GitLab self-hosted, etc.)
-
----
-
-## Notes
-
-- Provider detection already works correctly with substring matching
-- No changes needed for enterprise domains like `enterprise.github.com`
-- Neovim loading now optimized to prevent duplicate loading
-- All three implementations maintain feature parity
-- Code style consistently enforced (4-space for Vimscript, 2-space for Lua)
+| Commit | Description |
+|--------|-------------|
+| 77b3c5b | Initial release v1.0.0 |
+| 76dfcad | Improve Neovim loading: prevent duplicate loading |
+| 11a92c4 | Add OpenCode configuration files |
+| 154759f | Add complete conversation transcript |
+| c15bf7d | Fix get_git_root in Lua |
+| 204be87 | Fix get_relative_path in Lua |
+| d36d7eb | Fix get_git_root in Vimscript and Vim9script |
+| 566ddfc | Fix OpenGitFile in Vimscript and Vim9script |
+| a04c0d8 | Add OpenGitFileLastChange command (v1.1.0) |
+| 71089e0 | Fix OpenGitFileLastChange: use correct function names |
+| 4459260 | Fix OpenGitFileLastChange: add parse_pr_mr_number helper |
+| 3e2f868 | Add $BROWSER environment variable support |
+| 336d147 | Add OpenGitMyPRs command (v1.2.0) |
+| ed2bdf8 | Add OpenGitPRs command |
+| 123ec46 | Refactor plugin/git_open.vim as dispatcher |
+| be61a76 | Fix Vim9script plugin loading and missing functions |
+| e6d1579 | Fix Vim9script: remove export type declarations |
+| 2ca77a2 | Fix Vim9script type annotations and terminal escape sequences |
+| 649630c | Unify PR/MR commands into provider-agnostic interface |
+| 842a889 | Restructure plugin: Vim9script default, legacy in autoload/git_open/legacy.vim |
+| c6041e1 | Fix plugin/git_open.vim: move vim9script declaration after legacy guard |
+| 82d8ca2 | Fix Vim9script variadic forwarding in BuildUrl |
+| df4224b | Replace echoerr with friendly red message helper |
+| 46f792b | Fix OpenFile range: pass line1/line2 as explicit parameters |
+| 97a8a2b | Fix quoted line numbers in OpenGitFile URL |
+| 45d8627 | Add bang support: copy URL to clipboard |
+| 059d717 | Add optional args to OpenGitBranch, OpenGitFile, OpenGitCommit |
+| 24194da | Add branch tab-completion |
+| 27d0e67 | Fix branch completion: quote %(refname:short) |
+| 14d51a5 | Fix branch completion: list bare branch names |
+| 95c12c4 | Improve branch completion: sort by committerdate, use matchfuzzy |
+| 406770e | Update Versions section |
+| 26bc4da | Add state flag to OpenGitRequests and OpenGitMyRequests |
+| d67c734 | Fix GitHub/Codeberg pulls URL: use is:pr query param |
+| 61d452c | Fix Codeberg state filtering: pass provider to parse_request_state |
+| ee26d90 | Add tab-completion for state flags |
+| e4e6b2e | Add GitLab state filtering |
+| be49193 | Refactor GitLab state: drop -open (redundant) |
+| 2db1cf5 | Fix GitHub OpenGitMyRequests: only add author:@me when state flag given |
+| 8f131c1 | Simplify GitHub OpenGitMyRequests |
+| 314ec6c | Fix OpenGitMyRequests for GitHub |
+| cb1412b | Fix terminal escape sequences: use redraw! |
+| c20be3b | Resolve GitLab username for OpenGitMyRequests |
+| c0c9d91 | Update GitLab my requests URL |
+| 10f267a | Rework GitLab OpenGitMyRequests: dashboard page, -search flag |
+| 97348da | Add CompleteMyRequestState and -search=<state> compound flag |
+| 0ea5cd7 | Update README usage: document state flags |

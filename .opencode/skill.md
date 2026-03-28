@@ -1,7 +1,7 @@
 # Vim-Git-Open Development Skill
 
 ## Description
-Expert skill for developing and maintaining the vim-git-open plugin - a Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs) in a web browser. This skill provides guidelines for working with three separate implementations: Legacy Vimscript (Vim 7.0+), Vim9script (Vim 9.0+), and Lua (Neovim).
+Expert skill for developing and maintaining the vim-git-open plugin — a Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs) in a web browser. Three separate implementations must always be kept in sync: Vim9script (default), Legacy Vimscript (fallback), and Lua (Neovim).
 
 ## When to Use This Skill
 - Adding new features to vim-git-open
@@ -9,27 +9,28 @@ Expert skill for developing and maintaining the vim-git-open plugin - a Vim/Neov
 - Refactoring code while maintaining feature parity
 - Updating documentation
 - Adding support for new git hosting providers
-- Improving git remote URL parsing
-- Enhancing browser integration
 
 ## Project Structure
 
 ```
 vim-git-open/
 ├── plugin/
-│   ├── git_open.vim      # Legacy Vimscript loader (guards against Neovim)
-│   └── git_open.lua      # Lua loader for Neovim
+│   ├── git_open.vim          # Dispatcher: Vim9script or legacy (guards has('nvim'))
+│   ├── git_open_legacy.vim   # Legacy Vimscript entry point
+│   └── git_open.lua          # Lua entry point (Neovim autoloads this)
 ├── autoload/
-│   └── git_open.vim      # Legacy Vimscript core (~410 lines)
+│   ├── git_open.vim          # Vim9script core (~500 lines)
+│   └── git_open/
+│       └── legacy.vim        # Legacy Vimscript core (~600 lines)
 ├── lua/
-│   └── git_open.lua      # Lua core (~414 lines)
-├── vim9/
-│   ├── plugin/
-│   │   └── git_open.vim  # Vim9script loader
-│   └── autoload/
-│       └── git_open.vim  # Vim9script core (~394 lines)
+│   └── git_open.lua          # Lua core (~580 lines)
 ├── doc/
-│   └── git_open.txt      # Vim help documentation
+│   └── git_open.txt          # Vim help documentation
+├── .opencode/
+│   ├── agent.md              # Agent instructions and discoveries
+│   ├── conversation-log.md   # Full development history
+│   ├── skill.md              # This file
+│   └── conversation-transcript.md
 ├── README.md
 ├── CONTRIBUTING.md
 ├── CHANGELOG.md
@@ -37,364 +38,177 @@ vim-git-open/
 └── LICENSE
 ```
 
-## Core Requirements
+## Commands
 
-### Commands (All Implementations)
-All three implementations must provide these commands:
+| Command | Notes |
+|---------|-------|
+| `OpenGitRepo[!]` | Repository home page |
+| `OpenGitBranch[!] [branch]` | Branch view; tab-completes branch names |
+| `[range]OpenGitFile[!] [ref]` | File + line numbers; tab-completes branch names |
+| `OpenGitCommit[!] [commit]` | Commit view |
+| `OpenGitRequest[!] [number]` | PR/MR (provider-agnostic; auto-parses from commit) |
+| `OpenGitFileLastChange[!]` | PR/MR or commit that last changed current file |
+| `OpenGitMyRequests[!] [state]` | My PRs/MRs; tab-completes state flags |
+| `OpenGitRequests[!] [state]` | Repo PR/MR listing; tab-completes state flags |
 
-1. `OpenGitRepo` - Open repository home page
-2. `OpenGitBranch` - Open current branch view
-3. `OpenGitFile` - Open current file with line number support
-4. `OpenGitCommit` - Open current commit
-5. `OpenGitPR [number]` - Open pull request (GitHub/Codeberg)
-6. `OpenGitMR [number]` - Open merge request (GitLab)
+**State flags for `OpenGitMyRequests`:** `-open`, `-closed`, `-merged`, `-all`, `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`
+**State flags for `OpenGitRequests`:** `-open`, `-closed`, `-merged`, `-all`
 
-### Supported Git Providers
-- **GitHub** (github.com and enterprise instances)
-- **GitLab** (gitlab.com and self-hosted)
-- **Codeberg** (codeberg.org)
-- **Custom** (via user configuration)
+## Supported Providers
 
-### Provider Detection Strategy
+| Provider | Detection | Notes |
+|----------|-----------|-------|
+| GitHub | `domain =~# 'github\.com'` | Includes enterprise (substring match) |
+| GitLab | `domain =~# 'gitlab\.com'` | Includes self-managed |
+| Codeberg | `domain =~# 'codeberg\.org'` | Gitea-based |
+
+Always use substring matching, never exact matching.
+
+## Code Style
+
+### Vim9script (`autoload/git_open.vim`)
 ```vim
-" Use substring matching for domains
-if domain =~# 'github\.com'    " Matches github.com, enterprise.github.com, etc.
-    return 'GitHub'
-elseif domain =~# 'gitlab\.com'  " Matches gitlab.com, gitlab.company.com, etc.
-    return 'GitLab'
-elseif domain =~# 'codeberg\.org'
-    return 'Codeberg'
-endif
-```
+vim9script  " after the legacy guard
 
-### Remote URL Parsing
-Support all common git remote formats:
-- SSH: `git@github.com:user/repo.git`
-- SSH: `ssh://git@github.com/user/repo.git`
-- HTTPS: `https://github.com/user/repo.git`
-
-### Line Number Support
-Format line numbers according to provider:
-- **GitHub/Codeberg:** `#L10-L20` (dash separator)
-- **GitLab:** `#L10-20` (no dash)
-
-Support visual mode for range selection.
-
-## Code Style Guidelines
-
-### Indentation
-- **Legacy Vimscript:** 4 spaces
-- **Vim9script:** 4 spaces
-- **Lua:** 2 spaces
-- **Documentation examples:** Follow language-specific rules
-
-### Vimscript Style
-```vim
-" Function names: Use snake_case with s: prefix for script-local
-function! s:get_git_root() abort
-    " Use 4-space indentation
-    let l:result = finddir('.git', expand('%:p:h') . ';')
-    return fnamemodify(l:result, ':h')
-endfunction
-
-" Use explicit scoping (s:, l:, g:, a:)
-" Always use abort flag on functions
-" Use exists() checks for optional features
-```
-
-### Vim9script Style
-```vim
-vim9script
-
-# Use def for functions, explicit types when possible
-def GetGitRoot(): string
-    # Use 4-space indentation
-    var git_dir = finddir('.git', expand('%:p:h') .. ';')
-    return fnamemodify(git_dir, ':h')
+export def FunctionName(arg: string, flag: bool = false): string
+    var result = ''
+    # 4-space indentation
+    return result
 enddef
-
-# Use var/const for variables
-# Use .. for string concatenation
-# Add type annotations
 ```
 
-### Lua Style
+### Legacy Vimscript (`autoload/git_open/legacy.vim`)
+```vim
+function! git_open#legacy#function_name(arg, ...) abort
+    let l:result = ''
+    " 4-space indentation
+    " Explicit scoping: s: l: g: a:
+    " Check exists('*matchfuzzy') before using it
+    return l:result
+endfunction
+```
+
+### Lua (`lua/git_open.lua`)
 ```lua
 local M = {}
 
--- Use 2-space indentation
-local function get_git_root()
-  local git_dir = vim.fn.finddir('.git', vim.fn.expand('%:p:h') .. ';')
-  return vim.fn.fnamemodify(git_dir, ':h')
+local function private_function(arg)
+  -- 2-space indentation
+  local result = ''
+  return result
 end
 
--- Use local for module-private functions
--- Use vim.fn for Vim functions
--- Use vim.api for Neovim API
--- Use vim.g for global variables
-```
-
-## Configuration Variables
-
-### User-Facing Configuration
-```vim
-" Legacy Vimscript / Vim9script
-let g:vim_git_open_domains = {}        " Custom domain mappings
-let g:vim_git_open_providers = {}      " Provider overrides
-let g:vim_git_open_browser_command = '' " Browser command
-```
-
-```lua
--- Lua (Neovim)
-vim.g.vim_git_open_domains = {}
-vim.g.vim_git_open_providers = {}
-vim.g.vim_git_open_browser_command = ''
-```
-
-### Browser Command Auto-Detection
-- macOS: `open`
-- Linux: `xdg-open`
-- Windows: `start`
-
-## Feature Parity Requirements
-
-**CRITICAL:** When adding features or fixing bugs, you MUST update all three implementations:
-1. Legacy Vimscript (`autoload/git_open.vim`)
-2. Vim9script (`vim9/autoload/git_open.vim`)
-3. Lua (`lua/git_open.lua`)
-
-All implementations must provide identical functionality and behavior.
-
-## Testing Strategy
-
-### Manual Testing Checklist
-Test each implementation with:
-- [ ] Different git hosting providers (GitHub, GitLab, Codeberg)
-- [ ] Enterprise/self-hosted instances
-- [ ] SSH and HTTPS remote URLs
-- [ ] Line number support (single line and range)
-- [ ] Visual mode selection
-- [ ] PR/MR number parsing from commits
-- [ ] Manual PR/MR number specification
-- [ ] All six commands
-- [ ] Custom domain/provider mappings
-
-### Compatibility Testing
-- Legacy Vimscript: Test with Vim 7.0+
-- Vim9script: Test with Vim 9.0+
-- Lua: Test with Neovim 0.5+
-
-## Loading Mechanism
-
-### Current Approach
-- **Vim/Classic Vim:** Loads `plugin/git_open.vim` (Vimscript)
-- **Neovim:** Loads `plugin/git_open.lua` (Lua)
-- `plugin/git_open.vim` has guard: `if has('nvim') | finish | endif`
-- No duplicate loading
-
-### Plugin Loader Structure
-```vim
-" plugin/git_open.vim (Legacy Vimscript loader)
-if exists('g:loaded_git_open') || &compatible || has('nvim')
-    finish
-endif
-let g:loaded_git_open = 1
-
-" Initialize configuration variables
-" Create user commands
-" Call autoload functions
-```
-
-```lua
--- plugin/git_open.lua (Neovim loader)
-if vim.g.loaded_git_open then
-  return
+function M.public_function(arg)
+  -- public API
 end
-vim.g.loaded_git_open = 1
 
-local git_open = require('git_open')
-git_open.setup()
-
--- Create user commands using vim.api.nvim_create_user_command
+return M
 ```
+
+## Feature Parity Workflow
+
+When adding any feature or fixing any bug:
+
+1. **Vim9script** (`autoload/git_open.vim`)
+2. **Legacy Vimscript** (`autoload/git_open/legacy.vim`)
+3. **Lua** (`lua/git_open.lua`)
+4. **Entry points** (only if commands change):
+   - `plugin/git_open.vim`
+   - `plugin/git_open_legacy.vim`
+   - `plugin/git_open.lua`
+5. **Copy to installed locations:**
+   ```bash
+   cp <files> ~/.cache/vim/plugged/vim-git-open/<dest>
+   cp <files> ~/.local/share/nvim/site/pack/core/opt/vim-git-open/<dest>
+   ```
+6. **Commit and push**
 
 ## Common Patterns
 
 ### Git Command Execution
-Always use `git -C <repo_root>` to run commands:
 ```vim
-" Vimscript
-let l:cmd = 'git -C ' . shellescape(l:git_root) . ' ' . a:args
-let l:output = system(l:cmd)
+" Vim9script
+var output = trim(system('git -C ' .. shellescape(git_root) .. ' ' .. args))
 ```
-
 ```lua
 -- Lua
-local cmd = string.format('git -C %s %s', vim.fn.shellescape(git_root), args)
-local output = vim.fn.system(cmd)
+local output = vim.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(git_root) .. ' ' .. args))
 ```
 
-### Error Handling
+### Error Messages (no stack trace)
 ```vim
-" Vimscript
-if empty(l:repo_info)
-    echohl ErrorMsg
-    echomsg 'git-open: Could not detect git repository'
-    echohl None
-    return
-endif
+" Vim9script / Legacy
+echohl ErrorMsg
+echom 'git-open: message'
+echohl None
 ```
-
 ```lua
--- Lua
-if not repo_info then
-  vim.api.nvim_echo({{'git-open: Could not detect git repository', 'ErrorMsg'}}, true, {})
-  return
-end
+vim.api.nvim_echo({{'git-open: message', 'ErrorMsg'}}, true, {})
 ```
 
 ### Opening Browser
 ```vim
-" Vimscript
-let l:cmd = g:vim_git_open_browser_command . ' ' . shellescape(a:url)
-call system(l:cmd)
+call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
+redraw!
+echo 'Opened: ' .. url
 ```
 
-```lua
--- Lua
-local cmd = string.format('%s %s', browser_cmd, vim.fn.shellescape(url))
-vim.fn.system(cmd)
+### Bang Support (`copy vs open`)
+```vim
+" Entry point
+command! -bang -nargs=? OpenGitFoo GitOpen.OpenFoo(<q-args>, <bang>0)
+" Implementation
+export def OpenFoo(arg: string = '', copy: bool = false)
+    ...
+    if copy
+        " copy to clipboard
+    else
+        " open browser
+    endif
+enddef
 ```
+
+### State Flag Parsing
+```vim
+" ParseRequestState(state_arg, provider) returns URL query string
+" GitHub:   '-closed' → '?q=is%3Apr+is%3Aclosed'
+" GitLab:   '-closed' → '?state=closed'
+" Codeberg: '-closed' → '?state=closed'
+```
+
+### GitLab Username Resolution
+```vim
+" GetGitLabUsername() — resolution order:
+" 1. g:vim_git_open_gitlab_username
+" 2. $GITLAB_USER
+" 3. $GLAB_USER
+" 4. $USER
+```
+
+### Branch Completion
+Two `for-each-ref` calls:
+- Local: `--format='%(refname:short)' refs/heads/` (lstrip=2)
+- Remote: `--format='%(refname:short)' refs/remotes/origin/` (lstrip=3)
+- Sort by `-committerdate`, filter `HEAD`, deduplicate local-first
+- Use `matchfuzzy()` in Vim9/Lua; check `exists('*matchfuzzy')` in legacy
 
 ## Documentation Requirements
 
-### When Adding Features
-1. Update README.md with usage examples
-2. Update doc/git_open.txt help file
-3. Update CHANGELOG.md
-4. Update example_config.vim if config options added
-5. Add inline code comments for complex logic
+When making changes, update:
+1. `README.md` — user-facing docs (Usage Examples + Commands table)
+2. `doc/git_open.txt` — Vim help file
+3. `CHANGELOG.md` — version history
+4. `example_config.vim` — if config variables added
 
-### Documentation Style
-- Keep examples concise and practical
-- Use proper indentation (4-space Vimscript, 2-space Lua)
-- Include both Vimscript and Lua examples where applicable
-- Document edge cases and limitations
+## Important Reminders
 
-## Debugging Guidelines
-
-### Common Issues
-1. **Git root not found:** Check `.git` directory search
-2. **Remote URL not parsed:** Verify regex patterns
-3. **Provider not detected:** Check substring matching logic
-4. **Browser not opening:** Verify browser command detection
-5. **Line numbers wrong:** Check visual mode range handling
-
-### Debug Output
-Add temporary debug statements:
-```vim
-" Vimscript
-echomsg 'DEBUG: repo_info = ' . string(l:repo_info)
-```
-
-```lua
--- Lua
-print('DEBUG: repo_info = ' .. vim.inspect(repo_info))
-```
-
-## PR/MR Number Parsing
-
-### Commit Message Patterns
-- GitHub/Codeberg: `#123`, `PR #123`, `pr #123`
-- GitLab: `!123`, `MR !123`, `mr !123`
-
-### Implementation
-```vim
-" Vimscript
-let l:pr_match = matchlist(l:message, '#\(\d\+\)')
-if !empty(l:pr_match)
-    return l:pr_match[1]
-endif
-```
-
-```lua
--- Lua
-local pr_num = message:match('#(%d+)')
-if pr_num then
-  return pr_num
-end
-```
-
-## Versioning
-
-Current version: **1.0.0**
-
-Follow semantic versioning:
-- Major: Breaking changes
-- Minor: New features (backward compatible)
-- Patch: Bug fixes
-
-Update version in:
-- All plugin loader files
-- CHANGELOG.md
-- README.md (if major/minor)
-
-## Git Workflow
-
-### Commit Message Format
-```
-<type>: <short description>
-
-<detailed description if needed>
-
-<breaking changes if any>
-```
-
-Types: feat, fix, refactor, docs, style, test, chore
-
-### Before Committing
-1. Test all three implementations
-2. Update documentation
-3. Update CHANGELOG.md
-4. Ensure code style is consistent
-5. Run basic smoke tests
-
-## Important Notes
-
-- **Never break feature parity** between implementations
-- **Always use substring matching** for provider detection (not exact match)
-- **Guard Vimscript loader** with `has('nvim')` to prevent Neovim loading
-- **Use proper indentation** (4-space Vimscript, 2-space Lua)
-- **Test with real git repositories** and different providers
-- **User preferences:** Avoid auto-detection of Vim variant (user rolled back this approach)
-
-## Resources
-
-- Repository: https://github.com/phongnh/vim-git-open.git
-- License: MIT
-- Maintainer: Phong Nguyen
-
-## Quick Reference
-
-### File Locations
-- Legacy Vimscript: `autoload/git_open.vim`, `plugin/git_open.vim`
-- Vim9script: `vim9/autoload/git_open.vim`, `vim9/plugin/git_open.vim`
-- Lua: `lua/git_open.lua`, `plugin/git_open.lua`
-
-### Key Functions (All Implementations)
-- `parse_remote_url()` - Parse git remote URL
-- `detect_provider()` - Detect git hosting provider
-- `get_base_url()` - Get base URL for domain
-- `get_current_branch()` - Get current git branch
-- `get_current_commit()` - Get current commit hash
-- `get_file_path()` - Get relative file path from repo root
-- `get_line_range()` - Get line range (single or visual selection)
-- `format_line_anchor()` - Format line anchor for provider
-- `parse_pr_number()` / `parse_mr_number()` - Parse PR/MR from commit
-- `open_browser()` - Open URL in browser
-- `open_repo()` - Open repository home
-- `open_branch()` - Open branch view
-- `open_file()` - Open file with line numbers
-- `open_commit()` - Open commit view
-- `open_pr()` - Open pull request
-- `open_mr()` - Open merge request
+1. **Feature parity is non-negotiable** — all three must behave identically
+2. **Substring matching** for provider detection — not exact match
+3. **`redraw!`** (not `redraw`) after `system()` calls
+4. **`vim9script` guard order**: legacy guard first, then `vim9script` keyword
+5. **`export type`** not supported in Vim 9.2.250 — use concrete types directly
+6. **GitLab uses `opened`** (not `open`) in state params
+7. **GitHub PRs use `?q=is%3Apr+...`** — not `?state=` (that hits the issues endpoint)
+8. **`-search` flags** belong only in `CompleteMyRequestState`, not `CompleteRequestState`
+9. **Copy files to both installed locations** before committing
+10. **No emojis** unless explicitly requested

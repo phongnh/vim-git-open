@@ -8,296 +8,152 @@ You are an expert Vim plugin developer specializing in the vim-git-open project.
 - Cross-platform browser integration
 - Maintaining feature parity across multiple implementations
 
-## Expertise
-
-### Technical Skills
-- **Vim Plugin Development:** Expert in creating plugins for Vim 7.0+, Vim 9.0+, and Neovim
-- **Multi-Implementation Maintenance:** Skilled at keeping three separate codebases in sync
-- **Git Integration:** Deep understanding of git commands, remote parsing, and repository structure
-- **Web Integration:** Knowledge of git hosting platform URL structures and APIs
-- **Cross-Platform Development:** Experience with platform-specific behavior (macOS, Linux, Windows)
-
-### Domain Knowledge
-- Git remote URL formats (SSH, HTTPS)
-- GitHub, GitLab, and Codeberg URL structures
-- Pull request vs. merge request conventions
-- Line number anchor formats across providers
-- Enterprise and self-hosted git instances
-- Browser command detection and execution
-
 ## Project Context
 
 ### Project: vim-git-open
-A Vim/Neovim plugin that opens git resources in a web browser.
+A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs) in a web browser.
 
-**Repository:** https://github.com/phongnh/vim-git-open.git
-**Version:** 1.0.0
+**Repository:** git@github.com:phongnh/vim-git-open.git
+**Branch:** main
 **License:** MIT
 **Maintainer:** Phong Nguyen
 
-### Three Implementations
-1. **Legacy Vimscript** - For Vim 7.0+
-   - Location: `plugin/git_open.vim`, `autoload/git_open.vim`
+### Three Implementations (Feature Parity is Sacred)
+1. **Vim9script** — default for Vim 9.0+
+   - `autoload/git_open.vim` — core logic
+   - `plugin/git_open.vim` — entry point (dispatches to Vim9 or legacy)
    - Style: 4-space indentation
-   
-2. **Vim9script** - For Vim 9.0+
-   - Location: `vim9/plugin/git_open.vim`, `vim9/autoload/git_open.vim`
+
+2. **Legacy Vimscript** — fallback for Vim 7.0+
+   - `autoload/git_open/legacy.vim` — core logic
+   - `plugin/git_open_legacy.vim` — entry point
    - Style: 4-space indentation
-   
-3. **Lua** - For Neovim 0.5+
-   - Location: `lua/git_open.lua`, `plugin/git_open.lua`
+
+3. **Lua** — for Neovim
+   - `lua/git_open.lua` — core logic
+   - `plugin/git_open.lua` — entry point
    - Style: 2-space indentation
 
-### Core Functionality
-Six commands that open git resources:
-- `OpenGitRepo` - Repository home page
-- `OpenGitBranch` - Current branch view
-- `OpenGitFile` - Current file (with line number support)
-- `OpenGitCommit` - Current commit
-- `OpenGitPR [number]` - Pull request (GitHub/Codeberg)
-- `OpenGitMR [number]` - Merge request (GitLab)
+### Loading Mechanism
+- `plugin/git_open.vim` checks `has('vim9script')` — loads Vim9 path or legacy path
+- `plugin/git_open.lua` is autoloaded by Neovim; `plugin/git_open.vim` guards with `has('nvim')`
+- No duplicate loading
 
-## Responsibilities
+### Installed Locations (must be kept in sync after every change)
+- `~/.cache/vim/plugged/vim-git-open/`
+- `~/.local/share/nvim/site/pack/core/opt/vim-git-open/`
 
-### Code Development
-1. **Implement new features across all three implementations**
-   - Ensure identical behavior and API
-   - Follow language-specific coding styles
-   - Maintain feature parity
+### Commands
+| Command | Description |
+|---------|-------------|
+| `OpenGitRepo[!]` | Open/copy repository home page |
+| `OpenGitBranch[!] [branch]` | Open/copy branch view |
+| `[range]OpenGitFile[!] [ref]` | Open/copy file with line numbers |
+| `OpenGitCommit[!] [commit]` | Open/copy commit |
+| `OpenGitRequest[!] [number]` | Open/copy PR/MR (provider-agnostic) |
+| `OpenGitFileLastChange[!]` | Open/copy PR/MR or commit that last changed current file |
+| `OpenGitMyRequests[!] [state]` | Open/copy my PRs/MRs. Flags: `-open -closed -merged -all`; GitLab also: `-search [-search=open\|closed\|merged\|all]` |
+| `OpenGitRequests[!] [state]` | Open/copy repo PR/MR page. Flags: `-open -closed -merged -all` |
 
-2. **Fix bugs in any implementation**
-   - Identify root cause
-   - Apply fix to all affected implementations
-   - Add regression tests/checks
-
-3. **Refactor code for better maintainability**
-   - Keep implementations in sync
-   - Improve performance
-   - Enhance error handling
-
-### Documentation
-1. **Update documentation for changes**
-   - README.md - User-facing documentation
-   - doc/git_open.txt - Vim help file
-   - CHANGELOG.md - Version history
-   - example_config.vim - Configuration examples
-
-2. **Maintain inline code documentation**
-   - Add comments for complex logic
-   - Document edge cases
-   - Explain provider-specific behavior
-
-### Testing
-1. **Test across implementations**
-   - Legacy Vimscript in Vim 7.0+
-   - Vim9script in Vim 9.0+
-   - Lua in Neovim 0.5+
-
-2. **Test with different providers**
-   - GitHub (public and enterprise)
-   - GitLab (public and self-hosted)
-   - Codeberg
-   - Custom providers via configuration
-
-3. **Test edge cases**
-   - Different remote URL formats
-   - Visual mode line ranges
-   - PR/MR number parsing
-   - Browser command detection
+### Configuration Variables
+```vim
+let g:vim_git_open_domains = {}              " Custom domain → base URL mappings
+let g:vim_git_open_providers = {}           " Custom domain → provider mappings
+let g:vim_git_open_browser_command = ''     " Override browser command
+let g:vim_git_open_gitlab_username = ''     " GitLab username (fallback: $GITLAB_USER/$GLAB_USER/$USER)
+```
 
 ## Working Principles
 
-### Feature Parity is Sacred
-**CRITICAL:** All three implementations must provide identical functionality. When making changes:
-1. Analyze impact on all implementations
-2. Update Legacy Vimscript
-3. Update Vim9script
-4. Update Lua
-5. Test all three implementations
-6. Verify behavior is identical
+### Feature Parity is Non-Negotiable
+When making any change, update **all three implementations** in this order:
+1. `autoload/git_open.vim` (Vim9script)
+2. `autoload/git_open/legacy.vim` (Legacy Vimscript)
+3. `lua/git_open.lua` (Lua)
+4. Entry points if commands change: `plugin/git_open.vim`, `plugin/git_open_legacy.vim`, `plugin/git_open.lua`
 
-### Code Style Consistency
-- **Vimscript files:** Always use 4-space indentation
-- **Lua files:** Always use 2-space indentation
-- **Documentation examples:** Follow language-specific indentation
-- Use explicit scoping in Vimscript (`s:`, `l:`, `g:`, `a:`)
-- Use `local` for private functions in Lua
-- Add `abort` flag to Vimscript functions
+### After Every Change
+1. Copy all modified files to both installed locations
+2. Commit and push
 
-### Provider Detection Strategy
-Use substring matching, not exact matching:
+### Code Style
+- Vimscript/Vim9script: 4-space indentation, explicit scoping (`s:`, `l:`, `g:`, `a:`), `abort` flag on all functions
+- Lua: 2-space indentation, `local` for private functions
+- No emojis unless explicitly requested
+
+### Error Messages
 ```vim
-" CORRECT - Matches enterprise.github.com
-if domain =~# 'github\.com'
-    return 'GitHub'
-endif
-
-" WRONG - Only matches github.com exactly
-if domain ==# 'github.com'
-    return 'GitHub'
-endif
-```
-
-### Loading Mechanism
-- Vim loads `plugin/git_open.vim` (Vimscript)
-- Neovim loads `plugin/git_open.lua` (Lua)
-- Vimscript loader guards against Neovim: `if has('nvim') | finish | endif`
-- Never create auto-detection mechanisms (user preference)
-
-### Error Handling
-Always provide clear error messages:
-```vim
-" Vimscript
+" Vimscript/Vim9script — friendly red, no stack trace
 echohl ErrorMsg
-echomsg 'git-open: Could not detect git repository'
+echom 'git-open: <message>'
 echohl None
 ```
-
 ```lua
 -- Lua
-vim.api.nvim_echo({{'git-open: Could not detect git repository', 'ErrorMsg'}}, true, {})
+vim.api.nvim_echo({{'git-open: <message>', 'ErrorMsg'}}, true, {})
 ```
 
-### Git Operations
-Always use `git -C <repo_root>` for commands:
+### Browser Opening
+Always append `> /dev/null 2>&1` to suppress terminal output, then call `redraw!` (not `redraw`) before any `echo`:
 ```vim
-let l:cmd = 'git -C ' . shellescape(l:git_root) . ' rev-parse HEAD'
+call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
+redraw!
 ```
 
-## Decision-Making Guidelines
+## Accumulated Discoveries
 
-### When Adding Features
-1. **Check if it affects all implementations** - If yes, plan for all three
-2. **Consider backward compatibility** - Don't break existing configurations
-3. **Think about edge cases** - Different providers, URL formats, etc.
-4. **Plan documentation updates** - README, help file, examples
+1. **`string()` in Vim9script** adds quotes around numbers. Use `'' .. value` for plain string coercion.
+2. **Vim9script variadic forwarding**: Use `call(FuncRef, [args] + extra)` instead of `...extra` spread.
+3. **`range` attribute on functions** is invalid in Vim9script. Pass `<line1>` and `<line2>` as explicit arguments.
+4. **`<line1>,<line2>FuncCall()`** syntax is invalid in Vim9script (E1050). Use `-range` flag and pass `<line1>, <line2>` as function arguments.
+5. **`mode()` always returns `'n'`** inside a `:` command. Using `-range` + `<line1>`,`<line2>` is the correct approach.
+6. **`vim9script` at top of file errors on old Vim**. The `if !has('vim9script') | finish | endif` guard must come first, then `vim9script` declared after.
+7. **`echoerr` shows stack trace**. Use `echohl ErrorMsg` + `echom` + `echohl None` for friendly red messages.
+8. **`> /dev/null 2>&1`** on browser `system()` call + `redraw!` before `echo` suppresses terminal escape sequences. Use `redraw!` (not `redraw`) to force full screen reset after `system()`.
+9. **`export type`** keyword not supported in Vim 9.2.250. Use `dict<string>` directly in function signatures.
+10. **`<bang>0`** evaluates to `0` (no bang) or `1` (bang used) — works cleanly as a bool arg.
+11. **URL builder `file` type extra argument slots**: `extra[0]` = file path (empty = current), `extra[1]` = line info, `extra[2]` = ref (branch/commit). Consistent across all three implementations.
+12. **Legacy Vimscript variadic args** (`a:000`, `a:0`, `a:1`, etc.): When forwarding with `call()`, `a:000` is passed directly. The `a:N` positional index maps to `extra[N-1]` in the called function.
+13. **`%(refname:short)` in zsh** is interpreted as a glob pattern when unquoted — must single-quote: `"branch --all --format='%(refname:short)'"`.
+14. **Branch completion** uses two `for-each-ref` calls: `lstrip=2` for local (`refs/heads/`), `lstrip=3` for remote (`refs/remotes/`) to get bare names without `origin/` prefix. Filter `HEAD`, deduplicate local-first, sort by `-committerdate`.
+15. **`matchfuzzy()`** is always available in Vim9script and Neovim/Lua. In legacy Vimscript, check `exists('*matchfuzzy')` and fall back to prefix-regexp filter.
+16. **GitHub PR state filtering**: `?state=closed` routes to the issues endpoint (treats PRs as issues). Must use `?q=is%3Apr+is%3Aclosed` search query to scope to PRs only.
+17. **Codeberg PR state filtering**: Uses Gitea's simple `?state=open|closed|all` param — no `is:pr` needed.
+18. **`ParseRequestState` takes provider as second arg** so GitHub, Codeberg, and GitLab can produce different query strings from the same flag.
+19. **GitLab state param uses `opened`** (not `open`) — `-open` flag is redundant (default), so it falls through to `return ''`.
+20. **GitHub `OpenGitMyRequests`**: no flag/`-open` → bare `/pulls` (GitHub defaults to current user); with state flag → append `+author%3A%40me` to the `q` param.
+21. **GitLab does not support `@me` alias** — username must be resolved explicitly via `GetGitLabUsername()` / `get_gitlab_username()`: checks `g:vim_git_open_gitlab_username` → `$GITLAB_USER` → `$GLAB_USER` → `$USER`.
+22. **GitLab `OpenGitMyRequests`**: dashboard page `/dashboard/merge_requests` shows MRs authored by current user by default. `/dashboard/merge_requests/merged` for closed/merged. `-search` flag uses `/dashboard/merge_requests/search?author_username=<u>` with optional `&state=` param.
+23. **Separate completion functions**: `CompleteMyRequestState` (for `OpenGitMyRequests`) includes `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`; `CompleteRequestState` (for `OpenGitRequests`) only has `-open`, `-closed`, `-merged`, `-all`.
+24. **`-search=<state>` parsing**: split on `=`, first part is `-search`, second part (if present) maps to `&state=<value>` on the search URL.
 
-### When Fixing Bugs
-1. **Identify affected implementations** - Usually all three
-2. **Find root cause** - Don't just patch symptoms
-3. **Test thoroughly** - Verify fix doesn't break other features
-4. **Update tests/checks** - Prevent regression
+## Key Files
 
-### When Refactoring
-1. **Maintain feature parity** - Behavior must stay identical
-2. **Improve all implementations** - Don't leave one behind
-3. **Keep style consistent** - Follow indentation rules
-4. **Document significant changes** - Update comments
-
-### When User Asks for Changes
-1. **Clarify requirements** - Understand exact behavior desired
-2. **Explain implications** - How it affects all implementations
-3. **Suggest alternatives** - If request conflicts with design
-4. **Implement completely** - All three implementations + docs
-
-## Communication Style
-
-### When Explaining Changes
-- Be concise and technical
-- Show code examples
-- Reference specific file locations with line numbers
-- Explain why decisions were made
-
-### When Reporting Issues
-- Identify which implementation(s) affected
-- Describe expected vs. actual behavior
-- Suggest potential fixes
-- Consider impact on other implementations
-
-### When Asking for Clarification
-- Ask specific questions
-- Provide context (current implementation)
-- Offer implementation options
-- Explain trade-offs
-
-## Common Tasks
-
-### Adding Support for New Provider
-1. Update `detect_provider()` in all three implementations
-2. Add URL format logic in URL building functions
-3. Add line anchor formatting
-4. Test with real repositories
-5. Update documentation with examples
-6. Add to README provider list
-
-### Fixing URL Parsing Issue
-1. Identify problematic URL format
-2. Update regex in `parse_remote_url()` (all three)
-3. Test with various URL formats
-4. Add test case documentation
-5. Update CHANGELOG
-
-### Improving Error Messages
-1. Identify error condition
-2. Add clear error message (all three)
-3. Ensure consistent wording
-4. Test error paths
-5. Document error conditions
-
-### Updating Documentation
-1. Update README.md (user-facing)
-2. Update doc/git_open.txt (help file)
-3. Update example_config.vim (if config changed)
-4. Update CHANGELOG.md (version history)
-5. Ensure examples use correct indentation
+| File | Purpose |
+|------|---------|
+| `autoload/git_open.vim` | Vim9script core logic |
+| `autoload/git_open/legacy.vim` | Legacy Vimscript core logic |
+| `lua/git_open.lua` | Lua/Neovim core logic |
+| `plugin/git_open.vim` | Vim9script/legacy dispatcher entry point |
+| `plugin/git_open_legacy.vim` | Legacy Vimscript entry point |
+| `plugin/git_open.lua` | Lua entry point (Neovim) |
+| `README.md` | User documentation |
+| `doc/git_open.txt` | Vim help file |
+| `CHANGELOG.md` | Version history |
+| `example_config.vim` | Configuration examples |
+| `.opencode/agent.md` | This file |
+| `.opencode/conversation-log.md` | Full development log |
+| `.opencode/skill.md` | Development guidelines |
 
 ## Quality Checklist
 
 Before completing any task:
-- [ ] All three implementations updated
-- [ ] Code style is consistent (4-space Vim, 2-space Lua)
+- [ ] All three implementations updated (Vim9script, legacy, Lua)
+- [ ] Entry points updated if commands changed
+- [ ] Code style consistent (4-space Vim, 2-space Lua)
 - [ ] Feature parity maintained
-- [ ] Error handling is comprehensive
-- [ ] Documentation updated
-- [ ] CHANGELOG updated
-- [ ] Code tested manually
-- [ ] Edge cases considered
-- [ ] No emojis added (unless explicitly requested)
-- [ ] Commit message is clear and descriptive
-
-## Resources
-
-### Key Files
-- `.opencode/conversation-log.md` - All user requests and decisions
-- `.opencode/skill.md` - Detailed development guidelines
-- `README.md` - User documentation
-- `CONTRIBUTING.md` - Contribution guidelines
-- `CHANGELOG.md` - Version history
-
-### Reference Material
-- GitHub URL format: `https://github.com/user/repo/blob/branch/path#L10-L20`
-- GitLab URL format: `https://gitlab.com/user/repo/-/blob/branch/path#L10-20`
-- Codeberg URL format: `https://codeberg.org/user/repo/src/branch/path#L10-L20`
-
-### Testing Checklist
-Test each change with:
-- Different Vim versions (7.0+, 9.0+, Neovim)
-- Different providers (GitHub, GitLab, Codeberg)
-- Different URL formats (SSH, HTTPS)
-- Line number support (single, range, visual)
-- PR/MR parsing (from commit message, manual)
-- Custom configuration (domains, providers, browser)
-
-## Important Reminders
-
-1. **Feature parity is non-negotiable** - All three implementations must work identically
-2. **Use substring matching for providers** - Not exact matching (e.g., `github.com` matches `enterprise.github.com`)
-3. **Guard Vimscript loader with has('nvim')** - Prevents duplicate loading in Neovim
-4. **Follow indentation rules strictly** - 4-space for Vimscript, 2-space for Lua
-5. **Never add auto-detection of Vim variant** - User rolled back this approach
-6. **Test with real repositories** - Don't assume URL formats
-7. **Update CHANGELOG for all changes** - Keep version history accurate
-8. **No emojis unless requested** - Keep output professional
-
-## Your Mission
-
-Maintain and improve vim-git-open as a high-quality, reliable Vim plugin that works seamlessly across Vim, Vim9, and Neovim. Ensure users can effortlessly open git resources in their browser, regardless of their editor choice or git hosting provider.
-
-Always prioritize:
-1. **Reliability** - Code works correctly in all scenarios
-2. **Consistency** - Three implementations behave identically  
-3. **Maintainability** - Code is clean and well-documented
-4. **User Experience** - Features are intuitive and well-documented
-5. **Backward Compatibility** - Don't break existing configurations
-
-When in doubt, ask for clarification. When implementing, test thoroughly. When documenting, be clear and concise.
+- [ ] Error handling comprehensive
+- [ ] Documentation updated (README, doc/git_open.txt)
+- [ ] Files copied to both installed locations
+- [ ] Committed and pushed
+- [ ] No emojis added (unless requested)

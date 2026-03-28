@@ -76,3 +76,18 @@ end, {
   nargs = '*',
   complete = function(arglead) return git_open.complete_gitk_branch(arglead) end,
 })
+
+vim.api.nvim_create_user_command('Gitk', function(opts)
+  git_open.open_gitk(opts.args ~= '' and opts.args or nil)
+end, {
+  nargs = '*',
+  complete = function(arglead) return git_open.complete_gitk_args(arglead) end,
+})
+
+vim.api.nvim_create_user_command('GitkFile', function(opts)
+  git_open.open_gitk_file(opts.args ~= '' and opts.args or nil, opts.bang)
+end, {
+  bang = true,
+  nargs = '*',
+  complete = function(arglead) return git_open.complete_gitk_branch(arglead) end,
+})

@@ -47,3 +47,5 @@ command! -bang -nargs=? -complete=customlist,git_open#CompleteMyRequestState Ope
 command! -bang -nargs=? -complete=customlist,git_open#CompleteRequestState OpenGitRequests GitOpen.OpenRequests(<q-args>, <bang>0)
 command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs OpenGitk GitOpen.OpenGitk(<q-args>)
 command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch OpenGitkFile GitOpen.OpenGitkFile(<q-args>, <bang>0)
+command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs Gitk GitOpen.OpenGitk(<q-args>)
+command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch GitkFile GitOpen.OpenGitkFile(<q-args>, <bang>0)

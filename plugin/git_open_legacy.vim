@@ -46,6 +46,8 @@ command! -bang -nargs=? -complete=customlist,git_open#legacy#complete_my_request
 command! -bang -nargs=? -complete=customlist,git_open#legacy#complete_request_state OpenGitRequests call git_open#legacy#open_requests(<q-args>, <bang>0)
 command! -nargs=* -complete=customlist,git_open#legacy#complete_gitk_args OpenGitk call git_open#legacy#open_gitk(<q-args>)
 command! -bang -nargs=* -complete=customlist,git_open#legacy#complete_gitk_branch OpenGitkFile call git_open#legacy#open_gitk_file(<q-args>, <bang>0)
+command! -nargs=* -complete=customlist,git_open#legacy#complete_gitk_args Gitk call git_open#legacy#open_gitk(<q-args>)
+command! -bang -nargs=* -complete=customlist,git_open#legacy#complete_gitk_branch GitkFile call git_open#legacy#open_gitk_file(<q-args>, <bang>0)
 
 " Restore cpoptions
 let &cpoptions = s:save_cpo

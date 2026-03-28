@@ -656,12 +656,13 @@ def LaunchGitk(args: list<string>, git_root: string)
     endif
     if exists(':Launch') == 2
         # Vim 9.2+ built-in cross-platform GUI launcher (plugin/openPlugin.vim)
-        # :Launch does not support cwd, so temporarily cd to git root
+        # :Launch does not support cwd, so temporarily cd to git root.
+        # On Unix, dist#vim9#Launch calls job_start(split(args)) — do NOT
+        # shellescape individual args or the quotes become literal characters.
         var save_dir = getcwd()
         try
             execute 'cd ' .. fnameescape(git_root)
-            var cmd = join(map(copy(args), (_, v) => shellescape(v)))
-            execute 'Launch gitk ' .. cmd
+            execute 'Launch gitk ' .. join(args)
         finally
             execute 'cd ' .. fnameescape(save_dir)
         endtry

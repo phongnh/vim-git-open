@@ -343,7 +343,7 @@ function! s:open_browser(url) abort
     endif
 
     call system(l:cmd)
-    redraw
+    redraw!
     echo 'Opened: ' . a:url
 endfunction
 
@@ -354,7 +354,7 @@ function! s:copy_to_clipboard(url) abort
 
     call setreg('+', a:url)
     call setreg('*', a:url)
-    redraw
+    redraw!
     echo 'Copied: ' . a:url
 endfunction
 

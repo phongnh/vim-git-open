@@ -324,7 +324,7 @@ def OpenBrowser(url: string)
     endif
 
     system(cmd)
-    redraw
+    redraw!
     echo 'Opened: ' .. url
 enddef
 
@@ -335,7 +335,7 @@ def CopyToClipboard(url: string)
 
     setreg('+', url)
     setreg('*', url)
-    redraw
+    redraw!
     echo 'Copied: ' .. url
 enddef
 

@@ -280,13 +280,15 @@ let g:vim_git_open_providers = {
 
 ## Versions
 
-This plugin is available in three implementations:
+The plugin ships all three implementations in a single branch and selects the right one automatically at startup — no configuration required:
 
-- **master branch**: Legacy Vimscript (compatible with Vim 7.0+)
-- **vim9 branch**: Vim9script (requires Vim 9.0+)
-- **lua branch**: Lua (Neovim only)
+| Implementation | File | Loaded when |
+|---|---|---|
+| Vim9script | `plugin/git_open.vim` | Vim with `vim9script` support (Vim 9.0+) |
+| Legacy Vimscript | `plugin/git_open_legacy.vim` | Vim without `vim9script` support (Vim 7.0+) |
+| Lua | `plugin/git_open.lua` | Neovim |
 
-All versions have the same features and API. Use the master branch for maximum compatibility.
+All three implementations have full feature parity.
 
 ## Troubleshooting
 

@@ -15,29 +15,26 @@ def Warn(msg: string)
 enddef
 
 def GetGitRoot(): string
-    # Prefer vim-fugitive when available (handles fugitive:// virtual buffers).
-    # Use FugitiveGitDir() — reads b:git_dir directly, works in all fugitive
-    # buffer types (fugitiveblame, fugitive://, etc.) without the E15 errors
-    # that FugitiveWorkTree() triggers in some versions.
-    # Use call() so the lookup is deferred to runtime (Vim9script compile-time).
+    # Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
+    # (fugitiveblame, fugitive://, etc.). Use call() so the name is resolved
+    # at runtime — Vim9script compiles all bare names at load time.
     if exists('*FugitiveGitDir')
-        var fgd = '' .. call('FugitiveGitDir', [])
-        if !empty(fgd)
-            # fgd is the .git dir; its parent is the work tree root
-            var fgd_clean = substitute(fgd, '/$', '', '')
-            return fnamemodify(fgd_clean, ':h')
+        var gitdir = '' .. call('FugitiveGitDir', [])
+        if !empty(gitdir)
+            return fnamemodify(gitdir, ':h')
         endif
     endif
+    # Step 2: finddir from the current buffer's directory
     var git_dir = finddir('.git', expand('%:p:h') .. ';')
-    if empty(git_dir)
-        return ''
+    if !empty(git_dir)
+        return fnamemodify(git_dir, ':p:h')
     endif
-    # Get absolute path to .git directory, then get its parent
-    var abs_git_dir = fnamemodify(git_dir, ':p')
-    # Remove trailing slash and .git
-    abs_git_dir = substitute(abs_git_dir, '/$', '', '')
-    var root = fnamemodify(abs_git_dir, ':h')
-    return root
+    # Step 3: fallback to cwd — works in terminal/quickfix/empty buffers
+    git_dir = finddir('.git', getcwd() .. ';')
+    if !empty(git_dir)
+        return fnamemodify(git_dir, ':p:h')
+    endif
+    return ''
 enddef
 
 def GitCommand(args: string): string

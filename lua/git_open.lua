@@ -13,27 +13,24 @@ local function warn(msg)
 end
 
 local function get_git_root()
-  -- Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
-  -- FugitiveGitDir() reads b:git_dir directly — works in fugitiveblame and
-  -- all other fugitive buffer types without internal errors.
+  -- Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
   if vim.fn.exists('*FugitiveGitDir') == 1 then
     local fgd = vim.fn.FugitiveGitDir()
     if type(fgd) == 'string' and fgd ~= '' then
-      -- fgd is the .git dir; its parent is the work tree root
-      local fgd_clean = fgd:gsub('/$', '')
-      return vim.fn.fnamemodify(fgd_clean, ':h')
+      return vim.fn.fnamemodify(fgd, ':h')
     end
   end
+  -- Step 2: finddir from the current buffer's directory
   local git_dir = vim.fn.finddir('.git', vim.fn.expand('%:p:h') .. ';')
-  if git_dir == '' then
-    return nil
+  if git_dir ~= '' then
+    return vim.fn.fnamemodify(git_dir, ':p:h')
   end
-  -- Get absolute path to .git directory, then get its parent
-  local abs_git_dir = vim.fn.fnamemodify(git_dir, ':p')
-  -- Remove trailing slash and .git
-  abs_git_dir = abs_git_dir:gsub('/$', '')
-  local root = vim.fn.fnamemodify(abs_git_dir, ':h')
-  return root
+  -- Step 3: fallback to cwd — works in terminal/quickfix/empty buffers
+  git_dir = vim.fn.finddir('.git', vim.fn.getcwd() .. ';')
+  if git_dir ~= '' then
+    return vim.fn.fnamemodify(git_dir, ':p:h')
+  end
+  return nil
 end
 
 local function git_command(args)

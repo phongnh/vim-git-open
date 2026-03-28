@@ -18,27 +18,24 @@ endfunction
 
 " Get the git root directory
 function! s:get_git_root() abort
-    " Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
-    " FugitiveGitDir() reads b:git_dir directly — works in fugitiveblame and
-    " all other fugitive buffer types without internal errors.
+    " Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
     if exists('*FugitiveGitDir')
-        let l:fgd = FugitiveGitDir()
-        if !empty(l:fgd)
-            " fgd is the .git dir; its parent is the work tree root
-            let l:fgd_clean = substitute(l:fgd, '/$', '', '')
-            return fnamemodify(l:fgd_clean, ':h')
+        let l:gitdir = FugitiveGitDir()
+        if !empty(l:gitdir)
+            return fnamemodify(l:gitdir, ':h')
         endif
     endif
+    " Step 2: finddir from the current buffer's directory
     let l:git_dir = finddir('.git', expand('%:p:h') . ';')
-    if empty(l:git_dir)
-        return ''
+    if !empty(l:git_dir)
+        return fnamemodify(l:git_dir, ':p:h')
     endif
-    " Get absolute path to .git directory, then get its parent
-    let l:abs_git_dir = fnamemodify(l:git_dir, ':p')
-    " Remove trailing slash and .git
-    let l:abs_git_dir = substitute(l:abs_git_dir, '/$', '', '')
-    let l:root = fnamemodify(l:abs_git_dir, ':h')
-    return l:root
+    " Step 3: fallback to cwd — works in terminal/quickfix/empty buffers
+    let l:git_dir = finddir('.git', getcwd() . ';')
+    if !empty(l:git_dir)
+        return fnamemodify(l:git_dir, ':p:h')
+    endif
+    return ''
 endfunction
 
 " Execute git command in the git root

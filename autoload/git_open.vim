@@ -19,9 +19,9 @@ def GetGitRoot(): string
     # Use call() with a string so the lookup is deferred to runtime — Vim9script
     # compiles function bodies and would error on an unknown bare name.
     if exists('*FugitiveWorkTree')
-        var ft = '' .. call('FugitiveWorkTree', [])
-        if !empty(ft)
-            return ft
+        var ft_raw = call('FugitiveWorkTree', [])
+        if type(ft_raw) == v:t_string && !empty(ft_raw)
+            return '' .. ft_raw
         endif
     endif
     var git_dir = finddir('.git', expand('%:p:h') .. ';')

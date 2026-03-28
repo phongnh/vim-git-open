@@ -289,10 +289,11 @@ local function open_browser(url)
   if vim.fn.has('win32') == 1 or vim.fn.has('win64') == 1 then
     cmd = string.format('start "" %s', vim.fn.shellescape(url))
   else
-    cmd = string.format('%s %s', browser_cmd, vim.fn.shellescape(url))
+    cmd = string.format('%s %s > /dev/null 2>&1', browser_cmd, vim.fn.shellescape(url))
   end
-  
+
   vim.fn.system(cmd)
+  vim.cmd('redraw')
   print('Opened: ' .. url)
 end
 

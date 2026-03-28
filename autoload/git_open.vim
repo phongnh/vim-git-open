@@ -306,12 +306,15 @@ function! s:open_browser(url) abort
     endif
     
     let l:cmd = g:vim_git_open_browser_command . ' ' . shellescape(a:url)
-    
+
     if has('win32') || has('win64')
         let l:cmd = '!start "" ' . shellescape(a:url)
+    else
+        let l:cmd = l:cmd . ' > /dev/null 2>&1'
     endif
-    
+
     call system(l:cmd)
+    redraw
     echo 'Opened: ' . a:url
 endfunction
 

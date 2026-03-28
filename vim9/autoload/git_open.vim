@@ -32,13 +32,13 @@ def GitCommand(args: string): string
     return substitute(output, '\n\+$', '', '')
 enddef
 
-def ParseRemoteUrl(): RemoteInfo
+def ParseRemoteUrl(): dict<string>
     var remote = GitCommand('config --get remote.origin.url')
     if empty(remote)
         return {}
     endif
     
-    var result: RemoteInfo = {domain: '', path: ''}
+    var result: dict<string> = {domain: '', path: ''}
     
     # Handle SSH URLs: git@github.com:user/repo.git
     var ssh_match = matchlist(remote, '^\(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
@@ -285,16 +285,19 @@ def OpenBrowser(url: string)
     endif
     
     var cmd = g:vim_git_open_browser_command .. ' ' .. shellescape(url)
-    
+
     if has('win32') || has('win64')
         cmd = '!start "" ' .. shellescape(url)
+    else
+        cmd = cmd .. ' > /dev/null 2>&1'
     endif
-    
+
     system(cmd)
+    redraw
     echo 'Opened: ' .. url
 enddef
 
-def GetRepoInfo(): RepoInfo
+def GetRepoInfo(): dict<string>
     var remote = ParseRemoteUrl()
     if empty(remote)
         echoerr 'Not a git repository or no remote configured'
@@ -371,7 +374,7 @@ export def OpenPRs()
     OpenBrowser(url)
 enddef
 
-export def OpenFile() range
+export def OpenFile()
     var info = GetRepoInfo()
     if empty(info)
         return

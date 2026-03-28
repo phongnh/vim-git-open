@@ -186,6 +186,22 @@ local function parse_pr_mr_from_commit(provider)
   return parse_pr_mr_number(commit_msg, provider)
 end
 
+local function get_gitlab_username()
+  local cfg = vim.g.vim_git_open_gitlab_username
+  if cfg and cfg ~= '' then
+    return cfg
+  end
+  local gitlab_user = vim.fn.getenv('GITLAB_USER')
+  if gitlab_user ~= vim.NIL and gitlab_user ~= '' then
+    return gitlab_user
+  end
+  local glab_user = vim.fn.getenv('GLAB_USER')
+  if glab_user ~= vim.NIL and glab_user ~= '' then
+    return glab_user
+  end
+  return vim.fn.expand('$USER')
+end
+
 -- Parse state flag from command args: -open, -closed, -merged, -all
 -- Returns the query string suffix to append to the pulls/MRs URL.
 -- GitHub:   uses ?q=is%3Apr+is%3A<state> search query
@@ -535,7 +551,7 @@ function M.open_my_requests(state_arg, copy)
   local state = parse_request_state(state_arg, info.provider)
   local url
   if info.provider == 'GitLab' then
-    local base = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. (vim.fn.expand('$USER') or '')
+    local base = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. get_gitlab_username()
     url = base .. (state ~= '' and ('&' .. state:sub(2)) or '')
   elseif info.provider == 'GitHub' then
     -- No flag/-open: /pulls is already scoped to current user when logged in

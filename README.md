@@ -132,6 +132,28 @@ Or set the `$BROWSER` environment variable in your shell:
 export BROWSER=firefox
 ```
 
+### GitLab Username
+
+GitLab does not support a `@me` alias, so `:OpenGitMyRequests` needs your
+username to filter MRs by author. It resolves the username in this order:
+
+1. `g:vim_git_open_gitlab_username` (if set)
+2. `$GITLAB_USER` environment variable (if set)
+3. `$GLAB_USER` environment variable (if set, set by the [glab](https://gitlab.com/gitlab-org/cli) CLI)
+4. `$USER` (system fallback)
+
+To set it explicitly:
+
+```vim
+let g:vim_git_open_gitlab_username = 'your.username'
+```
+
+Or export the environment variable in your shell:
+
+```bash
+export GITLAB_USER=your.username
+```
+
 ## Usage Examples
 
 ### Basic Usage

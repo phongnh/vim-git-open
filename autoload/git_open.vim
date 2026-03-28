@@ -186,6 +186,18 @@ def ParsePrMrFromCommit(provider: string): string
     return ParsePrMrNumber(commit_msg, provider)
 enddef
 
+def GetGitLabUsername(): string
+    if exists('g:vim_git_open_gitlab_username') && !empty(g:vim_git_open_gitlab_username)
+        return g:vim_git_open_gitlab_username
+    endif
+    if !empty($GITLAB_USER)
+        return $GITLAB_USER
+    elseif !empty($GLAB_USER)
+        return $GLAB_USER
+    endif
+    return $USER
+enddef
+
 # Parse state flag from command args: -open, -closed, -merged, -all
 # Returns the query string suffix to append to the pulls/MRs URL.
 # GitHub:   uses ?q=is%3Apr+is%3A<state> search query
@@ -440,7 +452,7 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     var state = ParseRequestState(state_arg, info.provider)
     var url: string
     if info.provider ==# 'GitLab'
-        url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER') .. (empty(state) ? '' : '&' .. state[1 :])
+        url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. GetGitLabUsername() .. (empty(state) ? '' : '&' .. state[1 :])
     elseif info.provider ==# 'GitHub'
         # No flag/-open: /pulls is already scoped to current user when logged in
         # With state flag: append author:@me to keep scoped to current user

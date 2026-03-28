@@ -154,16 +154,23 @@ the browser. With [!], the URL is copied to the clipboard instead.
     This is useful for quickly jumping to the pull/merge request that
     introduced changes to the file you're currently editing.
 
-                                                        *:OpenGitMyRequests*
-:OpenGitMyRequests[!]
+                                                         *:OpenGitMyRequests*
+:OpenGitMyRequests[!] [-open|-closed|-merged|-all]
     Open (or copy) all your pull requests / merge requests for the current
     git provider.
 
     The URL opened depends on the provider:
       - GitHub/Codeberg: https://<host>/pulls
-      - GitLab:          https://<host>/dashboard/merge_requests
+      - GitLab:          https://<host>/dashboard/merge_requests?assignee_username=<user>
 
-    This is useful for quickly reviewing all open PRs/MRs assigned to you.
+    For GitLab, the username is resolved via |g:vim_git_open_gitlab_username|.
+    See that option for the full resolution order.
+
+    Optional state flag:
+      -open    Open PRs/MRs (default, same as no flag)
+      -closed  Closed PRs/MRs
+      -merged  Merged PRs/MRs (GitLab only; maps to closed on Codeberg)
+      -all     All PRs/MRs regardless of state
 
                                                          *:OpenGitRequests*
 :OpenGitRequests[!]
@@ -211,7 +218,7 @@ g:vim_git_open_domains
     Note: If no protocol (http:// or https://) is specified in the URL,
     https:// will be used by default.
 
-                                                *g:vim_git_open_providers*
+                                                 *g:vim_git_open_providers*
 g:vim_git_open_providers
     A dictionary specifying the provider type for custom domains.
     Use this to override automatic provider detection.
@@ -228,6 +235,25 @@ g:vim_git_open_providers
             \ 'git.company.com': 'GitHub',
             \ 'gitlab.internal': 'GitLab',
             \ }
+<
+
+                                          *g:vim_git_open_gitlab_username*
+g:vim_git_open_gitlab_username
+    Your GitLab username, used by |:OpenGitMyRequests| to filter MRs by
+    author. GitLab does not support a @me alias, so the username must be
+    resolved explicitly.
+
+    The username is resolved in this order:
+      1. g:vim_git_open_gitlab_username (this variable, if set)
+      2. $GITLAB_USER environment variable (if set)
+      3. $GLAB_USER environment variable (if set, provided by glab CLI)
+      4. $USER (system fallback)
+
+    Example: >
+        let g:vim_git_open_gitlab_username = 'your.username'
+<
+    Or export in your shell: >
+        export GITLAB_USER=your.username
 <
 
 ==============================================================================

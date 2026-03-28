@@ -379,6 +379,21 @@ local function get_repo_info()
   }
 end
 
+local function get_visual_selection()
+  if vim.fn.exists('*getregion') == 1 then
+    local lines = vim.fn.getregion(vim.fn.getpos("'<"), vim.fn.getpos("'>"))
+    return vim.trim(table.concat(lines, '\n'))
+  end
+  local line = vim.fn.getline("'<")
+  local _, _, c1 = unpack(vim.fn.getpos("'<"))
+  local _, l2, c2 = unpack(vim.fn.getpos("'>"))
+  local _, l1 = unpack(vim.fn.getpos("'<"))
+  if l1 ~= l2 then
+    return vim.trim(line:sub(c1))
+  end
+  return vim.trim(line:sub(c1, c2))
+end
+
 -- ============================================================================
 -- Completion Functions
 -- ============================================================================
@@ -499,13 +514,18 @@ function M.open_repo(copy)
   open_or_copy(url, copy)
 end
 
-function M.open_branch(branch, copy)
+function M.open_branch(branch, copy, visual)
   local info = get_repo_info()
   if not info then
     return
   end
-  
-  local url = build_url(info.provider, info.base_url, info.path, 'branch', branch)
+
+  local ref = branch
+  if (not ref or ref == '') and visual then
+    ref = get_visual_selection()
+  end
+
+  local url = build_url(info.provider, info.base_url, info.path, 'branch', ref)
   open_or_copy(url, copy)
 end
 
@@ -527,13 +547,18 @@ function M.open_file(line1, line2, ref, copy)
   open_or_copy(url, copy)
 end
 
-function M.open_commit(commit, copy)
+function M.open_commit(commit, copy, visual)
   local info = get_repo_info()
   if not info then
     return
   end
-  
-  local url = build_url(info.provider, info.base_url, info.path, 'commit', commit)
+
+  local ref = commit
+  if (not ref or ref == '') and visual then
+    ref = get_visual_selection()
+  end
+
+  local url = build_url(info.provider, info.base_url, info.path, 'commit', ref)
   open_or_copy(url, copy)
 end
 

@@ -377,6 +377,19 @@ def GetRepoInfo(): dict<string>
     }
 enddef
 
+def GetVisualSelection(): string
+    if exists('*getregion')
+        return trim(join(getregion(getpos("'<"), getpos("'>")), "\n"))
+    endif
+    var line = getline("'<")
+    var [_, l1, c1, _] = getpos("'<")
+    var [_, l2, c2, _] = getpos("'>")
+    if l1 != l2
+        return trim(strpart(line, c1 - 1))
+    endif
+    return trim(strpart(line, c1 - 1, c2 - c1 + 1))
+enddef
+
 # ============================================================================
 # Completion Functions
 # ============================================================================
@@ -451,13 +464,18 @@ export def OpenRepo(copy: bool = false)
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenBranch(branch_arg: string = '', copy: bool = false)
+export def OpenBranch(branch_arg: string = '', copy: bool = false, visual: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch_arg)
+    var branch = branch_arg
+    if empty(branch) && visual
+        branch = GetVisualSelection()
+    endif
+
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch)
     OpenOrCopy(url, copy)
 enddef
 
@@ -537,13 +555,18 @@ export def OpenFile(line1: number, line2: number, ref_arg: string = '', copy: bo
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenCommit(commit_arg: string = '', copy: bool = false)
+export def OpenCommit(commit_arg: string = '', copy: bool = false, visual: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
-    
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit_arg)
+
+    var commit = commit_arg
+    if empty(commit) && visual
+        commit = GetVisualSelection()
+    endif
+
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
     OpenOrCopy(url, copy)
 enddef
 

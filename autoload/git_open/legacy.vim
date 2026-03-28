@@ -401,6 +401,19 @@ endfunction
 " Completion Functions
 " ============================================================================
 
+function! s:get_visual_selection() abort
+    if exists('*getregion')
+        return trim(join(getregion(getpos("'<"), getpos("'>")), "\n"))
+    endif
+    let l:line = getline("'<")
+    let [l:_b, l:l1, l:c1, l:_o] = getpos("'<")
+    let [l:_b, l:l2, l:c2, l:_o] = getpos("'>")
+    if l:l1 != l:l2
+        return trim(strpart(l:line, l:c1 - 1))
+    endif
+    return trim(strpart(l:line, l:c1 - 1, l:c2 - l:c1 + 1))
+endfunction
+
 function! s:unique(items) abort
     let l:seen = {}
     let l:result = []
@@ -479,9 +492,14 @@ function! git_open#legacy#open_branch(...) abort
         return
     endif
 
-    " a:1 = branch (optional), a:2 = copy flag (optional)
+    " a:1 = branch (optional), a:2 = copy flag (optional), a:3 = visual flag (optional)
     let l:branch = a:0 > 0 ? a:1 : ''
     let l:copy = a:0 > 1 && a:2
+    let l:visual = a:0 > 2 && a:3
+
+    if empty(l:branch) && l:visual
+        let l:branch = s:get_visual_selection()
+    endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'branch', l:branch)
     call s:open_or_copy(l:url, l:copy)
@@ -515,9 +533,14 @@ function! git_open#legacy#open_commit(...) abort
         return
     endif
 
-    " a:1 = commit (optional), a:2 = copy flag (optional)
+    " a:1 = commit (optional), a:2 = copy flag (optional), a:3 = visual flag (optional)
     let l:commit = a:0 > 0 ? a:1 : ''
     let l:copy = a:0 > 1 && a:2
+    let l:visual = a:0 > 2 && a:3
+
+    if empty(l:commit) && l:visual
+        let l:commit = s:get_visual_selection()
+    endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit', l:commit)
     call s:open_or_copy(l:url, l:copy)

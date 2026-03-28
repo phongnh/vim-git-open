@@ -1,12 +1,13 @@
-vim9script
-
-# plugin/git_open.vim - Open git resources in browser (Vim9script)
-# Maintainer:   Phong Nguyen
-# Version:      1.0.0
+" plugin/git_open.vim - Open git resources in browser (Vim9script)
+" Maintainer:   Phong Nguyen
+" Version:      1.0.0
 
 if !has('vim9script') || has('nvim') || exists('g:loaded_git_open')
     finish
 endif
+
+vim9script
+
 g:loaded_git_open = 1
 
 import autoload 'git_open.vim' as GitOpen

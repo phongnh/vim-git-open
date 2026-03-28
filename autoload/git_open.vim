@@ -294,6 +294,25 @@ def OpenBrowser(url: string)
     echo 'Opened: ' .. url
 enddef
 
+def CopyToClipboard(url: string)
+    if empty(url)
+        return
+    endif
+
+    setreg('+', url)
+    setreg('*', url)
+    redraw
+    echo 'Copied: ' .. url
+enddef
+
+def OpenOrCopy(url: string, copy: bool)
+    if copy
+        CopyToClipboard(url)
+    else
+        OpenBrowser(url)
+    endif
+enddef
+
 def GetRepoInfo(): dict<string>
     var remote = ParseRemoteUrl()
     if empty(remote)
@@ -316,27 +335,27 @@ enddef
 # Public API Functions
 # ============================================================================
 
-export def OpenRepo()
+export def OpenRepo(copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
     
     var url = BuildUrl(info.provider, info.base_url, info.path, 'repo')
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenBranch()
+export def OpenBranch(copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
 
     var url = BuildUrl(info.provider, info.base_url, info.path, 'branch')
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenMyRequests()
+export def OpenMyRequests(copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -350,10 +369,10 @@ export def OpenMyRequests()
         url = info.base_url .. '/pulls'
     endif
 
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenRequests()
+export def OpenRequests(copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -368,10 +387,10 @@ export def OpenRequests()
         url = repo_url .. '/pulls'
     endif
 
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenFile(line1: number, line2: number)
+export def OpenFile(line1: number, line2: number, copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -385,20 +404,20 @@ export def OpenFile(line1: number, line2: number)
     var line_range = GetLineRange(line1, line2)
 
     var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range)
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenCommit()
+export def OpenCommit(copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
     
     var url = BuildUrl(info.provider, info.base_url, info.path, 'commit')
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenRequest(req_arg: string = '')
+export def OpenRequest(req_arg: string = '', copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -413,10 +432,10 @@ export def OpenRequest(req_arg: string = '')
 
     var type = info.provider ==# 'GitLab' ? 'mr' : 'pr'
     var url = BuildUrl(info.provider, info.base_url, info.path, type, number)
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef
 
-export def OpenFileLastChange()
+export def OpenFileLastChange(copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -455,5 +474,5 @@ export def OpenFileLastChange()
         url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
     endif
     
-    OpenBrowser(url)
+    OpenOrCopy(url, copy)
 enddef

@@ -54,16 +54,18 @@ cp -r vim-git-open/autoload ~/.vim/
 
 ## Commands
 
+All commands support a `!` (bang) variant that **copies the URL to the clipboard** instead of opening the browser.
+
 | Command | Description |
 |---------|-------------|
-| `:OpenGitRepo` | Open the repository home page |
-| `:OpenGitBranch` | Open the current branch in browser |
-| `:OpenGitFile` | Open the current file at current commit (supports line numbers) |
-| `:OpenGitCommit` | Open the current commit |
-| `:OpenGitRequest [number]` | Open pull/merge request (auto-detects provider). Auto-parses from commit if no number given |
-| `:OpenGitFileLastChange` | Open the PR/MR or commit that last changed the current file |
-| `:OpenGitMyRequests` | Open all my pull requests / merge requests for the current git provider |
-| `:OpenGitRequests` | Open the pull requests / merge requests page for the current repository |
+| `:OpenGitRepo[!]` | Open (or copy) the repository home page |
+| `:OpenGitBranch[!]` | Open (or copy) the current branch URL |
+| `:[range]OpenGitFile[!]` | Open (or copy) the current file at current commit (supports line numbers) |
+| `:OpenGitCommit[!]` | Open (or copy) the current commit URL |
+| `:OpenGitRequest[!] [number]` | Open (or copy) pull/merge request (auto-detects provider). Auto-parses from commit if no number given |
+| `:OpenGitFileLastChange[!]` | Open (or copy) the PR/MR or commit that last changed the current file |
+| `:OpenGitMyRequests[!]` | Open (or copy) all my pull requests / merge requests for the current git provider |
+| `:OpenGitRequests[!]` | Open (or copy) the pull requests / merge requests page for the current repository |
 
 ### Line Number Support
 
@@ -138,11 +140,17 @@ export BROWSER=firefox
 " Open repository home page
 :OpenGitRepo
 
+" Copy repository URL to clipboard
+:OpenGitRepo!
+
 " Open current branch
 :OpenGitBranch
 
 " Open current file in browser (includes current line number)
 :OpenGitFile
+
+" Copy current file URL to clipboard
+:OpenGitFile!
 
 " Open current file with line range (use visual selection)
 " Select lines 10-20 in visual mode, then:
@@ -158,6 +166,9 @@ export BROWSER=firefox
 " Open specific PR/MR number (auto-detects provider)
 :OpenGitRequest 123
 
+" Copy PR/MR URL to clipboard
+:OpenGitRequest! 123
+
 " Auto-parse PR/MR from commit message (e.g., "Fix bug (#456)" or "Merge !234")
 :OpenGitRequest
 
@@ -165,6 +176,9 @@ export BROWSER=firefox
 " If the file's latest commit has a PR/MR number, opens that PR/MR
 " Otherwise, opens the commit
 :OpenGitFileLastChange
+
+" Copy last change URL to clipboard
+:OpenGitFileLastChange!
 
 " Open my PRs/MRs for current git provider
 :OpenGitMyRequests
@@ -181,6 +195,9 @@ Add to your `.vimrc` or `init.vim`:
 " Open repository
 nnoremap <leader>go :OpenGitRepo<CR>
 
+" Copy repository URL
+nnoremap <leader>gO :OpenGitRepo!<CR>
+
 " Open current branch
 nnoremap <leader>gb :OpenGitBranch<CR>
 
@@ -188,6 +205,10 @@ nnoremap <leader>gb :OpenGitBranch<CR>
 nnoremap <leader>gf :OpenGitFile<CR>
 " Also works in visual mode for line ranges
 vnoremap <leader>gf :OpenGitFile<CR>
+
+" Copy current file URL
+nnoremap <leader>gF :OpenGitFile!<CR>
+vnoremap <leader>gF :OpenGitFile!<CR>
 
 " Open current commit
 nnoremap <leader>gc :OpenGitCommit<CR>

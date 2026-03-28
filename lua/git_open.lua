@@ -292,6 +292,25 @@ local function open_browser(url)
   print('Opened: ' .. url)
 end
 
+local function copy_to_clipboard(url)
+  if not url or url == '' then
+    return
+  end
+
+  vim.fn.setreg('+', url)
+  vim.fn.setreg('*', url)
+  vim.cmd('redraw')
+  print('Copied: ' .. url)
+end
+
+local function open_or_copy(url, copy)
+  if copy then
+    copy_to_clipboard(url)
+  else
+    open_browser(url)
+  end
+end
+
 local function get_repo_info()
   local remote = parse_remote_url()
   if not remote then
@@ -314,27 +333,27 @@ end
 -- Public API Functions
 -- ============================================================================
 
-function M.open_repo()
+function M.open_repo(copy)
   local info = get_repo_info()
   if not info then
     return
   end
   
   local url = build_url(info.provider, info.base_url, info.path, 'repo')
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_branch()
+function M.open_branch(copy)
   local info = get_repo_info()
   if not info then
     return
   end
   
   local url = build_url(info.provider, info.base_url, info.path, 'branch')
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_file(line1, line2)
+function M.open_file(line1, line2, copy)
   local info = get_repo_info()
   if not info then
     return
@@ -348,20 +367,20 @@ function M.open_file(line1, line2)
   local line_range = get_line_range(line1, line2)
 
   local url = build_url(info.provider, info.base_url, info.path, 'file', nil, line_range)
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_commit()
+function M.open_commit(copy)
   local info = get_repo_info()
   if not info then
     return
   end
   
   local url = build_url(info.provider, info.base_url, info.path, 'commit')
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_request(number)
+function M.open_request(number, copy)
   local info = get_repo_info()
   if not info then
     return
@@ -379,10 +398,10 @@ function M.open_request(number)
 
   local type = info.provider == 'GitLab' and 'mr' or 'pr'
   local url = build_url(info.provider, info.base_url, info.path, type, req)
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_file_last_change()
+function M.open_file_last_change(copy)
   local info = get_repo_info()
   if not info then
     return
@@ -421,10 +440,10 @@ function M.open_file_last_change()
     url = build_url(info.provider, info.base_url, info.path, 'commit', commit)
   end
   
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_my_requests()
+function M.open_my_requests(copy)
   local info = get_repo_info()
   if not info then
     return
@@ -438,10 +457,10 @@ function M.open_my_requests()
     url = info.base_url .. '/pulls'
   end
 
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
-function M.open_requests()
+function M.open_requests(copy)
   local info = get_repo_info()
   if not info then
     return
@@ -456,7 +475,7 @@ function M.open_requests()
     url = repo_url .. '/pulls'
   end
 
-  open_browser(url)
+  open_or_copy(url, copy)
 end
 
 function M.setup(opts)

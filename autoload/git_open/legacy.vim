@@ -313,6 +313,25 @@ function! s:open_browser(url) abort
     echo 'Opened: ' . a:url
 endfunction
 
+function! s:copy_to_clipboard(url) abort
+    if empty(a:url)
+        return
+    endif
+
+    call setreg('+', a:url)
+    call setreg('*', a:url)
+    redraw
+    echo 'Copied: ' . a:url
+endfunction
+
+function! s:open_or_copy(url, copy) abort
+    if a:copy
+        call s:copy_to_clipboard(a:url)
+    else
+        call s:open_browser(a:url)
+    endif
+endfunction
+
 " Get repository info (domain, path, provider)
 function! s:get_repo_info() abort
     let l:remote = s:parse_remote_url()
@@ -336,27 +355,27 @@ endfunction
 " Public API Functions
 " ============================================================================
 
-function! git_open#legacy#open_repo() abort
+function! git_open#legacy#open_repo(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
     endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'repo')
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
-function! git_open#legacy#open_branch() abort
+function! git_open#legacy#open_branch(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
     endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'branch')
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
-function! git_open#legacy#open_file(line1, line2) abort
+function! git_open#legacy#open_file(line1, line2, ...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
@@ -370,17 +389,17 @@ function! git_open#legacy#open_file(line1, line2) abort
     let l:line_range = s:get_line_range(a:line1, a:line2)
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'file', '', l:line_range)
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
-function! git_open#legacy#open_commit() abort
+function! git_open#legacy#open_commit(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
     endif
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit')
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
 function! git_open#legacy#open_request(...) abort
@@ -389,7 +408,9 @@ function! git_open#legacy#open_request(...) abort
         return
     endif
 
+    " First optional arg is req number, second is copy flag
     let l:number = a:0 > 0 && !empty(a:1) ? a:1 : s:parse_pr_mr_from_commit(l:info.provider)
+    let l:copy = a:0 > 1 && a:2
 
     if empty(l:number)
         call s:warn('No request number specified and could not parse from commit message')
@@ -398,10 +419,10 @@ function! git_open#legacy#open_request(...) abort
 
     let l:type = l:info.provider ==# 'GitLab' ? 'mr' : 'pr'
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, l:type, l:number)
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
-function! git_open#legacy#open_file_last_change() abort
+function! git_open#legacy#open_file_last_change(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
@@ -432,10 +453,10 @@ function! git_open#legacy#open_file_last_change() abort
         let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit', l:commit)
     endif
 
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
-function! git_open#legacy#open_my_requests() abort
+function! git_open#legacy#open_my_requests(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
@@ -447,10 +468,10 @@ function! git_open#legacy#open_my_requests() abort
         let l:url = l:info.base_url . '/pulls'
     endif
 
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
-function! git_open#legacy#open_requests() abort
+function! git_open#legacy#open_requests(...) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
@@ -463,7 +484,7 @@ function! git_open#legacy#open_requests() abort
         let l:url = l:repo_url . '/pulls'
     endif
 
-    call s:open_browser(l:url)
+    call s:open_or_copy(l:url, a:0 > 0 && a:1)
 endfunction
 
 " Restore cpoptions

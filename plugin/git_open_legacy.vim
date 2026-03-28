@@ -36,14 +36,14 @@ if !exists('g:vim_git_open_browser_command')
 endif
 
 " Commands
-command! -nargs=0 OpenGitRepo call git_open#legacy#open_repo()
-command! -nargs=0 OpenGitBranch call git_open#legacy#open_branch()
-command! -nargs=0 -range OpenGitFile call git_open#legacy#open_file(<line1>, <line2>)
-command! -nargs=0 OpenGitCommit call git_open#legacy#open_commit()
-command! -nargs=? OpenGitRequest call git_open#legacy#open_request(<q-args>)
-command! -nargs=0 OpenGitFileLastChange call git_open#legacy#open_file_last_change()
-command! -nargs=0 OpenGitMyRequests call git_open#legacy#open_my_requests()
-command! -nargs=0 OpenGitRequests call git_open#legacy#open_requests()
+command! -bang -nargs=0 OpenGitRepo call git_open#legacy#open_repo(<bang>0)
+command! -bang -nargs=0 OpenGitBranch call git_open#legacy#open_branch(<bang>0)
+command! -bang -nargs=0 -range OpenGitFile call git_open#legacy#open_file(<line1>, <line2>, <bang>0)
+command! -bang -nargs=0 OpenGitCommit call git_open#legacy#open_commit(<bang>0)
+command! -bang -nargs=? OpenGitRequest call git_open#legacy#open_request(<q-args>, <bang>0)
+command! -bang -nargs=0 OpenGitFileLastChange call git_open#legacy#open_file_last_change(<bang>0)
+command! -bang -nargs=0 OpenGitMyRequests call git_open#legacy#open_my_requests(<bang>0)
+command! -bang -nargs=0 OpenGitRequests call git_open#legacy#open_requests(<bang>0)
 
 " Restore cpoptions
 let &cpoptions = s:save_cpo

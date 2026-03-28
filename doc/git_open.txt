@@ -65,17 +65,20 @@ Manual installation:
 ==============================================================================
 4. COMMANDS                                                *git-open-commands*
 
+All commands support a [!] (bang) variant. Without [!], the URL is opened in
+the browser. With [!], the URL is copied to the clipboard instead.
+
                                                               *:OpenGitRepo*
-:OpenGitRepo
-    Open the repository home page in your browser.
+:OpenGitRepo[!]
+    Open (or copy) the repository home page.
 
                                                             *:OpenGitBranch*
-:OpenGitBranch
-    Open the current branch in your browser.
+:OpenGitBranch[!]
+    Open (or copy) the current branch URL.
 
                                                               *:OpenGitFile*
-:[range]OpenGitFile
-    Open the current file at the current commit in your browser.
+:[range]OpenGitFile[!]
+    Open (or copy) the current file at the current commit.
     
     Automatically includes the current line number in the URL.
     In visual mode or with a range, opens the file with line range.
@@ -83,6 +86,9 @@ Manual installation:
     Examples: >
         " Open file at current line
         :OpenGitFile
+        
+        " Copy file URL at current line
+        :OpenGitFile!
         
         " Open file with line range (lines 10-20)
         :10,20OpenGitFile
@@ -95,21 +101,21 @@ Manual installation:
       - GitLab: Uses #L10 or #L10-20 for ranges
 
                                                             *:OpenGitCommit*
-:OpenGitCommit
-    Open the current commit in your browser.
+:OpenGitCommit[!]
+    Open (or copy) the current commit URL.
 
                                                             *:OpenGitRequest*
-:OpenGitRequest [number]
-    Open a pull request (GitHub/Codeberg) or merge request (GitLab) in your
-    browser. The type is auto-detected based on the git provider.
+:OpenGitRequest[!] [number]
+    Open (or copy) a pull request (GitHub/Codeberg) or merge request (GitLab).
+    The type is auto-detected based on the git provider.
 
     If [number] is provided, opens that specific PR/MR.
     If [number] is not provided, attempts to parse the number from the
     current commit message (looks for #123 or !123 format).
 
                                                     *:OpenGitFileLastChange*
-:OpenGitFileLastChange
-    Open the last change (PR/MR or commit) for the current file.
+:OpenGitFileLastChange[!]
+    Open (or copy) the last change (PR/MR or commit) for the current file.
     
     This command finds the latest commit that modified the current file,
     then checks if the commit message contains a PR/MR number:
@@ -120,8 +126,9 @@ Manual installation:
     introduced changes to the file you're currently editing.
 
                                                         *:OpenGitMyRequests*
-:OpenGitMyRequests
-    Open all your pull requests / merge requests for the current git provider.
+:OpenGitMyRequests[!]
+    Open (or copy) all your pull requests / merge requests for the current
+    git provider.
 
     The URL opened depends on the provider:
       - GitHub/Codeberg: https://<host>/pulls
@@ -129,9 +136,10 @@ Manual installation:
 
     This is useful for quickly reviewing all open PRs/MRs assigned to you.
 
-                                                        *:OpenGitRequests*
-:OpenGitRequests
-    Open the pull requests / merge requests page for the current repository.
+                                                         *:OpenGitRequests*
+:OpenGitRequests[!]
+    Open (or copy) the pull requests / merge requests page for the current
+    repository.
 
     The URL opened depends on the provider:
       - GitHub/Codeberg: https://<host>/<user>/<repo>/pulls
@@ -201,11 +209,17 @@ Basic usage:~
     " Open repository home page
     :OpenGitRepo
     
+    " Copy repository URL to clipboard
+    :OpenGitRepo!
+    
     " Open current branch
     :OpenGitBranch
     
     " Open current file in browser (includes current line number)
     :OpenGitFile
+    
+    " Copy current file URL to clipboard
+    :OpenGitFile!
     
     " Open file with line range (select lines 10-20 in visual mode)
     :'<,'>OpenGitFile
@@ -219,6 +233,9 @@ Working with PRs/MRs:~
     " Open specific PR/MR number (auto-detects provider)
     :OpenGitRequest 123
 
+    " Copy PR/MR URL to clipboard
+    :OpenGitRequest! 123
+
     " Auto-parse PR/MR from commit message
     :OpenGitRequest
 
@@ -226,6 +243,9 @@ Working with PRs/MRs:~
     " If the file's latest commit has a PR/MR, opens that PR/MR
     " Otherwise, opens the commit
     :OpenGitFileLastChange
+
+    " Copy last change URL to clipboard
+    :OpenGitFileLastChange!
 
     " Open my PRs/MRs for current git provider
     :OpenGitMyRequests
@@ -238,6 +258,8 @@ Recommended keymaps:~
 >
     " Open repository
     nnoremap <leader>go :OpenGitRepo<CR>
+    " Copy repository URL
+    nnoremap <leader>gO :OpenGitRepo!<CR>
     
     " Open current branch
     nnoremap <leader>gb :OpenGitBranch<CR>
@@ -246,6 +268,9 @@ Recommended keymaps:~
     nnoremap <leader>gf :OpenGitFile<CR>
     " Visual mode - line range
     vnoremap <leader>gf :OpenGitFile<CR>
+    " Copy file URL
+    nnoremap <leader>gF :OpenGitFile!<CR>
+    vnoremap <leader>gF :OpenGitFile!<CR>
     
     " Open current commit
     nnoremap <leader>gc :OpenGitCommit<CR>

@@ -384,6 +384,14 @@ function M.complete_branch(arglead)
   return vim.fn.matchfuzzy(result, arglead)
 end
 
+function M.complete_request_state(arglead)
+  local flags = { '-open', '-closed', '-merged', '-all' }
+  if not arglead or arglead == '' then
+    return flags
+  end
+  return vim.fn.matchfuzzy(flags, arglead)
+end
+
 -- ============================================================================
 -- Public API Functions
 -- ============================================================================

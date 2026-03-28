@@ -48,8 +48,16 @@ end, { bang = true })
 
 vim.api.nvim_create_user_command('OpenGitMyRequests', function(opts)
   git_open.open_my_requests(opts.args ~= '' and opts.args or nil, opts.bang)
-end, { bang = true, nargs = '?' })
+end, {
+  bang = true,
+  nargs = '?',
+  complete = function(arglead) return git_open.complete_request_state(arglead) end,
+})
 
 vim.api.nvim_create_user_command('OpenGitRequests', function(opts)
   git_open.open_requests(opts.args ~= '' and opts.args or nil, opts.bang)
-end, { bang = true, nargs = '?' })
+end, {
+  bang = true,
+  nargs = '?',
+  complete = function(arglead) return git_open.complete_request_state(arglead) end,
+})

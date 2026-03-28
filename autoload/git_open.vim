@@ -380,6 +380,14 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
     return matchfuzzy(result, arglead)
 enddef
 
+export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
+    var flags = ['-open', '-closed', '-merged', '-all']
+    if empty(arglead)
+        return flags
+    endif
+    return matchfuzzy(flags, arglead)
+enddef
+
 # ============================================================================
 # Public API Functions
 # ============================================================================

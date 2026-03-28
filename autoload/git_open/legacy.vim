@@ -403,6 +403,17 @@ function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
     return filter(l:result, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction
 
+function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
+    let l:flags = ['-open', '-closed', '-merged', '-all']
+    if empty(a:arglead)
+        return l:flags
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(l:flags, a:arglead)
+    endif
+    return filter(copy(l:flags), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
 " ============================================================================
 " Public API Functions
 " ============================================================================

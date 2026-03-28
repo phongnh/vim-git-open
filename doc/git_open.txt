@@ -233,8 +233,8 @@ the browser. With [!], the URL is copied to the clipboard instead.
 :OpenGitkFileHistory [files...]
     Launch gitk showing the full rename history of the current file (or
     given space-separated [files]).  For each file, all historical paths
-    are resolved via `git log --follow --name-only`, then merged and
-    deduplicated.  gitk is invoked with `gitk -- <all-paths>`.
+    are resolved via "git log --follow --name-only", then merged and
+    deduplicated.  gitk is invoked with all resolved paths.
 
     Useful when a file has been renamed multiple times and you want the
     complete history in a single gitk view.
@@ -255,7 +255,7 @@ the browser. With [!], the URL is copied to the clipboard instead.
 
                                                                  *:GitkFile*
 :GitkFile[!]
-    Alias for |:OpenGitkFile|. Accepts `!` to add `--follow`.
+    Alias for |:OpenGitkFile|. Accepts [!] to add --follow.
 
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*

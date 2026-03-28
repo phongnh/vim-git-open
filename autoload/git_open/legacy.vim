@@ -434,6 +434,59 @@ function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
     return filter(l:result, 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction
 
+function! git_open#legacy#complete_gitk_args(arglead, cmdline, cursorpos) abort
+    " Branches (local first, sorted by -committerdate)
+    let l:local_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+    let l:remote_raw = s:git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
+    let l:branches = []
+    if !empty(l:local_raw)
+        let l:branches += split(l:local_raw, '\n')
+    endif
+    if !empty(l:remote_raw)
+        let l:branches += filter(split(l:remote_raw, '\n'), 'v:val !=# ''HEAD''')
+    endif
+    let l:seen = {}
+    let l:result = []
+    for l:b in l:branches
+        if !has_key(l:seen, l:b)
+            let l:seen[l:b] = 1
+            call add(l:result, l:b)
+        endif
+    endfor
+    " Tracked files/dirs
+    let l:files_raw = s:git_command('ls-files')
+    if !empty(l:files_raw)
+        for l:f in split(l:files_raw, '\n')
+            if !has_key(l:seen, l:f)
+                let l:seen[l:f] = 1
+                call add(l:result, l:f)
+            endif
+        endfor
+    endif
+    if empty(a:arglead)
+        return l:result
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(l:result, a:arglead)
+    endif
+    return filter(copy(l:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
+function! git_open#legacy#complete_gitk_files(arglead, cmdline, cursorpos) abort
+    let l:files_raw = s:git_command('ls-files')
+    if empty(l:files_raw)
+        return []
+    endif
+    let l:files = split(l:files_raw, '\n')
+    if empty(a:arglead)
+        return l:files
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(l:files, a:arglead)
+    endif
+    return filter(copy(l:files), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
 function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
     let l:flags = ['-open', '-closed', '-merged', '-all']
     if empty(a:arglead)
@@ -635,6 +688,100 @@ function! git_open#legacy#open_requests(...) abort
     endif
 
     call s:open_or_copy(l:url, l:copy)
+endfunction
+
+" ============================================================================
+" Gitk Functions
+" ============================================================================
+
+function! s:launch_gitk(args, git_root) abort
+    if !executable('gitk')
+        call s:warn('git-open: gitk not found in PATH')
+        return
+    endif
+    if has('job')
+        " Vim 8.0+ job_start with cwd support
+        call job_start(['gitk'] + a:args, {'cwd': a:git_root, 'stoponexit': ''})
+    else
+        " Vim 7 fallback: shell background
+        let l:escaped = join(map(copy(a:args), 'shellescape(v:val)'))
+        call system('cd ' . shellescape(a:git_root) . ' && gitk ' . l:escaped . ' &')
+        redraw!
+    endif
+endfunction
+
+function! s:get_gitk_old_paths(rel_path) abort
+    " Collect all historical paths this file has had (follows renames)
+    let l:output = s:git_command('log --follow --name-only --format= -- ' . shellescape(a:rel_path))
+    if empty(l:output)
+        return [a:rel_path]
+    endif
+    let l:seen = {}
+    let l:paths = []
+    for l:p in split(l:output, '\n')
+        if !empty(l:p) && !has_key(l:seen, l:p)
+            let l:seen[l:p] = 1
+            call add(l:paths, l:p)
+        endif
+    endfor
+    return empty(l:paths) ? [a:rel_path] : l:paths
+endfunction
+
+function! git_open#legacy#open_gitk(...) abort
+    let l:git_root = s:get_git_root()
+    if empty(l:git_root)
+        call s:warn('git-open: not a git repository')
+        return
+    endif
+    let l:args_str = a:0 > 0 ? a:1 : ''
+    let l:args = empty(l:args_str) ? [] : split(l:args_str)
+    call s:launch_gitk(l:args, l:git_root)
+endfunction
+
+function! git_open#legacy#open_gitk_file(...) abort
+    let l:git_root = s:get_git_root()
+    if empty(l:git_root)
+        call s:warn('git-open: not a git repository')
+        return
+    endif
+    if empty(expand('%'))
+        call s:warn('git-open: no file in current buffer')
+        return
+    endif
+    let l:follow = a:0 > 0 && a:1
+    let l:rel_path = s:get_relative_path()
+    let l:args = l:follow ? ['--follow', '--', l:rel_path] : ['--', l:rel_path]
+    call s:launch_gitk(l:args, l:git_root)
+endfunction
+
+function! git_open#legacy#open_gitk_file_history(...) abort
+    let l:git_root = s:get_git_root()
+    if empty(l:git_root)
+        call s:warn('git-open: not a git repository')
+        return
+    endif
+    let l:files_str = a:0 > 0 ? a:1 : ''
+    if empty(l:files_str)
+        if empty(expand('%'))
+            call s:warn('git-open: no file in current buffer')
+            return
+        endif
+        let l:files = [s:get_relative_path()]
+    else
+        let l:files = split(l:files_str)
+    endif
+    " Resolve full rename history for each file, merge and deduplicate
+    let l:seen = {}
+    let l:all_paths = []
+    for l:f in l:files
+        for l:p in s:get_gitk_old_paths(l:f)
+            if !has_key(l:seen, l:p)
+                let l:seen[l:p] = 1
+                call add(l:all_paths, l:p)
+            endif
+        endfor
+    endfor
+    call s:launch_gitk(['--'] + l:all_paths, l:git_root)
 endfunction
 
 " Restore cpoptions

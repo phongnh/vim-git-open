@@ -411,6 +411,53 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
     return matchfuzzy(result, arglead)
 enddef
 
+export def CompleteGitkArgs(arglead: string, cmdline: string, cursorpos: number): list<string>
+    # Branches (local first, sorted by -committerdate)
+    var local_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+    var remote_raw = GitCommand("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
+    var branches: list<string> = []
+    if !empty(local_raw)
+        branches += split(local_raw, '\n')
+    endif
+    if !empty(remote_raw)
+        branches += filter(split(remote_raw, '\n'), (_, v) => v !=# 'HEAD')
+    endif
+    var seen: dict<bool> = {}
+    var result: list<string> = []
+    for b in branches
+        if !has_key(seen, b)
+            seen[b] = true
+            result->add(b)
+        endif
+    endfor
+    # Tracked files/dirs
+    var files_raw = GitCommand('ls-files')
+    if !empty(files_raw)
+        for f in split(files_raw, '\n')
+            if !has_key(seen, f)
+                seen[f] = true
+                result->add(f)
+            endif
+        endfor
+    endif
+    if empty(arglead)
+        return result
+    endif
+    return matchfuzzy(result, arglead)
+enddef
+
+export def CompleteGitkFiles(arglead: string, cmdline: string, cursorpos: number): list<string>
+    var files_raw = GitCommand('ls-files')
+    if empty(files_raw)
+        return []
+    endif
+    var files = split(files_raw, '\n')
+    if empty(arglead)
+        return files
+    endif
+    return matchfuzzy(files, arglead)
+enddef
+
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
     var flags = ['-open', '-closed', '-merged', '-all']
     if empty(arglead)
@@ -596,4 +643,107 @@ export def OpenFileLastChange(copy: bool = false)
     endif
     
     OpenOrCopy(url, copy)
+enddef
+
+# ============================================================================
+# Gitk Functions
+# ============================================================================
+
+def LaunchGitk(args: list<string>, git_root: string)
+    if !executable('gitk')
+        Warn('git-open: gitk not found in PATH')
+        return
+    endif
+    if exists(':Launch') == 2
+        # Vim 9.2+ built-in cross-platform GUI launcher (plugin/openPlugin.vim)
+        # :Launch does not support cwd, so temporarily cd to git root
+        var save_dir = getcwd()
+        try
+            execute 'cd ' .. fnameescape(git_root)
+            var cmd = join(map(copy(args), (_, v) => shellescape(v)))
+            execute 'Launch gitk ' .. cmd
+        finally
+            execute 'cd ' .. fnameescape(save_dir)
+        endtry
+    elseif has('job')
+        # Vim 8.0+ job_start with cwd support
+        job_start(['gitk'] + args, {cwd: git_root, stoponexit: ''})
+    else
+        # Vim 7 fallback: shell background
+        var escaped = join(map(copy(args), (_, v) => shellescape(v)))
+        system('cd ' .. shellescape(git_root) .. ' && gitk ' .. escaped .. ' &')
+        redraw!
+    endif
+enddef
+
+def GetGitkOldPaths(rel_path: string): list<string>
+    # Collect all historical paths this file has had (follows renames)
+    var output = GitCommand('log --follow --name-only --format= -- ' .. shellescape(rel_path))
+    if empty(output)
+        return [rel_path]
+    endif
+    # Split, remove empty lines, deduplicate while preserving order
+    var seen: dict<bool> = {}
+    var paths: list<string> = []
+    for p in split(output, '\n')
+        if !empty(p) && !has_key(seen, p)
+            seen[p] = true
+            paths->add(p)
+        endif
+    endfor
+    return empty(paths) ? [rel_path] : paths
+enddef
+
+export def OpenGitk(args_str: string = '')
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        Warn('git-open: not a git repository')
+        return
+    endif
+    LaunchGitk(empty(args_str) ? [] : split(args_str), git_root)
+enddef
+
+export def OpenGitkFile(follow: bool = false)
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        Warn('git-open: not a git repository')
+        return
+    endif
+    if empty(expand('%'))
+        Warn('git-open: no file in current buffer')
+        return
+    endif
+    var rel_path = GetRelativePath()
+    var args = follow ? ['--follow', '--', rel_path] : ['--', rel_path]
+    LaunchGitk(args, git_root)
+enddef
+
+export def OpenGitkFileHistory(files_str: string = '')
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        Warn('git-open: not a git repository')
+        return
+    endif
+    var files: list<string>
+    if empty(files_str)
+        if empty(expand('%'))
+            Warn('git-open: no file in current buffer')
+            return
+        endif
+        files = [GetRelativePath()]
+    else
+        files = split(files_str)
+    endif
+    # Resolve full rename history for each file, merge and deduplicate
+    var seen: dict<bool> = {}
+    var all_paths: list<string> = []
+    for f in files
+        for p in GetGitkOldPaths(f)
+            if !has_key(seen, p)
+                seen[p] = true
+                all_paths->add(p)
+            endif
+        endfor
+    endfor
+    LaunchGitk(['--'] + all_paths, git_root)
 enddef

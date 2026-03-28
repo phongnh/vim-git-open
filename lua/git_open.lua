@@ -383,6 +383,43 @@ end
 -- Completion Functions
 -- ============================================================================
 
+-- ============================================================================
+-- Gitk Helper Functions
+-- ============================================================================
+
+local function launch_gitk(args, git_root)
+  if vim.fn.executable('gitk') == 0 then
+    warn('git-open: gitk not found in PATH')
+    return
+  end
+  local cmd = { 'gitk' }
+  for _, a in ipairs(args) do
+    table.insert(cmd, a)
+  end
+  vim.fn.jobstart(cmd, { cwd = git_root, detach = true })
+end
+
+local function get_gitk_old_paths(rel_path, git_root)
+  local cmd = string.format(
+    'git -C %s log --follow --name-only --format= -- %s',
+    vim.fn.shellescape(git_root),
+    vim.fn.shellescape(rel_path)
+  )
+  local output = vim.trim(vim.fn.system(cmd))
+  if output == '' then
+    return { rel_path }
+  end
+  local seen = {}
+  local paths = {}
+  for _, p in ipairs(vim.split(output, '\n', { plain = true, trimempty = true })) do
+    if not seen[p] then
+      seen[p] = true
+      table.insert(paths, p)
+    end
+  end
+  return #paths > 0 and paths or { rel_path }
+end
+
 function M.complete_branch(arglead)
   -- Local branches sorted by most recent commit (-committerdate)
   local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
@@ -410,6 +447,62 @@ function M.complete_branch(arglead)
     if not seen[b] then
       seen[b] = true
       table.insert(result, b)
+    end
+  end
+
+  if not arglead or arglead == '' then
+    return result
+  end
+  return vim.fn.matchfuzzy(result, arglead)
+end
+
+function M.complete_gitk_args(arglead)
+  local git_root = get_git_root()
+  -- Local branches sorted by most recent commit
+  local branches_raw = git_root and vim.trim(vim.fn.system(
+    string.format("git -C %s for-each-ref --sort=-committerdate --format='%%(refname:lstrip=2)' refs/heads/",
+      vim.fn.shellescape(git_root))
+  )) or ''
+  -- Tracked files
+  local files_raw = git_root and vim.trim(vim.fn.system(
+    string.format('git -C %s ls-files', vim.fn.shellescape(git_root))
+  )) or ''
+
+  local seen = {}
+  local result = {}
+  if branches_raw ~= '' then
+    for _, b in ipairs(vim.split(branches_raw, '\n', { plain = true, trimempty = true })) do
+      if not seen[b] then
+        seen[b] = true
+        table.insert(result, b)
+      end
+    end
+  end
+  if files_raw ~= '' then
+    for _, f in ipairs(vim.split(files_raw, '\n', { plain = true, trimempty = true })) do
+      if not seen[f] then
+        seen[f] = true
+        table.insert(result, f)
+      end
+    end
+  end
+
+  if not arglead or arglead == '' then
+    return result
+  end
+  return vim.fn.matchfuzzy(result, arglead)
+end
+
+function M.complete_gitk_files(arglead)
+  local git_root = get_git_root()
+  local files_raw = git_root and vim.trim(vim.fn.system(
+    string.format('git -C %s ls-files', vim.fn.shellescape(git_root))
+  )) or ''
+
+  local result = {}
+  if files_raw ~= '' then
+    for _, f in ipairs(vim.split(files_raw, '\n', { plain = true, trimempty = true })) do
+      table.insert(result, f)
     end
   end
 
@@ -606,6 +699,65 @@ function M.open_requests(state_arg, copy)
   end
 
   open_or_copy(url, copy)
+end
+
+function M.open_gitk(args_str)
+  local git_root = get_git_root()
+  if not git_root then
+    warn('git-open: not a git repository')
+    return
+  end
+  local args = (args_str and args_str ~= '') and vim.split(args_str, '%s+') or {}
+  launch_gitk(args, git_root)
+end
+
+function M.open_gitk_file(follow)
+  local git_root = get_git_root()
+  if not git_root then
+    warn('git-open: not a git repository')
+    return
+  end
+  if vim.fn.expand('%') == '' then
+    warn('git-open: no file in current buffer')
+    return
+  end
+  local rel_path = get_relative_path()
+  local args = follow and { '--follow', '--', rel_path } or { '--', rel_path }
+  launch_gitk(args, git_root)
+end
+
+function M.open_gitk_file_history(files_str)
+  local git_root = get_git_root()
+  if not git_root then
+    warn('git-open: not a git repository')
+    return
+  end
+  local files
+  if not files_str or files_str == '' then
+    if vim.fn.expand('%') == '' then
+      warn('git-open: no file in current buffer')
+      return
+    end
+    files = { get_relative_path() }
+  else
+    files = vim.split(files_str, '%s+')
+  end
+  -- Resolve full rename history for each file, merge and deduplicate
+  local seen = {}
+  local all_paths = {}
+  for _, f in ipairs(files) do
+    for _, p in ipairs(get_gitk_old_paths(f, git_root)) do
+      if not seen[p] then
+        seen[p] = true
+        table.insert(all_paths, p)
+      end
+    end
+  end
+  local args = { '--' }
+  for _, p in ipairs(all_paths) do
+    table.insert(args, p)
+  end
+  launch_gitk(args, git_root)
 end
 
 function M.setup(opts)

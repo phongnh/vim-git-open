@@ -30,6 +30,7 @@ Features:
   - Open current commit
   - Open pull requests (GitHub/Codeberg) or merge requests (GitLab)
   - Open the last change (PR/MR or commit) for the current file
+  - Launch gitk for the repository, current file, or full rename history
   - Auto-detect provider from git remote URL
   - Support for custom domain mappings
   - Line number support (single line or visual selection range)
@@ -43,6 +44,7 @@ Features:
 - Neovim 0.5+ (for Lua version)
 - Git installed and configured
 - A git repository with a remote configured
+- gitk (optional, required only for :OpenGitk, :OpenGitkFile, :OpenGitkFileHistory)
 
 ==============================================================================
 3. INSTALLATION                                        *git-open-installation*
@@ -180,6 +182,60 @@ the browser. With [!], the URL is copied to the clipboard instead.
     The URL opened depends on the provider:
       - GitHub/Codeberg: https://<host>/<user>/<repo>/pulls
       - GitLab:          https://<host>/<user>/<repo>/-/merge_requests
+
+                                                               *:OpenGitk*
+:OpenGitk [args]
+    Launch gitk with optional free-form arguments (branch names, paths,
+    flags, etc.).  Tab-completion offers local branches (sorted by most
+    recent commit) followed by all tracked files.
+
+    Requires gitk to be installed and in PATH.
+
+    Examples: >
+        " Open gitk for the whole repository
+        :OpenGitk
+
+        " Open gitk on a specific branch
+        :OpenGitk main
+
+        " Open gitk with custom flags
+        :OpenGitk --all
+<
+
+                                                           *:OpenGitkFile*
+:OpenGitkFile[!]
+    Launch gitk for the current file: `gitk -- <current-file>`.
+    With [!], adds `--follow` to trace history across renames.
+
+    Requires gitk to be installed and in PATH.
+
+    Examples: >
+        " Open gitk for the current file
+        :OpenGitkFile
+
+        " Open gitk for the current file, following renames
+        :OpenGitkFile!
+<
+
+                                                    *:OpenGitkFileHistory*
+:OpenGitkFileHistory [files...]
+    Launch gitk showing the full rename history of the current file (or
+    given space-separated [files]).  For each file, all historical paths
+    are resolved via `git log --follow --name-only`, then merged and
+    deduplicated.  gitk is invoked with `gitk -- <all-paths>`.
+
+    Useful when a file has been renamed multiple times and you want the
+    complete history in a single gitk view.
+
+    Requires gitk to be installed and in PATH.
+
+    Examples: >
+        " Full history of the current buffer across all renames
+        :OpenGitkFileHistory
+
+        " Full history for specific files
+        :OpenGitkFileHistory path/to/file.txt other/file.go
+<
 
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*

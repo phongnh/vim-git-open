@@ -51,8 +51,57 @@ def GitCommand(args: string): string
     return substitute(output, '\n\+$', '', '')
 enddef
 
+def GetAllRemoteNames(git_root: string): list<string>
+    var output = trim(system('git -C ' .. shellescape(git_root) .. ' remote'))
+    if empty(output)
+        return []
+    endif
+    return filter(split(output, '\n'), (_, v) => !empty(v))
+enddef
+
+def GetCurrentRemote(git_root: string): string
+    # Step 1: already resolved for this buffer
+    if exists('b:vim_git_open_remote') && !empty(b:vim_git_open_remote)
+        return b:vim_git_open_remote
+    endif
+
+    var remotes = GetAllRemoteNames(git_root)
+    if empty(remotes)
+        return ''
+    endif
+
+    # Step 2: honour g:vim_git_open_remote if valid
+    if exists('g:vim_git_open_remote') && !empty(g:vim_git_open_remote)
+        if index(remotes, g:vim_git_open_remote) >= 0
+            b:vim_git_open_remote = g:vim_git_open_remote
+            return b:vim_git_open_remote
+        else
+            # Warn once per buffer then fall through
+            if !exists('b:vim_git_open_remote_warned')
+                Warn("git-open: remote '" .. g:vim_git_open_remote .. "' not found, falling back")
+                b:vim_git_open_remote_warned = 1
+            endif
+        endif
+    endif
+
+    # Step 3: prefer 'origin'
+    if index(remotes, 'origin') >= 0
+        b:vim_git_open_remote = 'origin'
+        return b:vim_git_open_remote
+    endif
+
+    # Step 4: first available remote
+    b:vim_git_open_remote = remotes[0]
+    return b:vim_git_open_remote
+enddef
+
 def ParseRemoteUrl(): dict<string>
-    var remote = GitCommand('config --get remote.origin.url')
+    var git_root = GetGitRoot()
+    var remote_name = empty(git_root) ? '' : GetCurrentRemote(git_root)
+    if empty(remote_name)
+        return {}
+    endif
+    var remote = GitCommand('config --get remote.' .. remote_name .. '.url')
     if empty(remote)
         return {}
     endif
@@ -229,8 +278,6 @@ def ParseRequestState(args: string, provider: string): string
     elseif provider ==# 'Codeberg'
         if arg ==# '-closed' || arg ==# '-merged'
             return '?state=closed'
-        elseif arg ==# '-all'
-            return '?state=all'
         endif
     else
         # GitHub
@@ -282,6 +329,49 @@ def BuildGithubUrl(base_url: string, path: string, type: string, ...extra: list<
     return url
 enddef
 
+# Codeberg (Gitea/Forgejo) uses different URL paths from GitHub:
+#   branch view: /src/branch/{branch}
+#   file at commit: /src/commit/{commit}/{file}
+#   file at branch: /src/branch/{branch}/{file}
+#   single PR: /pulls/{number}  (not /pull/)
+#   commit: /commit/{hash}  (same as GitHub)
+def BuildCodebergUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
+    var url = base_url .. '/' .. path
+
+    if type ==# 'repo'
+        return url
+    elseif type ==# 'branch'
+        var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
+        return url .. '/src/branch/' .. branch
+    elseif type ==# 'file'
+        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
+        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
+        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
+        # Determine whether ref looks like a commit hash (40 hex chars) or a branch name
+        var ref_type = ref =~# '^[0-9a-f]\{40\}$' ? 'commit' : 'branch'
+        var file_url = url .. '/src/' .. ref_type .. '/' .. ref .. '/' .. file
+
+        # Add line number anchor if provided (extra[1])
+        if len(extra) > 1 && !empty(extra[1])
+            file_url ..= FormatLineAnchor('GitHub', extra[1])
+        endif
+
+        return file_url
+    elseif type ==# 'commit'
+        var commit = len(extra) > 0 ? extra[0] : GetCurrentCommit()
+        return url .. '/commit/' .. commit
+    elseif type ==# 'pr'
+        var pr = len(extra) > 0 ? extra[0] : ''
+        if empty(pr)
+            Warn('No PR number specified')
+            return ''
+        endif
+        return url .. '/pulls/' .. pr
+    endif
+
+    return url
+enddef
+
 def BuildGitlabUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
     var url = base_url .. '/' .. path
     
@@ -320,8 +410,10 @@ enddef
 def BuildUrl(provider: string, base_url: string, path: string, type: string, ...extra: list<any>): string
     if provider ==# 'GitLab'
         return call(BuildGitlabUrl, [base_url, path, type] + extra)
+    elseif provider ==# 'Codeberg'
+        return call(BuildCodebergUrl, [base_url, path, type] + extra)
     else
-        # Default to GitHub (includes Codeberg)
+        # Default to GitHub
         return call(BuildGithubUrl, [base_url, path, type] + extra)
     endif
 enddef
@@ -463,6 +555,54 @@ export def CompleteMyRequestState(arglead: string, cmdline: string, cursorpos: n
                 \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], arglead)
 enddef
 
+export def CompleteGitRemote(arglead: string, cmdline: string, cursorpos: number): list<string>
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        return []
+    endif
+    return FuzzyFilter(GetAllRemoteNames(git_root), arglead)
+enddef
+
+export def OpenGitRemote(name: string = '', reset: bool = false)
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        Warn('git-open: not a git repository')
+        return
+    endif
+
+    if reset
+        if exists('b:vim_git_open_remote')
+            unlet b:vim_git_open_remote
+        endif
+        if exists('b:vim_git_open_remote_warned')
+            unlet b:vim_git_open_remote_warned
+        endif
+        echo 'git-open: remote reset (will re-resolve on next command)'
+        return
+    endif
+
+    if empty(name)
+        var current = GetCurrentRemote(git_root)
+        if empty(current)
+            Warn('git-open: no remotes found')
+        else
+            echo "git-open: current remote is '" .. current .. "'"
+        endif
+        return
+    endif
+
+    var remotes = GetAllRemoteNames(git_root)
+    if index(remotes, name) < 0
+        Warn("git-open: remote '" .. name .. "' not found (available: " .. join(remotes, ', ') .. ')')
+        return
+    endif
+    b:vim_git_open_remote = name
+    if exists('b:vim_git_open_remote_warned')
+        unlet b:vim_git_open_remote_warned
+    endif
+    echo "git-open: remote set to '" .. name .. "' for this buffer"
+enddef
+
 # ============================================================================
 # Public API Functions
 # ============================================================================
@@ -527,8 +667,16 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
         # With state flag: append author:@me to keep scoped to current user
         url = info.base_url .. '/pulls' .. (empty(state) ? '' : state .. '+author%3A%40me')
     else
-        # Codeberg: state is already a full query string or empty
-        url = info.base_url .. '/pulls' .. state
+        # Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
+        # -closed/-merged → ?type=created_by&state=closed
+        var cb_arg = tolower(trim(state_arg))
+        if cb_arg ==# '-closed' || cb_arg ==# '-merged'
+            url = info.base_url .. '/pulls?type=created_by&state=closed'
+        elseif cb_arg ==# '-all'
+            url = info.base_url .. '/pulls?type=created_by'
+        else
+            url = info.base_url .. '/pulls'
+        endif
     endif
 
     OpenOrCopy(url, copy)

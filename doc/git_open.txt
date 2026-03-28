@@ -2,7 +2,7 @@
 
 Author:  Phong Nguyen
 License: MIT
-Version: 1.2.0
+Version: 1.4.0
 
 ==============================================================================
 CONTENTS                                                   *git-open-contents*
@@ -34,6 +34,7 @@ Features:
   - Auto-detect provider from git remote URL
   - Support for custom domain mappings
   - Line number support (single line or visual selection range)
+  - Per-buffer remote selection with :OpenGitRemote
   - Works with legacy Vim, Vim9script, and Neovim (Lua)
 
 ==============================================================================
@@ -126,6 +127,11 @@ the browser. With [!], the URL is copied to the clipboard instead.
       - GitHub/Codeberg: Uses #L10 or #L10-L20 for ranges
       - GitLab: Uses #L10 or #L10-20 for ranges
 
+    URL path formats:
+      - GitHub: /blob/{ref}/{file}
+      - GitLab: /-/blob/{ref}/{file}
+      - Codeberg: /src/commit/{commit}/{file} or /src/branch/{branch}/{file}
+
                                                              *:OpenGitCommit*
 :OpenGitCommit[!] [commit]
     Open (or copy) a specified [commit] hash URL.
@@ -174,8 +180,9 @@ the browser. With [!], the URL is copied to the clipboard instead.
     git provider.
 
     The URL opened depends on the provider:
-      - GitHub/Codeberg: https://<host>/pulls
-      - GitLab:          https://<host>/dashboard/merge_requests/search?author_username=<user>
+      - GitHub:   https://<host>/pulls
+      - Codeberg: https://<host>/pulls?type=created_by  (scoped to current user)
+      - GitLab:   https://<host>/dashboard/merge_requests/search?author_username=<user>
 
     For GitLab, the username is resolved via |g:vim_git_open_gitlab_username|.
     See that option for the full resolution order.
@@ -183,8 +190,13 @@ the browser. With [!], the URL is copied to the clipboard instead.
     Optional state flag:
       -open    Open PRs/MRs (default, same as no flag)
       -closed  Closed PRs/MRs
-      -merged  Merged PRs/MRs (GitLab only; maps to closed on Codeberg)
-      -all     All PRs/MRs regardless of state
+      -merged  Merged PRs/MRs (GitLab only; maps to closed on Codeberg/GitHub)
+      -all     All PRs/MRs regardless of state (Codeberg: adds ?type=created_by)
+
+    Codeberg state behaviour:
+      (no flag) / -open  →  /pulls
+      -all               →  /pulls?type=created_by
+      -closed / -merged  →  /pulls?type=created_by&state=closed
 
                                                          *:OpenGitRequests*
 :OpenGitRequests[!]
@@ -237,6 +249,34 @@ the browser. With [!], the URL is copied to the clipboard instead.
                                                                  *:GitkFile*
 :GitkFile[!]
     Alias for |:OpenGitkFile|. Accepts [!] for full rename history.
+
+                                                             *:OpenGitRemote*
+:OpenGitRemote[!] [remote]
+    Print, set, or reset the active git remote for the current buffer.
+
+    Without arguments, prints the currently resolved remote name: >
+        git-open: current remote is 'origin'
+<
+    With a [remote] argument, validates the name against the actual remotes
+    and sets it as the active remote for this buffer: >
+        :OpenGitRemote upstream
+        git-open: remote set to 'upstream' for this buffer
+<
+    With [!] (bang) and no argument, resets the per-buffer remote so it will
+    be re-resolved automatically on the next command: >
+        :OpenGitRemote!
+        git-open: remote reset (will re-resolve on next command)
+<
+    Tab-completion lists all remotes from `git remote`.
+
+    The resolved remote is cached in |b:vim_git_open_remote| and used by all
+    other OpenGit* commands for this buffer until reset.
+
+    Resolution order (first match wins):
+      1. |b:vim_git_open_remote| — already cached for this buffer
+      2. |g:vim_git_open_remote| — global preference (validated against actual remotes)
+      3. 'origin' — if present
+      4. First remote returned by `git remote`
 
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*
@@ -294,7 +334,7 @@ g:vim_git_open_providers
             \ }
 <
 
-                                          *g:vim_git_open_gitlab_username*
+                                           *g:vim_git_open_gitlab_username*
 g:vim_git_open_gitlab_username
     Your GitLab username, used by |:OpenGitMyRequests| to filter MRs by
     author. GitLab does not support a @me alias, so the username must be
@@ -312,6 +352,38 @@ g:vim_git_open_gitlab_username
     Or export in your shell: >
         export GITLAB_USER=your.username
 <
+
+                                                   *g:vim_git_open_remote*
+g:vim_git_open_remote
+    Global default remote name preference. When set, the plugin validates
+    this name against the actual remotes in the repository. If valid, it is
+    used as the active remote for every buffer; if not found, a one-time
+    warning is shown and the plugin falls back to 'origin' (or the first
+    available remote).
+
+    This variable is read-only from the plugin's perspective — it is never
+    written by the plugin. Use |:OpenGitRemote| to override the remote for
+    a specific buffer.
+
+    Default: '' (empty — auto-resolve per buffer)
+
+    Example: >
+        let g:vim_git_open_remote = 'upstream'
+<
+
+                                                    *b:vim_git_open_remote*
+b:vim_git_open_remote
+    Buffer-local cached remote name. Set automatically by the plugin on
+    first use, and can be set or cleared manually with |:OpenGitRemote|.
+    All OpenGit* commands use this variable when resolving the remote URL
+    for the current buffer.
+
+    You can inspect or override it directly: >
+        echo b:vim_git_open_remote
+        let b:vim_git_open_remote = 'upstream'
+<
+    Use |:OpenGitRemote!| to clear it so the plugin re-resolves on the
+    next command.
 
 ==============================================================================
 6. EXAMPLES                                                *git-open-examples*
@@ -379,6 +451,21 @@ Working with PRs/MRs:~
     :OpenGitRequests
 <
 
+Per-buffer remote selection:~
+>
+    " Check which remote is active for this buffer
+    :OpenGitRemote
+
+    " Switch this buffer to use 'upstream'
+    :OpenGitRemote upstream
+
+    " Reset so the plugin re-resolves on the next command
+    :OpenGitRemote!
+
+    " Set a global default remote in vimrc
+    let g:vim_git_open_remote = 'upstream'
+<
+
 Recommended keymaps:~
 >
     " Open repository
@@ -438,6 +525,7 @@ Neovim Lua configuration:~
             ['git.company.com'] = 'GitHub',
         },
         browser_command = 'open',
+        remote = 'upstream',  -- optional: default remote preference
     })
     
     -- Keymaps
@@ -485,6 +573,23 @@ Manually specify the provider:
 >
     let g:vim_git_open_providers = {'your.domain': 'GitLab'}
 <
+
+Wrong or unexpected remote~
+
+If the plugin is opening URLs for the wrong remote, check which remote is
+active for the current buffer: >
+    :OpenGitRemote
+<
+To switch to a different remote for this buffer: >
+    :OpenGitRemote upstream
+<
+To set a global default remote in your vimrc: >
+    let g:vim_git_open_remote = 'upstream'
+<
+To reset the cached remote and re-resolve on next use: >
+    :OpenGitRemote!
+<
+See also |b:vim_git_open_remote| and |g:vim_git_open_remote|.
 
 Remote URL not recognized~
 

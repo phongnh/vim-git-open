@@ -54,6 +54,7 @@ vim-git-open/
 | `OpenGitkFile[!]` | Launch gitk for current file. `!` shows full rename history via `git log --follow` |
 | `Gitk [args]` | Alias for `OpenGitk` |
 | `GitkFile[!]` | Alias for `OpenGitkFile` |
+| `OpenGitRemote[!] [remote]` | Print/set/reset per-buffer remote. No args: print. With remote: validate+set. With `!`: reset |
 
 **State flags for `OpenGitMyRequests`:** `-open`, `-closed`, `-merged`, `-all`, `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`
 **State flags for `OpenGitRequests`:** `-open`, `-closed`, `-merged`, `-all`
@@ -177,7 +178,12 @@ enddef
 " ParseRequestState(state_arg, provider) returns URL query string
 " GitHub:   '-closed' → '?q=is%3Apr+is%3Aclosed'
 " GitLab:   '-closed' → '?state=closed'
-" Codeberg: '-closed' → '?state=closed'
+" Codeberg: '-closed' → '?state=closed'  (used by OpenRequests only)
+"
+" OpenMyRequests Codeberg assembles its own query — does NOT use ParseRequestState output:
+"   no flag / -open → /pulls
+"   -all            → /pulls?type=created_by
+"   -closed/-merged → /pulls?type=created_by&state=closed
 ```
 
 ### GetGitRoot — 3-Step Detection
@@ -214,8 +220,7 @@ enddef
 **Why `FugitiveGitDir()` not `FugitiveWorkTree()`:**
 `FugitiveWorkTree()` triggers E15 in Vim 9.2. `FugitiveGitDir()` reads `b:git_dir` directly.
 
-### Branch/Commit Fallback in OpenBranch/OpenCommit
-After the visual selection check, explicitly call the fallback if still empty:
+### Branch/Commit Fallback in OpenBranch/OpenCommitAfter the visual selection check, explicitly call the fallback if still empty:
 ```vim
 " Vim9script
 export def OpenBranch(branch: string = '', copy: bool = false)
@@ -237,6 +242,42 @@ Two `for-each-ref` calls:
 - Remote: `--format='%(refname:short)' refs/remotes/origin/` (lstrip=3)
 - Sort by `-committerdate`, filter `HEAD`, deduplicate local-first
 - Use `matchfuzzy()` in Vim9/Lua; check `exists('*matchfuzzy')` in legacy
+
+### Per-Buffer Remote Resolution
+Resolution order (first match wins):
+1. `b:vim_git_open_remote` — already cached for this buffer
+2. `g:vim_git_open_remote` — global preference (validated against actual remotes)
+3. `origin` — if present in `git remote` output
+4. First remote returned by `git remote`
+
+`b:vim_git_open_remote` is set on first resolution and cached until `:OpenGitRemote!` resets it.
+`g:vim_git_open_remote` is **never written** by the plugin — it is user-set only.
+`b:vim_git_open_remote_warned` suppresses the invalid-remote warning to once per buffer.
+
+```vim
+" Vim9script — GetCurrentRemote pattern
+def GetCurrentRemote(git_root: string): string
+    if exists('b:vim_git_open_remote') && !empty(b:vim_git_open_remote)
+        return b:vim_git_open_remote
+    endif
+    var all_remotes = GetAllRemoteNames(git_root)
+    var preferred = get(g:, 'vim_git_open_remote', '')
+    if !empty(preferred)
+        if index(all_remotes, preferred) >= 0
+            b:vim_git_open_remote = preferred
+            return preferred
+        elseif !get(b:, 'vim_git_open_remote_warned', false)
+            b:vim_git_open_remote_warned = true
+            echohl WarningMsg
+            echom 'git-open: remote "' .. preferred .. '" not found, falling back'
+            echohl None
+        endif
+    endif
+    var remote = index(all_remotes, 'origin') >= 0 ? 'origin' : (empty(all_remotes) ? '' : all_remotes[0])
+    b:vim_git_open_remote = remote
+    return remote
+enddef
+```
 
 ## Documentation Requirements
 

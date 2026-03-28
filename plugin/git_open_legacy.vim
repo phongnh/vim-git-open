@@ -20,6 +20,10 @@ if !exists('g:vim_git_open_providers')
     let g:vim_git_open_providers = {}
 endif
 
+if !exists('g:vim_git_open_remote')
+    let g:vim_git_open_remote = ''
+endif
+
 if !exists('g:vim_git_open_browser_command')
     " Check for $BROWSER environment variable first
     if !empty($BROWSER)
@@ -48,6 +52,7 @@ command! -nargs=* -complete=customlist,git_open#legacy#complete_gitk_args OpenGi
 command! -bang -nargs=* -complete=customlist,git_open#legacy#complete_gitk_branch OpenGitkFile call git_open#legacy#open_gitk_file(<q-args>, <bang>0)
 command! -nargs=* -complete=customlist,git_open#legacy#complete_gitk_args Gitk call git_open#legacy#open_gitk(<q-args>)
 command! -bang -nargs=* -complete=customlist,git_open#legacy#complete_gitk_branch GitkFile call git_open#legacy#open_gitk_file(<q-args>, <bang>0)
+command! -bang -nargs=? -complete=customlist,git_open#legacy#complete_git_remote OpenGitRemote call git_open#legacy#open_git_remote(<q-args>, <bang>0)
 
 " Restore cpoptions
 let &cpoptions = s:save_cpo

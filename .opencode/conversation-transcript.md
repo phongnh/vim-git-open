@@ -222,6 +222,78 @@ Usage examples expanded with:
 
 ---
 
+## Session 7 (2026-03-28): Codeberg OpenMyRequests URL fixes
+
+### Exchange 1: Status Check
+
+**User:** "What did we do so far?"
+
+**Assistant:** Provided a full summary of all work to date, including the in-progress
+Codeberg `OpenMyRequests` fix (just starting, no edits yet). Listed the next steps:
+fix `ParseRequestState` for Codeberg, fix `OpenMyRequests` Codeberg branch, fix
+`OpenRequests` Codeberg branch, copy files, commit.
+
+---
+
+### Exchange 2: Continue
+
+**User:** "Continue if you have next steps, or stop and ask for clarification."
+
+**Assistant actions:**
+
+1. **Fixed `ParseRequestState` Codeberg** in all 3 files — removed the `-all` →
+   `?state=all` case. Now returns `?state=closed` for `-closed`/`-merged`, `''`
+   for everything else (including `-all`). **Commit: 15a0778**
+
+2. **Fixed `OpenMyRequests` Codeberg branch** in all 3 files — replaced blind
+   `.. state` append with manual query assembly:
+   - `-closed`/`-merged` → `?state=closed&type=created_by`
+   - all other cases → `?type=created_by`
+
+3. **`OpenRequests` Codeberg** — already correct after `ParseRequestState` fix,
+   no changes needed.
+
+4. Copied all changed files to both installed locations.
+
+5. **Commit: 15a0778** — "fix: correct Codeberg OpenMyRequests URL (type=created_by, no state=all)"
+
+---
+
+### Exchange 3: Refine — type=created_by ordering and no-flag behaviour
+
+**User:** "- type=created_by should go before `state` - no flag and -open should return ''"
+
+**Assistant actions:**
+
+Updated `OpenMyRequests` Codeberg branch in all 3 files to the final correct logic:
+
+| Flag | URL |
+|------|-----|
+| (none) / `-open` | `/pulls` |
+| `-all` | `/pulls?type=created_by` |
+| `-closed` / `-merged` | `/pulls?type=created_by&state=closed` |
+
+Copied all changed files to both installed locations.
+**Commit: c184550** — "fix: type=created_by before state, no flag/-open returns bare /pulls"
+
+---
+
+### Exchange 4: Update docs, agents, skills, transcript
+
+**User:** "Update document doc/git_open.txt, update conversions/transcript, agents and skills"
+
+**Assistant actions:**
+1. `doc/git_open.txt` — updated `:OpenGitMyRequests` entry: Codeberg URL now shown
+   separately; state behaviour table added; `-merged` note corrected for Codeberg
+2. `.opencode/conversation-transcript.md` — added Session 7 (this entry)
+3. `.opencode/conversation-log.md` — added Session 7 entries and commits
+4. `.opencode/agent.md` — updated discovery #17 (Codeberg state filtering); added
+   discovery #33 (Codeberg `OpenMyRequests` URL assembly)
+5. `.opencode/skill.md` — updated State Flag Parsing notes for Codeberg
+6. Copied all changed files to both installed locations and committed
+
+---
+
 ## End of Transcript
 
-*Sessions 1–2: 2026-03-27 | Sessions 3–5: 2026-03-28*
+*Sessions 1–2: 2026-03-27 | Sessions 3–7: 2026-03-28*

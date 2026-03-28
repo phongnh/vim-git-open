@@ -92,3 +92,11 @@ end, {
   nargs = '*',
   complete = function(arglead) return git_open.complete_gitk_branch(arglead) end,
 })
+
+vim.api.nvim_create_user_command('OpenGitRemote', function(opts)
+  git_open.open_git_remote(opts.args ~= '' and opts.args or nil, opts.bang)
+end, {
+  bang = true,
+  nargs = '?',
+  complete = function(arglead) return git_open.complete_git_remote(arglead) end,
+})

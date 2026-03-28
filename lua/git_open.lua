@@ -44,8 +44,67 @@ local function git_command(args)
   return vim.trim(output)
 end
 
+local function get_all_remote_names(git_root)
+  local cmd = string.format('git -C %s remote', vim.fn.shellescape(git_root))
+  local output = vim.trim(vim.fn.system(cmd))
+  if output == '' then
+    return {}
+  end
+  local names = {}
+  for _, name in ipairs(vim.split(output, '\n', { plain = true, trimempty = true })) do
+    table.insert(names, name)
+  end
+  return names
+end
+
+local function get_current_remote(git_root)
+  -- Step 1: already resolved for this buffer
+  local cached = vim.b.vim_git_open_remote
+  if cached and cached ~= '' then
+    return cached
+  end
+
+  local remotes = get_all_remote_names(git_root)
+  if #remotes == 0 then
+    return nil
+  end
+
+  -- Step 2: honour vim.g.vim_git_open_remote if valid
+  local pref = vim.g.vim_git_open_remote
+  if pref and pref ~= '' then
+    for _, r in ipairs(remotes) do
+      if r == pref then
+        vim.b.vim_git_open_remote = pref
+        return pref
+      end
+    end
+    -- pref not in remotes — warn once per buffer then fall through
+    if not vim.b.vim_git_open_remote_warned then
+      warn("git-open: remote '" .. pref .. "' not found, falling back")
+      vim.b.vim_git_open_remote_warned = 1
+    end
+  end
+
+  -- Step 3: prefer 'origin'
+  for _, r in ipairs(remotes) do
+    if r == 'origin' then
+      vim.b.vim_git_open_remote = 'origin'
+      return 'origin'
+    end
+  end
+
+  -- Step 4: first available remote
+  vim.b.vim_git_open_remote = remotes[1]
+  return remotes[1]
+end
+
 local function parse_remote_url()
-  local remote = git_command('config --get remote.origin.url')
+  local git_root = get_git_root()
+  local remote_name = git_root and get_current_remote(git_root) or nil
+  if not remote_name or remote_name == '' then
+    return nil
+  end
+  local remote = git_command('config --get remote.' .. remote_name .. '.url')
   if not remote or remote == '' then
     return nil
   end
@@ -228,8 +287,6 @@ local function parse_request_state(args, provider)
   elseif provider == 'Codeberg' then
     if arg == '-closed' or arg == '-merged' then
       return '?state=closed'
-    elseif arg == '-all' then
-      return '?state=all'
     end
   else
     -- GitHub
@@ -280,9 +337,51 @@ local function build_github_url(base_url, path, url_type, extra, line_info, ref)
   return url
 end
 
+-- Codeberg (Gitea/Forgejo) uses different URL paths from GitHub:
+--   branch view: /src/branch/{branch}
+--   file at commit: /src/commit/{commit}/{file}
+--   file at branch: /src/branch/{branch}/{file}
+--   single PR: /pulls/{number}  (not /pull/)
+--   commit: /commit/{hash}  (same as GitHub)
+local function build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
+  local url = base_url .. '/' .. path
+
+  if url_type == 'repo' then
+    return url
+  elseif url_type == 'branch' then
+    local branch = extra or get_current_branch()
+    return url .. '/src/branch/' .. branch
+  elseif url_type == 'file' then
+    local file = extra or get_relative_path()
+    -- ref is an optional branch/commit; fall back to HEAD commit
+    local resolved_ref = (ref and ref ~= '') and ref or get_current_commit()
+    -- Determine whether ref looks like a commit hash (40 hex chars) or a branch name
+    local ref_type = resolved_ref:match('^[0-9a-f]+$') and #resolved_ref == 40 and 'commit' or 'branch'
+    local file_url = url .. '/src/' .. ref_type .. '/' .. resolved_ref .. '/' .. file
+
+    -- Add line number anchor if provided
+    if line_info and line_info ~= '' then
+      file_url = file_url .. format_line_anchor('GitHub', line_info)
+    end
+
+    return file_url
+  elseif url_type == 'commit' then
+    local commit = extra or get_current_commit()
+    return url .. '/commit/' .. commit
+  elseif url_type == 'pr' then
+    if not extra or extra == '' then
+      warn('No PR number specified')
+      return nil
+    end
+    return url .. '/pulls/' .. extra
+  end
+
+  return url
+end
+
 local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
   local url = base_url .. '/' .. path
-  
+
   if url_type == 'repo' then
     return url
   elseif url_type == 'branch' then
@@ -293,12 +392,12 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
     -- ref is an optional branch/commit; fall back to HEAD commit
     local commit = (ref and ref ~= '') and ref or get_current_commit()
     local file_url = url .. '/-/blob/' .. commit .. '/' .. file
-    
+
     -- Add line number anchor if provided
     if line_info and line_info ~= '' then
       file_url = file_url .. format_line_anchor('GitLab', line_info)
     end
-    
+
     return file_url
   elseif url_type == 'commit' then
     local commit = extra or get_current_commit()
@@ -310,15 +409,17 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
     end
     return url .. '/-/merge_requests/' .. extra
   end
-  
+
   return url
 end
 
 local function build_url(provider, base_url, path, url_type, extra, line_info, ref)
   if provider == 'GitLab' then
     return build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
+  elseif provider == 'Codeberg' then
+    return build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
   else
-    -- Default to GitHub (includes Codeberg)
+    -- Default to GitHub
     return build_github_url(base_url, path, url_type, extra, line_info, ref)
   end
 end
@@ -508,6 +609,50 @@ function M.complete_my_request_state(arglead)
     '-search', '-search=open', '-search=closed', '-search=merged', '-search=all' }, arglead)
 end
 
+function M.complete_git_remote(arglead)
+  local git_root = get_git_root()
+  if not git_root then
+    return {}
+  end
+  return fuzzy_filter(get_all_remote_names(git_root), arglead)
+end
+
+function M.open_git_remote(name, reset)
+  local git_root = get_git_root()
+  if not git_root then
+    warn('git-open: not a git repository')
+    return
+  end
+
+  if reset then
+    vim.b.vim_git_open_remote = nil
+    vim.b.vim_git_open_remote_warned = nil
+    print('git-open: remote reset (will re-resolve on next command)')
+    return
+  end
+
+  if not name or name == '' then
+    local current = get_current_remote(git_root)
+    if not current or current == '' then
+      warn('git-open: no remotes found')
+    else
+      print("git-open: current remote is '" .. current .. "'")
+    end
+    return
+  end
+
+  local remotes = get_all_remote_names(git_root)
+  for _, r in ipairs(remotes) do
+    if r == name then
+      vim.b.vim_git_open_remote = name
+      vim.b.vim_git_open_remote_warned = nil
+      print("git-open: remote set to '" .. name .. "' for this buffer")
+      return
+    end
+  end
+  warn("git-open: remote '" .. name .. "' not found (available: " .. table.concat(remotes, ', ') .. ')')
+end
+
 -- ============================================================================
 -- Public API Functions
 -- ============================================================================
@@ -670,8 +815,16 @@ function M.open_my_requests(state_arg, copy)
     -- With state flag: append author:@me to keep scoped to current user
     url = info.base_url .. '/pulls' .. (state ~= '' and (state .. '+author%3A%40me') or '')
   else
-    -- Codeberg: state is already a full query string or empty
-    url = info.base_url .. '/pulls' .. state
+    -- Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
+    -- -closed/-merged → ?type=created_by&state=closed
+    local cb_arg = vim.trim(state_arg or ''):lower()
+    if cb_arg == '-closed' or cb_arg == '-merged' then
+      url = info.base_url .. '/pulls?type=created_by&state=closed'
+    elseif cb_arg == '-all' then
+      url = info.base_url .. '/pulls?type=created_by'
+    else
+      url = info.base_url .. '/pulls'
+    end
   end
 
   open_or_copy(url, copy)
@@ -737,7 +890,15 @@ function M.setup(opts)
   if opts.providers then
     vim.g.vim_git_open_providers = opts.providers
   end
-  
+
+  if opts.remote then
+    if not vim.g.vim_git_open_remote then
+      vim.g.vim_git_open_remote = opts.remote
+    end
+  elseif not vim.g.vim_git_open_remote then
+    vim.g.vim_git_open_remote = ''
+  end
+
   if opts.browser_command then
     vim.g.vim_git_open_browser_command = opts.browser_command
   elseif not vim.g.vim_git_open_browser_command then

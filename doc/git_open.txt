@@ -217,7 +217,8 @@ the browser. With [!], the URL is copied to the clipboard instead.
                                                             *:OpenGitkFile*
 :OpenGitkFile[!]
     Launch gitk for the current file: gitk -- <current-file>.
-    With [!], adds --follow to trace history across renames.
+    With [!], shows the full rename history of the current file across all
+    renames by resolving all historical paths via "git log --follow".
 
     Requires gitk to be installed and in PATH.
 
@@ -225,14 +226,9 @@ the browser. With [!], the URL is copied to the clipboard instead.
         " Open gitk for the current file
         :OpenGitkFile
 
-        " Open gitk for the current file, following renames
+        " Open gitk with full rename history
         :OpenGitkFile!
 <
-
-                                                    *:OpenGitkFileHistory*
-:OpenGitkFileHistory [files...]
-    Launch gitk with the full rename history of the current file (or given
-    [files]).  Resolves all historical paths via "git log --follow".
 
                                                                     *:Gitk*
 :Gitk [args]

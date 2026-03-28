@@ -19,7 +19,7 @@ def GetGitRoot(): string
     # Use call() with a string so the lookup is deferred to runtime — Vim9script
     # compiles function bodies and would error on an unknown bare name.
     if exists('*FugitiveWorkTree')
-        var ft = call('FugitiveWorkTree', [])
+        var ft = '' .. call('FugitiveWorkTree', [])
         if !empty(ft)
             return ft
         endif
@@ -388,11 +388,11 @@ enddef
 
 def GetVisualSelection(): string
     if exists('*getregion')
-        return trim(join(getregion(getpos("'<"), getpos("'>")), "\n"))
+        return trim(join(call('getregion', [getpos("'<"), getpos("'>")]), "\n"))
     endif
     var line = getline("'<")
-    var [_, l1, c1, _] = getpos("'<")
-    var [_, l2, c2, _] = getpos("'>")
+    var [_b1, l1, c1, _o1] = getpos("'<")
+    var [_b2, l2, c2, _o2] = getpos("'>")
     if l1 != l2
         return trim(strpart(line, c1 - 1))
     endif

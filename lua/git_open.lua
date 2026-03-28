@@ -194,9 +194,7 @@ end
 local function parse_request_state(args, provider)
   local arg = vim.trim(args or ''):lower()
   if provider == 'GitLab' then
-    if arg == '-open' then
-      return '?state=opened'
-    elseif arg == '-merged' then
+    if arg == '-merged' then
       return '?state=merged'
     elseif arg == '-closed' then
       return '?state=closed'

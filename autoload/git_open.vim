@@ -194,9 +194,7 @@ enddef
 def ParseRequestState(args: string, provider: string): string
     var arg = tolower(trim(args))
     if provider ==# 'GitLab'
-        if arg ==# '-open'
-            return '?state=opened'
-        elseif arg ==# '-merged'
+        if arg ==# '-merged'
             return '?state=merged'
         elseif arg ==# '-closed'
             return '?state=closed'

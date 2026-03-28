@@ -203,9 +203,7 @@ endfunction
 function! s:parse_request_state(args, provider) abort
     let l:arg = tolower(trim(a:args))
     if a:provider ==# 'GitLab'
-        if l:arg ==# '-open'
-            return '?state=opened'
-        elseif l:arg ==# '-merged'
+        if l:arg ==# '-merged'
             return '?state=merged'
         elseif l:arg ==# '-closed'
             return '?state=closed'

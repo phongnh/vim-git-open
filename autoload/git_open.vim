@@ -15,9 +15,11 @@ def Warn(msg: string)
 enddef
 
 def GetGitRoot(): string
-    # Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
+    # Prefer vim-fugitive when available (handles fugitive:// virtual buffers).
+    # Use call() with a string so the lookup is deferred to runtime — Vim9script
+    # compiles function bodies and would error on an unknown bare name.
     if exists('*FugitiveWorkTree')
-        var ft = FugitiveWorkTree()
+        var ft = call('FugitiveWorkTree', [])
         if !empty(ft)
             return ft
         endif

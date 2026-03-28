@@ -16,25 +16,38 @@ function! s:warn(msg) abort
     echohl None
 endfunction
 
+function! s:debug(msg) abort
+    if get(g:, 'vim_git_open_debug', 0)
+        echom 'git-open: ' .. a:msg
+    endif
+endfunction
+
 " Get the git root directory
 function! s:get_git_root() abort
     " Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
     if exists('*FugitiveGitDir')
         let l:gitdir = FugitiveGitDir()
         if !empty(l:gitdir)
-            return fnamemodify(l:gitdir, ':h')
+            let l:root = fnamemodify(l:gitdir, ':h')
+            call s:debug('GetGitRoot (FugitiveGitDir): ' .. l:root)
+            return l:root
         endif
     endif
     " Step 2: finddir from the current buffer's directory
     let l:git_dir = finddir('.git', expand('%:p:h') . ';')
     if !empty(l:git_dir)
-        return fnamemodify(l:git_dir, ':p:h')
+        let l:root = fnamemodify(l:git_dir, ':p:h')
+        call s:debug('GetGitRoot (bufname): ' .. l:root)
+        return l:root
     endif
     " Step 3: fallback to cwd — works in terminal/quickfix/empty buffers
     let l:git_dir = finddir('.git', getcwd() . ';')
     if !empty(l:git_dir)
-        return fnamemodify(l:git_dir, ':p:h')
+        let l:root = fnamemodify(l:git_dir, ':p:h')
+        call s:debug('GetGitRoot (cwd): ' .. l:root)
+        return l:root
     endif
+    call s:debug('GetGitRoot: not found')
     return ''
 endfunction
 

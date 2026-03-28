@@ -14,6 +14,12 @@ def Warn(msg: string)
     echohl None
 enddef
 
+def Debug(msg: string)
+    if get(g:, 'vim_git_open_debug', 0)
+        echom 'git-open: ' .. msg
+    endif
+enddef
+
 def GetGitRoot(): string
     # Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
     # (fugitiveblame, fugitive://, etc.). Use call() so the name is resolved
@@ -21,19 +27,26 @@ def GetGitRoot(): string
     if exists('*FugitiveGitDir')
         var gitdir = '' .. call('FugitiveGitDir', [])
         if !empty(gitdir)
-            return fnamemodify(gitdir, ':h')
+            var root = fnamemodify(gitdir, ':h')
+            Debug('GetGitRoot (FugitiveGitDir): ' .. root)
+            return root
         endif
     endif
     # Step 2: finddir from the current buffer's directory
     var git_dir = finddir('.git', expand('%:p:h') .. ';')
     if !empty(git_dir)
-        return fnamemodify(git_dir, ':p:h')
+        var root = fnamemodify(git_dir, ':p:h')
+        Debug('GetGitRoot (bufname): ' .. root)
+        return root
     endif
     # Step 3: fallback to cwd — works in terminal/quickfix/empty buffers
     git_dir = finddir('.git', getcwd() .. ';')
     if !empty(git_dir)
-        return fnamemodify(git_dir, ':p:h')
+        var root = fnamemodify(git_dir, ':p:h')
+        Debug('GetGitRoot (cwd): ' .. root)
+        return root
     endif
+    Debug('GetGitRoot: not found')
     return ''
 enddef
 

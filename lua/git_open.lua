@@ -12,40 +12,6 @@ local function warn(msg)
   vim.api.nvim_echo({{msg, 'ErrorMsg'}}, true, {})
 end
 
-local function debug(msg)
-  if vim.g.vim_git_open_debug and vim.g.vim_git_open_debug ~= 0 then
-    vim.api.nvim_echo({{'git-open: ' .. msg, 'None'}}, true, {})
-  end
-end
-
-local function get_git_root()
-  -- Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
-  if vim.fn.exists('*FugitiveGitDir') == 1 then
-    local fgd = vim.fn.FugitiveGitDir()
-    if type(fgd) == 'string' and fgd ~= '' then
-      local root = vim.fn.fnamemodify(fgd, ':h')
-      debug('get_git_root (FugitiveGitDir): ' .. root)
-      return root
-    end
-  end
-  -- Step 2: finddir from the current buffer's directory
-  local git_dir = vim.fn.finddir('.git', vim.fn.expand('%:p:h') .. ';')
-  if git_dir ~= '' then
-    local root = vim.fn.fnamemodify(git_dir, ':p:h')
-    debug('get_git_root (bufname): ' .. root)
-    return root
-  end
-  -- Step 3: fallback to cwd — works in terminal/quickfix/empty buffers
-  git_dir = vim.fn.finddir('.git', vim.fn.getcwd() .. ';')
-  if git_dir ~= '' then
-    local root = vim.fn.fnamemodify(git_dir, ':p:h')
-    debug('get_git_root (cwd): ' .. root)
-    return root
-  end
-  debug('get_git_root: not found')
-  return nil
-end
-
 local function get_git_root()
   -- Step 1: FugitiveGitDir() — handles all fugitive virtual buffers
   if vim.fn.exists('*FugitiveGitDir') == 1 then

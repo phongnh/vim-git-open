@@ -452,7 +452,7 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     var state = ParseRequestState(state_arg, info.provider)
     var url: string
     if info.provider ==# 'GitLab'
-        url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. GetGitLabUsername() .. (empty(state) ? '' : '&' .. state[1 :])
+        url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername() .. (empty(state) ? '' : '&' .. state[1 :])
     elseif info.provider ==# 'GitHub'
         # No flag/-open: /pulls is already scoped to current user when logged in
         # With state flag: append author:@me to keep scoped to current user

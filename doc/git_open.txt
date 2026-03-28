@@ -161,7 +161,7 @@ the browser. With [!], the URL is copied to the clipboard instead.
 
     The URL opened depends on the provider:
       - GitHub/Codeberg: https://<host>/pulls
-      - GitLab:          https://<host>/dashboard/merge_requests?assignee_username=<user>
+      - GitLab:          https://<host>/dashboard/merge_requests/search?author_username=<user>
 
     For GitLab, the username is resolved via |g:vim_git_open_gitlab_username|.
     See that option for the full resolution order.

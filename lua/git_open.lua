@@ -551,7 +551,7 @@ function M.open_my_requests(state_arg, copy)
   local state = parse_request_state(state_arg, info.provider)
   local url
   if info.provider == 'GitLab' then
-    local base = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. get_gitlab_username()
+    local base = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. get_gitlab_username()
     url = base .. (state ~= '' and ('&' .. state:sub(2)) or '')
   elseif info.provider == 'GitHub' then
     -- No flag/-open: /pulls is already scoped to current user when logged in

@@ -574,7 +574,7 @@ function! git_open#legacy#open_my_requests(...) abort
     let l:copy = a:0 > 1 && a:2
 
     if l:info.provider ==# 'GitLab'
-        let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . s:get_gitlab_username() . (empty(l:state) ? '' : '&' . l:state[1:])
+        let l:url = l:info.base_url . '/dashboard/merge_requests/search?author_username=' . s:get_gitlab_username() . (empty(l:state) ? '' : '&' . l:state[1:])
     elseif l:info.provider ==# 'GitHub'
         " No flag/-open: /pulls is already scoped to current user when logged in
         " With state flag: append author:@me to keep scoped to current user

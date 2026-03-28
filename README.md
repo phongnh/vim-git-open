@@ -64,8 +64,8 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | `:OpenGitCommit[!] [commit]` | Open (or copy) the current commit, or a specified commit |
 | `:OpenGitRequest[!] [number]` | Open (or copy) pull/merge request (auto-detects provider). Auto-parses from commit if no number given |
 | `:OpenGitFileLastChange[!]` | Open (or copy) the PR/MR or commit that last changed the current file |
-| `:OpenGitMyRequests[!]` | Open (or copy) all my pull requests / merge requests for the current git provider |
-| `:OpenGitRequests[!]` | Open (or copy) the pull requests / merge requests page for the current repository |
+| `:OpenGitMyRequests[!] [state]` | Open (or copy) my pull/merge requests. Optional state: `-open`, `-closed`, `-merged`, `-all`. GitLab also accepts `-search` to use the search page |
+| `:OpenGitRequests[!] [state]` | Open (or copy) the pull/merge requests page for the current repository. Optional state: `-open`, `-closed`, `-merged`, `-all` |
 
 ### Line Number Support
 
@@ -215,11 +215,24 @@ export GITLAB_USER=your.username
 " Copy last change URL to clipboard
 :OpenGitFileLastChange!
 
-" Open my PRs/MRs for current git provider
+" Open my PRs/MRs for current git provider (defaults to open)
 :OpenGitMyRequests
 
-" Open PRs/MRs page for current repository
+" Filter my PRs/MRs by state (GitHub/Codeberg)
+:OpenGitMyRequests -closed
+:OpenGitMyRequests -merged
+:OpenGitMyRequests -all
+
+" GitLab: use search page scoped to current user
+:OpenGitMyRequests -search
+
+" Open PRs/MRs page for current repository (defaults to open)
 :OpenGitRequests
+
+" Filter repository PRs/MRs by state
+:OpenGitRequests -closed
+:OpenGitRequests -merged
+:OpenGitRequests -all
 ```
 
 ### Example Keymaps

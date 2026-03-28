@@ -781,13 +781,15 @@ function! git_open#legacy#open_my_requests(...) abort
         " With state flag: append author:@me to keep scoped to current user
         let l:url = l:info.base_url . '/pulls' . (empty(l:state) ? '' : l:state . '+author%3A%40me')
     else
-        " Codeberg: always scope to current user with type=created_by;
-        " add state=closed only for -closed/-merged; -all shows all states
+        " Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
+        " -closed/-merged → ?type=created_by&state=closed
         let l:cb_arg = tolower(trim(a:0 > 0 ? a:1 : ''))
         if l:cb_arg ==# '-closed' || l:cb_arg ==# '-merged'
-            let l:url = l:info.base_url . '/pulls?state=closed&type=created_by'
-        else
+            let l:url = l:info.base_url . '/pulls?type=created_by&state=closed'
+        elseif l:cb_arg ==# '-all'
             let l:url = l:info.base_url . '/pulls?type=created_by'
+        else
+            let l:url = l:info.base_url . '/pulls'
         endif
     endif
 

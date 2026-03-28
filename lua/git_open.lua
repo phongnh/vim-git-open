@@ -815,13 +815,15 @@ function M.open_my_requests(state_arg, copy)
     -- With state flag: append author:@me to keep scoped to current user
     url = info.base_url .. '/pulls' .. (state ~= '' and (state .. '+author%3A%40me') or '')
   else
-    -- Codeberg: always scope to current user with type=created_by;
-    -- add state=closed only for -closed/-merged; -all shows all states
+    -- Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
+    -- -closed/-merged → ?type=created_by&state=closed
     local cb_arg = vim.trim(state_arg or ''):lower()
     if cb_arg == '-closed' or cb_arg == '-merged' then
-      url = info.base_url .. '/pulls?state=closed&type=created_by'
-    else
+      url = info.base_url .. '/pulls?type=created_by&state=closed'
+    elseif cb_arg == '-all' then
       url = info.base_url .. '/pulls?type=created_by'
+    else
+      url = info.base_url .. '/pulls'
     end
   end
 

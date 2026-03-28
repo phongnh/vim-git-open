@@ -187,12 +187,23 @@ def ParsePrMrFromCommit(provider: string): string
 enddef
 
 # Parse state flag from command args: -open, -closed, -merged, -all
-# Returns the query string suffix to append to the pulls URL.
+# Returns the query string suffix to append to the pulls/MRs URL.
 # GitHub:   uses ?q=is%3Apr+is%3A<state> search query
 # Codeberg: uses ?state=<state> param (Gitea-based, no merged state)
+# GitLab:   uses ?state=<state> param (opened/merged/closed/all)
 def ParseRequestState(args: string, provider: string): string
     var arg = tolower(trim(args))
-    if provider ==# 'Codeberg'
+    if provider ==# 'GitLab'
+        if arg ==# '-open'
+            return '?state=opened'
+        elseif arg ==# '-merged'
+            return '?state=merged'
+        elseif arg ==# '-closed'
+            return '?state=closed'
+        elseif arg ==# '-all'
+            return '?state=all'
+        endif
+    elseif provider ==# 'Codeberg'
         if arg ==# '-closed' || arg ==# '-merged'
             return '?state=closed'
         elseif arg ==# '-all'
@@ -431,7 +442,7 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     var state = ParseRequestState(state_arg, info.provider)
     var url: string
     if info.provider ==# 'GitLab'
-        url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER')
+        url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER') .. (empty(state) ? '' : '&' .. state[1 :])
     else
         # GitHub and Codeberg: state is already a full query string or empty
         url = info.base_url .. '/pulls' .. state
@@ -450,7 +461,7 @@ export def OpenRequests(state_arg: string = '', copy: bool = false)
     var repo_url = info.base_url .. '/' .. info.path
     var url: string
     if info.provider ==# 'GitLab'
-        url = repo_url .. '/-/merge_requests'
+        url = repo_url .. '/-/merge_requests' .. state
     else
         # GitHub and Codeberg: state is already a full query string or empty
         url = repo_url .. '/pulls' .. state

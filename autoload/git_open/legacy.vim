@@ -196,12 +196,23 @@ function! s:parse_pr_mr_from_commit(provider) abort
 endfunction
 
 " Parse state flag from command args: -open, -closed, -merged, -all
-" Returns the query string suffix to append to the pulls URL.
+" Returns the query string suffix to append to the pulls/MRs URL.
 " GitHub:   uses ?q=is%3Apr+is%3A<state> search query
 " Codeberg: uses ?state=<state> param (Gitea-based, no merged state)
+" GitLab:   uses ?state=<state> param (opened/merged/closed/all)
 function! s:parse_request_state(args, provider) abort
     let l:arg = tolower(trim(a:args))
-    if a:provider ==# 'Codeberg'
+    if a:provider ==# 'GitLab'
+        if l:arg ==# '-open'
+            return '?state=opened'
+        elseif l:arg ==# '-merged'
+            return '?state=merged'
+        elseif l:arg ==# '-closed'
+            return '?state=closed'
+        elseif l:arg ==# '-all'
+            return '?state=all'
+        endif
+    elseif a:provider ==# 'Codeberg'
         if l:arg ==# '-closed' || l:arg ==# '-merged'
             return '?state=closed'
         elseif l:arg ==# '-all'
@@ -553,7 +564,7 @@ function! git_open#legacy#open_my_requests(...) abort
     let l:copy = a:0 > 1 && a:2
 
     if l:info.provider ==# 'GitLab'
-        let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER')
+        let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER') . (empty(l:state) ? '' : '&' . l:state[1:])
     else
         " GitHub and Codeberg: state is already a full query string or empty
         let l:url = l:info.base_url . '/pulls' . l:state
@@ -574,7 +585,7 @@ function! git_open#legacy#open_requests(...) abort
 
     let l:repo_url = l:info.base_url . '/' . l:info.path
     if l:info.provider ==# 'GitLab'
-        let l:url = l:repo_url . '/-/merge_requests'
+        let l:url = l:repo_url . '/-/merge_requests' . l:state
     else
         " GitHub and Codeberg: state is already a full query string or empty
         let l:url = l:repo_url . '/pulls' . l:state

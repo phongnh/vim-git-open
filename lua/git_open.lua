@@ -420,7 +420,16 @@ function M.complete_branch(arglead)
 end
 
 function M.complete_request_state(arglead)
-  local flags = { '-open', '-closed', '-merged', '-all', '-search' }
+  local flags = { '-open', '-closed', '-merged', '-all' }
+  if not arglead or arglead == '' then
+    return flags
+  end
+  return vim.fn.matchfuzzy(flags, arglead)
+end
+
+function M.complete_my_request_state(arglead)
+  local flags = { '-open', '-closed', '-merged', '-all',
+    '-search', '-search=open', '-search=closed', '-search=merged', '-search=all' }
   if not arglead or arglead == '' then
     return flags
   end
@@ -552,9 +561,16 @@ function M.open_my_requests(state_arg, copy)
   local url
   if info.provider == 'GitLab' then
     local arg = vim.trim(state_arg or ''):lower()
-    if arg == '-search' then
-      -- -search: use search page scoped to author + optional state filter
-      url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. get_gitlab_username()
+    -- Check for -search or -search=<state>
+    if arg:match('^%-search') then
+      local search_state = arg:match('^%-search=(.+)$') or ''
+      local search_url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. get_gitlab_username()
+      if search_state == 'closed' or search_state == 'merged' then
+        search_url = search_url .. '&state=' .. search_state
+      elseif search_state == 'all' then
+        search_url = search_url .. '&state=all'
+      end
+      url = search_url
     elseif arg == '-closed' or arg == '-merged' then
       url = info.base_url .. '/dashboard/merge_requests/merged'
     else

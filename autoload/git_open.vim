@@ -412,7 +412,16 @@ export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): 
 enddef
 
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
-    var flags = ['-open', '-closed', '-merged', '-all', '-search']
+    var flags = ['-open', '-closed', '-merged', '-all']
+    if empty(arglead)
+        return flags
+    endif
+    return matchfuzzy(flags, arglead)
+enddef
+
+export def CompleteMyRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
+    var flags = ['-open', '-closed', '-merged', '-all',
+                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all']
     if empty(arglead)
         return flags
     endif
@@ -453,9 +462,17 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     var url: string
     if info.provider ==# 'GitLab'
         var arg = tolower(trim(state_arg))
-        if arg ==# '-search'
-            # -search: use search page scoped to author + optional state filter
-            url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername()
+        # Check for -search or -search=<state>
+        if arg =~# '^-search'
+            var parts = split(arg, '=')
+            var search_state = len(parts) > 1 ? parts[1] : ''
+            var search_url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername()
+            if search_state ==# 'closed' || search_state ==# 'merged'
+                search_url ..= '&state=' .. search_state
+            elseif search_state ==# 'all'
+                search_url ..= '&state=all'
+            endif
+            url = search_url
         elseif arg ==# '-closed' || arg ==# '-merged'
             url = info.base_url .. '/dashboard/merge_requests/merged'
         else

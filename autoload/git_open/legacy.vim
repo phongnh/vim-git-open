@@ -435,7 +435,19 @@ function! git_open#legacy#complete_branch(arglead, cmdline, cursorpos) abort
 endfunction
 
 function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
-    let l:flags = ['-open', '-closed', '-merged', '-all', '-search']
+    let l:flags = ['-open', '-closed', '-merged', '-all']
+    if empty(a:arglead)
+        return l:flags
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(l:flags, a:arglead)
+    endif
+    return filter(copy(l:flags), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
+function! git_open#legacy#complete_my_request_state(arglead, cmdline, cursorpos) abort
+    let l:flags = ['-open', '-closed', '-merged', '-all',
+                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all']
     if empty(a:arglead)
         return l:flags
     endif
@@ -575,9 +587,17 @@ function! git_open#legacy#open_my_requests(...) abort
 
     if l:info.provider ==# 'GitLab'
         let l:arg = tolower(trim(a:0 > 0 ? a:1 : ''))
-        if l:arg ==# '-search'
-            " -search: use search page scoped to author + optional state filter
-            let l:url = l:info.base_url . '/dashboard/merge_requests/search?author_username=' . s:get_gitlab_username()
+        " Check for -search or -search=<state>
+        if l:arg =~# '^-search'
+            let l:parts = split(l:arg, '=')
+            let l:search_state = len(l:parts) > 1 ? l:parts[1] : ''
+            let l:search_url = l:info.base_url . '/dashboard/merge_requests/search?author_username=' . s:get_gitlab_username()
+            if l:search_state ==# 'closed' || l:search_state ==# 'merged'
+                let l:search_url .= '&state=' . l:search_state
+            elseif l:search_state ==# 'all'
+                let l:search_url .= '&state=all'
+            endif
+            let l:url = l:search_url
         elseif l:arg ==# '-closed' || l:arg ==# '-merged'
             let l:url = l:info.base_url . '/dashboard/merge_requests/merged'
         else

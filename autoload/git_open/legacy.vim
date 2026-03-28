@@ -472,21 +472,6 @@ function! git_open#legacy#complete_gitk_args(arglead, cmdline, cursorpos) abort
     return filter(copy(l:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction
 
-function! git_open#legacy#complete_gitk_files(arglead, cmdline, cursorpos) abort
-    let l:files_raw = s:git_command('ls-files')
-    if empty(l:files_raw)
-        return []
-    endif
-    let l:files = split(l:files_raw, '\n')
-    if empty(a:arglead)
-        return l:files
-    endif
-    if exists('*matchfuzzy')
-        return matchfuzzy(l:files, a:arglead)
-    endif
-    return filter(copy(l:files), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
-endfunction
-
 function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
     let l:flags = ['-open', '-closed', '-merged', '-all']
     if empty(a:arglead)
@@ -748,40 +733,11 @@ function! git_open#legacy#open_gitk_file(...) abort
         call s:warn('git-open: no file in current buffer')
         return
     endif
-    let l:follow = a:0 > 0 && a:1
     let l:rel_path = s:get_relative_path()
-    let l:args = l:follow ? ['--follow', '--', l:rel_path] : ['--', l:rel_path]
-    call s:launch_gitk(l:args, l:git_root)
-endfunction
-
-function! git_open#legacy#open_gitk_file_history(...) abort
-    let l:git_root = s:get_git_root()
-    if empty(l:git_root)
-        call s:warn('git-open: not a git repository')
-        return
-    endif
-    let l:files_str = a:0 > 0 ? a:1 : ''
-    if empty(l:files_str)
-        if empty(expand('%'))
-            call s:warn('git-open: no file in current buffer')
-            return
-        endif
-        let l:files = [s:get_relative_path()]
-    else
-        let l:files = split(l:files_str)
-    endif
-    " Resolve full rename history for each file, merge and deduplicate
-    let l:seen = {}
-    let l:all_paths = []
-    for l:f in l:files
-        for l:p in s:get_gitk_old_paths(l:f)
-            if !has_key(l:seen, l:p)
-                let l:seen[l:p] = 1
-                call add(l:all_paths, l:p)
-            endif
-        endfor
-    endfor
-    call s:launch_gitk(['--'] + l:all_paths, l:git_root)
+    " Resolve full rename history
+    let l:all_paths = s:get_gitk_old_paths(l:rel_path)
+    let l:extra_args = a:0 > 0 && !empty(a:1) ? split(a:1) : []
+    call s:launch_gitk(l:extra_args + ['--'] + l:all_paths, l:git_root)
 endfunction
 
 " Restore cpoptions

@@ -493,25 +493,6 @@ function M.complete_gitk_args(arglead)
   return vim.fn.matchfuzzy(result, arglead)
 end
 
-function M.complete_gitk_files(arglead)
-  local git_root = get_git_root()
-  local files_raw = git_root and vim.trim(vim.fn.system(
-    string.format('git -C %s ls-files', vim.fn.shellescape(git_root))
-  )) or ''
-
-  local result = {}
-  if files_raw ~= '' then
-    for _, f in ipairs(vim.split(files_raw, '\n', { plain = true, trimempty = true })) do
-      table.insert(result, f)
-    end
-  end
-
-  if not arglead or arglead == '' then
-    return result
-  end
-  return vim.fn.matchfuzzy(result, arglead)
-end
-
 function M.complete_request_state(arglead)
   local flags = { '-open', '-closed', '-merged', '-all' }
   if not arglead or arglead == '' then
@@ -711,7 +692,7 @@ function M.open_gitk(args_str)
   launch_gitk(args, git_root)
 end
 
-function M.open_gitk_file(follow)
+function M.open_gitk_file(opts_str)
   local git_root = get_git_root()
   if not git_root then
     warn('git-open: not a git repository')
@@ -722,41 +703,13 @@ function M.open_gitk_file(follow)
     return
   end
   local rel_path = get_relative_path()
-  local args = follow and { '--follow', '--', rel_path } or { '--', rel_path }
-  launch_gitk(args, git_root)
-end
-
-function M.open_gitk_file_history(files_str)
-  local git_root = get_git_root()
-  if not git_root then
-    warn('git-open: not a git repository')
-    return
-  end
-  local files
-  if not files_str or files_str == '' then
-    if vim.fn.expand('%') == '' then
-      warn('git-open: no file in current buffer')
-      return
-    end
-    files = { get_relative_path() }
-  else
-    files = vim.split(files_str, '%s+')
-  end
-  -- Resolve full rename history for each file, merge and deduplicate
-  local seen = {}
-  local all_paths = {}
-  for _, f in ipairs(files) do
-    for _, p in ipairs(get_gitk_old_paths(f, git_root)) do
-      if not seen[p] then
-        seen[p] = true
-        table.insert(all_paths, p)
-      end
-    end
-  end
-  local args = { '--' }
-  for _, p in ipairs(all_paths) do
-    table.insert(args, p)
-  end
+  -- Resolve full rename history
+  local all_paths = get_gitk_old_paths(rel_path, git_root)
+  local extra_args = (opts_str and opts_str ~= '') and vim.split(opts_str, '%s+') or {}
+  local args = {}
+  for _, a in ipairs(extra_args) do table.insert(args, a) end
+  table.insert(args, '--')
+  for _, p in ipairs(all_paths) do table.insert(args, p) end
   launch_gitk(args, git_root)
 end
 

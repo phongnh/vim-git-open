@@ -46,5 +46,4 @@ command! -bang -nargs=0 OpenGitFileLastChange GitOpen.OpenFileLastChange(<bang>0
 command! -bang -nargs=? -complete=customlist,git_open#CompleteMyRequestState OpenGitMyRequests GitOpen.OpenMyRequests(<q-args>, <bang>0)
 command! -bang -nargs=? -complete=customlist,git_open#CompleteRequestState OpenGitRequests GitOpen.OpenRequests(<q-args>, <bang>0)
 command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs OpenGitk GitOpen.OpenGitk(<q-args>)
-command! -bang -nargs=0 OpenGitkFile GitOpen.OpenGitkFile(<bang>0)
-command! -nargs=* -complete=customlist,git_open#CompleteGitkFiles OpenGitkFileHistory GitOpen.OpenGitkFileHistory(<q-args>)
+command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs OpenGitkFile GitOpen.OpenGitkFile(<q-args>)

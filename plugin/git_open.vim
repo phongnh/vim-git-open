@@ -43,5 +43,5 @@ command! -bang -nargs=? -range -complete=customlist,git_open#CompleteBranch Open
 command! -bang -nargs=? OpenGitCommit GitOpen.OpenCommit(<q-args>, <bang>0)
 command! -bang -nargs=? OpenGitRequest GitOpen.OpenRequest(<q-args>, <bang>0)
 command! -bang -nargs=0 OpenGitFileLastChange GitOpen.OpenFileLastChange(<bang>0)
-command! -bang -nargs=0 OpenGitMyRequests GitOpen.OpenMyRequests(<bang>0)
-command! -bang -nargs=0 OpenGitRequests GitOpen.OpenRequests(<bang>0)
+command! -bang -nargs=? OpenGitMyRequests GitOpen.OpenMyRequests(<q-args>, <bang>0)
+command! -bang -nargs=? OpenGitRequests GitOpen.OpenRequests(<q-args>, <bang>0)

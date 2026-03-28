@@ -186,6 +186,19 @@ local function parse_pr_mr_from_commit(provider)
   return parse_pr_mr_number(commit_msg, provider)
 end
 
+-- Parse state flag from command args: -open, -closed, -merged, -all
+-- Returns '' (open/default), 'closed', 'all'
+-- GitHub/Codeberg have no separate merged state: -merged maps to 'closed'
+local function parse_request_state(args)
+  local arg = vim.trim(args or ''):lower()
+  if arg == '-closed' or arg == '-merged' then
+    return 'closed'
+  elseif arg == '-all' then
+    return 'all'
+  end
+  return ''
+end
+
 -- ============================================================================
 -- URL Builders
 -- ============================================================================
@@ -486,29 +499,34 @@ function M.open_file_last_change(copy)
   open_or_copy(url, copy)
 end
 
-function M.open_my_requests(copy)
+function M.open_my_requests(state_arg, copy)
   local info = get_repo_info()
   if not info then
     return
   end
 
+  local state = parse_request_state(state_arg)
   local url
   if info.provider == 'GitLab' then
     url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. (vim.fn.expand('$USER') or '')
   else
     -- GitHub and Codeberg
     url = info.base_url .. '/pulls'
+    if state ~= '' then
+      url = url .. '?state=' .. state
+    end
   end
 
   open_or_copy(url, copy)
 end
 
-function M.open_requests(copy)
+function M.open_requests(state_arg, copy)
   local info = get_repo_info()
   if not info then
     return
   end
 
+  local state = parse_request_state(state_arg)
   local repo_url = info.base_url .. '/' .. info.path
   local url
   if info.provider == 'GitLab' then
@@ -516,6 +534,9 @@ function M.open_requests(copy)
   else
     -- GitHub and Codeberg
     url = repo_url .. '/pulls'
+    if state ~= '' then
+      url = url .. '?state=' .. state
+    end
   end
 
   open_or_copy(url, copy)

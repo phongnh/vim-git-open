@@ -42,8 +42,8 @@ command! -bang -nargs=? -range -complete=customlist,git_open#legacy#complete_bra
 command! -bang -nargs=? OpenGitCommit call git_open#legacy#open_commit(<q-args>, <bang>0)
 command! -bang -nargs=? OpenGitRequest call git_open#legacy#open_request(<q-args>, <bang>0)
 command! -bang -nargs=0 OpenGitFileLastChange call git_open#legacy#open_file_last_change(<bang>0)
-command! -bang -nargs=0 OpenGitMyRequests call git_open#legacy#open_my_requests(<bang>0)
-command! -bang -nargs=0 OpenGitRequests call git_open#legacy#open_requests(<bang>0)
+command! -bang -nargs=? OpenGitMyRequests call git_open#legacy#open_my_requests(<q-args>, <bang>0)
+command! -bang -nargs=? OpenGitRequests call git_open#legacy#open_requests(<q-args>, <bang>0)
 
 " Restore cpoptions
 let &cpoptions = s:save_cpo

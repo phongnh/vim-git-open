@@ -195,6 +195,19 @@ function! s:parse_pr_mr_from_commit(provider) abort
     return s:parse_pr_mr_number(l:commit_msg, a:provider)
 endfunction
 
+" Parse state flag from command args: -open, -closed, -merged, -all
+" Returns '' (open/default), 'closed', 'all'
+" GitHub/Codeberg have no separate merged state: -merged maps to 'closed'
+function! s:parse_request_state(args) abort
+    let l:arg = tolower(trim(a:args))
+    if l:arg ==# '-closed' || l:arg ==# '-merged'
+        return 'closed'
+    elseif l:arg ==# '-all'
+        return 'all'
+    endif
+    return ''
+endfunction
+
 " ============================================================================
 " URL Builders
 " ============================================================================
@@ -514,13 +527,21 @@ function! git_open#legacy#open_my_requests(...) abort
         return
     endif
 
+    " a:1 = state arg (optional), a:2 = copy flag (optional)
+    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '')
+    let l:copy = a:0 > 1 && a:2
+
     if l:info.provider ==# 'GitLab'
         let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER')
     else
+        " GitHub and Codeberg
         let l:url = l:info.base_url . '/pulls'
+        if !empty(l:state)
+            let l:url .= '?state=' . l:state
+        endif
     endif
 
-    call s:open_or_copy(l:url, a:0 > 0 && a:1)
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
 function! git_open#legacy#open_requests(...) abort
@@ -529,14 +550,22 @@ function! git_open#legacy#open_requests(...) abort
         return
     endif
 
+    " a:1 = state arg (optional), a:2 = copy flag (optional)
+    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '')
+    let l:copy = a:0 > 1 && a:2
+
     let l:repo_url = l:info.base_url . '/' . l:info.path
     if l:info.provider ==# 'GitLab'
         let l:url = l:repo_url . '/-/merge_requests'
     else
+        " GitHub and Codeberg
         let l:url = l:repo_url . '/pulls'
+        if !empty(l:state)
+            let l:url .= '?state=' . l:state
+        endif
     endif
 
-    call s:open_or_copy(l:url, a:0 > 0 && a:1)
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
 " Restore cpoptions

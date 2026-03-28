@@ -47,9 +47,9 @@ vim.api.nvim_create_user_command('OpenGitFileLastChange', function(opts)
 end, { bang = true })
 
 vim.api.nvim_create_user_command('OpenGitMyRequests', function(opts)
-  git_open.open_my_requests(opts.bang)
-end, { bang = true })
+  git_open.open_my_requests(opts.args ~= '' and opts.args or nil, opts.bang)
+end, { bang = true, nargs = '?' })
 
 vim.api.nvim_create_user_command('OpenGitRequests', function(opts)
-  git_open.open_requests(opts.bang)
-end, { bang = true })
+  git_open.open_requests(opts.args ~= '' and opts.args or nil, opts.bang)
+end, { bang = true, nargs = '?' })

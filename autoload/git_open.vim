@@ -186,6 +186,19 @@ def ParsePrMrFromCommit(provider: string): string
     return ParsePrMrNumber(commit_msg, provider)
 enddef
 
+# Parse state flag from command args: -open, -closed, -merged, -all
+# Returns '' (open/default), 'closed', 'all'
+# GitHub/Codeberg have no separate merged state: -merged maps to 'closed'
+def ParseRequestState(args: string): string
+    var arg = tolower(trim(args))
+    if arg ==# '-closed' || arg ==# '-merged'
+        return 'closed'
+    elseif arg ==# '-all'
+        return 'all'
+    endif
+    return ''
+enddef
+
 # ============================================================================
 # URL Builders
 # ============================================================================
@@ -391,29 +404,34 @@ export def OpenBranch(branch_arg: string = '', copy: bool = false)
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenMyRequests(copy: bool = false)
+export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
 
+    var state = ParseRequestState(state_arg)
     var url: string
     if info.provider ==# 'GitLab'
         url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER')
     else
         # GitHub and Codeberg
         url = info.base_url .. '/pulls'
+        if !empty(state)
+            url ..= '?state=' .. state
+        endif
     endif
 
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenRequests(copy: bool = false)
+export def OpenRequests(state_arg: string = '', copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
 
+    var state = ParseRequestState(state_arg)
     var repo_url = info.base_url .. '/' .. info.path
     var url: string
     if info.provider ==# 'GitLab'
@@ -421,6 +439,9 @@ export def OpenRequests(copy: bool = false)
     else
         # GitHub and Codeberg
         url = repo_url .. '/pulls'
+        if !empty(state)
+            url ..= '?state=' .. state
+        endif
     endif
 
     OpenOrCopy(url, copy)

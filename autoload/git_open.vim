@@ -439,6 +439,29 @@ export def CompleteGitkBranch(arglead: string, cmdline: string, cursorpos: numbe
     endif
     return matchfuzzy(result, arglead)
 enddef
+
+export def CompleteGitkArgs(arglead: string, cmdline: string, cursorpos: number): list<string>
+    # Branches (local plain + remote with prefix) then tracked files
+    var result = CompleteGitkBranch('', '', 0)
+    var seen: dict<bool> = {}
+    for b in result
+        seen[b] = true
+    endfor
+    var files_raw = GitCommand('ls-files')
+    if !empty(files_raw)
+        for f in split(files_raw, '\n')
+            if !has_key(seen, f)
+                seen[f] = true
+                result->add(f)
+            endif
+        endfor
+    endif
+    if empty(arglead)
+        return result
+    endif
+    return matchfuzzy(result, arglead)
+enddef
+
 export def CompleteRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
     var flags = ['-open', '-closed', '-merged', '-all']
     if empty(arglead)

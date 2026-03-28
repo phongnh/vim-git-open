@@ -465,6 +465,31 @@ function! git_open#legacy#complete_gitk_branch(arglead, cmdline, cursorpos) abor
     return filter(copy(l:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
 endfunction
 
+function! git_open#legacy#complete_gitk_args(arglead, cmdline, cursorpos) abort
+    " Branches (local plain + remote with prefix) then tracked files
+    let l:result = git_open#legacy#complete_gitk_branch('', '', 0)
+    let l:seen = {}
+    for l:b in l:result
+        let l:seen[l:b] = 1
+    endfor
+    let l:files_raw = s:git_command('ls-files')
+    if !empty(l:files_raw)
+        for l:f in split(l:files_raw, '\n')
+            if !has_key(l:seen, l:f)
+                let l:seen[l:f] = 1
+                call add(l:result, l:f)
+            endif
+        endfor
+    endif
+    if empty(a:arglead)
+        return l:result
+    endif
+    if exists('*matchfuzzy')
+        return matchfuzzy(l:result, a:arglead)
+    endif
+    return filter(copy(l:result), 'v:val =~# ''^'' . escape(a:arglead, ''\/.*[]^$~'')')
+endfunction
+
 function! git_open#legacy#complete_request_state(arglead, cmdline, cursorpos) abort
     let l:flags = ['-open', '-closed', '-merged', '-all']
     if empty(a:arglead)

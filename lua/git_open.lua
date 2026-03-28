@@ -486,6 +486,26 @@ function M.complete_gitk_branch(arglead)
   return vim.fn.matchfuzzy(result, arglead)
 end
 
+function M.complete_gitk_args(arglead)
+  -- Branches (local plain + remote with prefix) then tracked files
+  local result = M.complete_gitk_branch('')
+  local seen = {}
+  for _, b in ipairs(result) do seen[b] = true end
+  local files_raw = git_command('ls-files')
+  if files_raw and files_raw ~= '' then
+    for _, f in ipairs(vim.split(files_raw, '\n', { plain = true, trimempty = true })) do
+      if not seen[f] then
+        seen[f] = true
+        table.insert(result, f)
+      end
+    end
+  end
+  if not arglead or arglead == '' then
+    return result
+  end
+  return vim.fn.matchfuzzy(result, arglead)
+end
+
 function M.complete_request_state(arglead)
   local flags = { '-open', '-closed', '-merged', '-all' }
   if not arglead or arglead == '' then

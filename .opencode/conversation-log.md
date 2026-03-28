@@ -299,6 +299,31 @@ Chronological log of all user requests, requirements, and implementation decisio
 
 ---
 
+## Session 5: Remove OpenGitkFileHistory, doc/usage cleanup
+**Date:** 2026-03-28 (continued)
+
+### Fix: doc — remove OpenGitkFileHistory section, clean up formatting
+- Removed backtick inline code from `doc/git_open.txt` (not valid Vim help syntax)
+- **Commit:** 631f320
+
+### Fix: doc — condense OpenGitkFileHistory to single-line entry
+- Reduced the full section to a compact command entry
+- **Commit:** 7131793
+
+### Fix: doc — remove OpenGitkFileHistory entirely, correct OpenGitkFile! description
+- `:OpenGitkFileHistory` does not exist as a command; `!` on `:OpenGitkFile` is what shows full rename history
+- Updated `:OpenGitkFile[!]` description: "With [!], shows the full rename history of the current file across all renames by resolving all historical paths via git log --follow"
+- Updated `:GitkFile` alias description accordingly
+- **Commit:** 975dd90
+
+### Docs: Update README, doc, agent, skill, conversation files
+- `README.md`: removed `:OpenGitkFileHistory` row from commands table and usage examples; updated `:OpenGitkFile[!]` description; updated Features list
+- `doc/git_open.txt`: removed `:OpenGitkFileHistory` from requirements; fixed `:GitkFile` alias wording; fixed backticks in troubleshooting section; updated features list
+- `.opencode/agent.md`: commands table updated (removed `OpenGitkFileHistory`, corrected `OpenGitkFile[!]` notes)
+- `.opencode/skill.md`: commands table updated (same); also added gitk/alias commands which were missing entirely; updated `OpenGitBranch`/`OpenGitCommit` notes with visual mode info
+
+---
+
 ## Key Discoveries (Cumulative)
 
 1. `string()` in Vim9script adds quotes around numbers — use `'' .. value`
@@ -412,3 +437,7 @@ Chronological log of all user requests, requirements, and implementation decisio
 | 07fbac3 | Fix GetGitRoot step 1: replace exists() guard with try/catch in Vim9script |
 | 0de4cfa | Remove debug logging helpers and fix duplicate get_git_root in Lua |
 | f6e2a6e | Fix OpenBranch/OpenCommit: use current branch/HEAD when no arg given |
+| f742d7a | Update docs and .opencode: Session 4 gitk commands, visual selection, GetGitRoot fixes |
+| 631f320 | doc: clean up OpenGitkFileHistory section formatting |
+| 7131793 | doc: condense OpenGitkFileHistory to single-line command entry |
+| 975dd90 | doc: remove OpenGitkFileHistory entry, update OpenGitkFile! description |

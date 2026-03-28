@@ -43,13 +43,17 @@ vim-git-open/
 | Command | Notes |
 |---------|-------|
 | `OpenGitRepo[!]` | Repository home page |
-| `OpenGitBranch[!] [branch]` | Branch view; tab-completes branch names |
+| `OpenGitBranch[!] [branch]` | Branch view; tab-completes branch names. Visual mode: selected text as branch name |
 | `[range]OpenGitFile[!] [ref]` | File + line numbers; tab-completes branch names |
-| `OpenGitCommit[!] [commit]` | Commit view |
+| `OpenGitCommit[!] [commit]` | Commit view. Visual mode: selected text as commit hash |
 | `OpenGitRequest[!] [number]` | PR/MR (provider-agnostic; auto-parses from commit) |
 | `OpenGitFileLastChange[!]` | PR/MR or commit that last changed current file |
 | `OpenGitMyRequests[!] [state]` | My PRs/MRs; tab-completes state flags |
 | `OpenGitRequests[!] [state]` | Repo PR/MR listing; tab-completes state flags |
+| `OpenGitk [args]` | Launch gitk; tab-completes branches and tracked files |
+| `OpenGitkFile[!]` | Launch gitk for current file. `!` shows full rename history via `git log --follow` |
+| `Gitk [args]` | Alias for `OpenGitk` |
+| `GitkFile[!]` | Alias for `OpenGitkFile` |
 
 **State flags for `OpenGitMyRequests`:** `-open`, `-closed`, `-merged`, `-all`, `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`
 **State flags for `OpenGitRequests`:** `-open`, `-closed`, `-merged`, `-all`

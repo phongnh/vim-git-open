@@ -55,8 +55,7 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 | `OpenGitMyRequests[!] [state]` | Open/copy my PRs/MRs. Flags: `-open -closed -merged -all`; GitLab also: `-search [-search=open\|closed\|merged\|all]` |
 | `OpenGitRequests[!] [state]` | Open/copy repo PR/MR page. Flags: `-open -closed -merged -all` |
 | `OpenGitk [args]` | Launch gitk with optional args. Tab-completes branches and tracked files |
-| `OpenGitkFile[!]` | Launch gitk for current file. `!` adds `--follow` |
-| `OpenGitkFileHistory [files...]` | Launch gitk with full rename history of current file |
+| `OpenGitkFile[!]` | Launch gitk for current file. `!` shows full rename history via `git log --follow` |
 | `Gitk [args]` | Alias for `OpenGitk` |
 | `GitkFile[!]` | Alias for `OpenGitkFile` |
 

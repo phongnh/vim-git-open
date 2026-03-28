@@ -10,7 +10,7 @@ A Vim plugin to open git resources (files, branches, commits, PRs/MRs) in your b
 - Open current commit
 - Open pull requests (GitHub/Codeberg) or merge requests (GitLab)
 - Open the last change (PR/MR or commit) for the current file
-- Launch gitk for the repository, current file, or full rename history
+- Launch gitk for the repository or current file (with optional full rename history)
 - Auto-detect provider from git remote URL
 - Support for custom domain mappings
 - Line number support (single line or visual selection range)
@@ -68,8 +68,7 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | `:OpenGitMyRequests[!] [state]` | Open (or copy) my pull/merge requests. Optional state: `-open`, `-closed`, `-merged`, `-all`. GitLab also accepts `-search` to use the search page |
 | `:OpenGitRequests[!] [state]` | Open (or copy) the pull/merge requests page for the current repository. Optional state: `-open`, `-closed`, `-merged`, `-all` |
 | `:OpenGitk [args]` | Launch `gitk` with optional free-form args (branch names, paths, etc.). Tab-completes branches and tracked files |
-| `:OpenGitkFile[!]` | Launch `gitk -- <current-file>`. With `!`, adds `--follow` to trace rename history |
-| `:OpenGitkFileHistory [files...]` | Launch `gitk` with the full rename history of the current file (or given files). Resolves all historical paths via `git log --follow` |
+| `:OpenGitkFile[!]` | Launch `gitk -- <current-file>`. With `!`, shows the full rename history by resolving all historical paths via `git log --follow` |
 | `:Gitk [args]` | Alias for `:OpenGitk` |
 | `:GitkFile[!]` | Alias for `:OpenGitkFile` |
 
@@ -262,17 +261,11 @@ export GITLAB_USER=your.username
 " Open gitk for a specific branch
 :OpenGitk main
 
-" Open gitk for the current file (no rename tracking)
+" Open gitk for the current file
 :OpenGitkFile
 
-" Open gitk for the current file following renames (--follow)
+" Open gitk with full rename history of the current file
 :OpenGitkFile!
-
-" Open gitk showing the full history of the current file across all renames
-:OpenGitkFileHistory
-
-" Open gitk showing history for specific files (space-separated)
-:OpenGitkFileHistory path/to/file.txt other/file.go
 ```
 
 ### Example Keymaps

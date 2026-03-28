@@ -175,6 +175,53 @@ Usage examples expanded with:
 
 ---
 
+## Session 5 (2026-03-28): Remove OpenGitkFileHistory, doc/usage cleanup
+
+### Exchange 1: Cleanup OpenGitkFileHistory section in doc
+
+**User:** "Cleanup :OpenGitkFileHistory section in doc/git_open.txt"
+
+**Assistant actions:**
+1. Read the `:OpenGitkFileHistory` section — found backticks (invalid Vim help syntax) and redundant prose
+2. Replaced backticks with plain text / quoted strings; trimmed redundant "Requires gitk" note and examples block into a compact entry (**631f320**, **7131793**)
+
+---
+
+### Exchange 2: Remove OpenGitkFileHistory — it is now OpenGitkFile!
+
+**User:** "Actually, :OpenGitkFileHistory does not exist, it now is OpenGitkFile!, just update OpenGitkFile! instead"
+
+**Assistant actions:**
+1. Removed the `:OpenGitkFileHistory` entry from `doc/git_open.txt` entirely
+2. Updated `:OpenGitkFile[!]` description: "With [!], shows the full rename history of the current file across all renames by resolving all historical paths via git log --follow"
+3. Fixed `:GitkFile` alias description: "Accepts [!] for full rename history"
+4. **Commit:** 975dd90
+
+---
+
+### Exchange 3: Update docs, usage, save transcript, update agents and skills
+
+**User:** "Update document and usage, save conversation/transcript update agents and skills files as well"
+
+**Assistant actions:**
+1. `README.md`:
+   - Commands table: removed `:OpenGitkFileHistory` row; updated `:OpenGitkFile[!]` description to match actual behaviour
+   - "Working with gitk" examples: removed `OpenGitkFileHistory` examples; updated `OpenGitkFile!` comment
+   - Features list: condensed gitk bullet to single item
+2. `doc/git_open.txt`:
+   - Requirements: removed `:OpenGitkFileHistory` reference
+   - `:GitkFile` alias: updated wording
+   - Features list: condensed gitk bullet
+   - Troubleshooting: removed stray backticks from fugitive entry
+3. `.opencode/agent.md`: commands table — removed `OpenGitkFileHistory`, corrected `OpenGitkFile[!]` note
+4. `.opencode/skill.md`: commands table — removed `OpenGitkFileHistory`, corrected `OpenGitkFile[!]` note; added gitk/alias rows (previously missing); added visual mode notes to `OpenGitBranch`/`OpenGitCommit`
+5. `.opencode/conversation-log.md`: added Session 5 entries; updated commit table
+6. `.opencode/conversation-transcript.md`: added Session 5 (this entry)
+7. Copied all changed files to both installed locations
+8. Committed and pushed
+
+---
+
 ## End of Transcript
 
-*Sessions 1–2: 2026-03-27 | Sessions 3–4: 2026-03-28*
+*Sessions 1–2: 2026-03-27 | Sessions 3–5: 2026-03-28*

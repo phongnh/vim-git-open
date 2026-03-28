@@ -30,7 +30,7 @@ Features:
   - Open current commit
   - Open pull requests (GitHub/Codeberg) or merge requests (GitLab)
   - Open the last change (PR/MR or commit) for the current file
-  - Launch gitk for the repository, current file, or full rename history
+  - Launch gitk for the repository or current file (with optional full rename history)
   - Auto-detect provider from git remote URL
   - Support for custom domain mappings
   - Line number support (single line or visual selection range)
@@ -44,7 +44,7 @@ Features:
 - Neovim 0.5+ (for Lua version)
 - Git installed and configured
 - A git repository with a remote configured
-- gitk (optional, required only for :OpenGitk, :OpenGitkFile, :OpenGitkFileHistory)
+- gitk (optional, required only for :OpenGitk, :OpenGitkFile)
 
 ==============================================================================
 3. INSTALLATION                                        *git-open-installation*
@@ -236,7 +236,7 @@ the browser. With [!], the URL is copied to the clipboard instead.
 
                                                                  *:GitkFile*
 :GitkFile[!]
-    Alias for |:OpenGitkFile|. Accepts [!] to add --follow.
+    Alias for |:OpenGitkFile|. Accepts [!] for full rename history.
 
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*
@@ -456,9 +456,9 @@ Neovim Lua configuration:~
 
 "Not a git repository" error in fugitive buffers~
 
-If you see this error inside a fugitive blame view or `fugitive://` buffer,
+If you see this error inside a fugitive blame view or fugitive:// buffer,
 make sure vim-fugitive is installed. The plugin detects the git root via
-`FugitiveGitDir()` for all fugitive virtual buffers automatically.
+FugitiveGitDir() for all fugitive virtual buffers automatically.
 
 "Not a git repository" error~
 

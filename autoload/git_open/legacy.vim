@@ -19,10 +19,14 @@ endfunction
 " Get the git root directory
 function! s:get_git_root() abort
     " Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
-    if exists('*FugitiveWorkTree')
-        let l:ft = FugitiveWorkTree()
-        if !empty(l:ft)
-            return l:ft
+    " FugitiveGitDir() reads b:git_dir directly — works in fugitiveblame and
+    " all other fugitive buffer types without internal errors.
+    if exists('*FugitiveGitDir')
+        let l:fgd = FugitiveGitDir()
+        if !empty(l:fgd)
+            " fgd is the .git dir; its parent is the work tree root
+            let l:fgd_clean = substitute(l:fgd, '/$', '', '')
+            return fnamemodify(l:fgd_clean, ':h')
         endif
     endif
     let l:git_dir = finddir('.git', expand('%:p:h') . ';')

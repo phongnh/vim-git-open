@@ -16,12 +16,16 @@ enddef
 
 def GetGitRoot(): string
     # Prefer vim-fugitive when available (handles fugitive:// virtual buffers).
-    # Use call() with a string so the lookup is deferred to runtime — Vim9script
-    # compiles function bodies and would error on an unknown bare name.
-    if exists('*FugitiveWorkTree')
-        var ft_raw = call('FugitiveWorkTree', [])
-        if type(ft_raw) == v:t_string && !empty(ft_raw)
-            return '' .. ft_raw
+    # Use FugitiveGitDir() — reads b:git_dir directly, works in all fugitive
+    # buffer types (fugitiveblame, fugitive://, etc.) without the E15 errors
+    # that FugitiveWorkTree() triggers in some versions.
+    # Use call() so the lookup is deferred to runtime (Vim9script compile-time).
+    if exists('*FugitiveGitDir')
+        var fgd = '' .. call('FugitiveGitDir', [])
+        if !empty(fgd)
+            # fgd is the .git dir; its parent is the work tree root
+            var fgd_clean = substitute(fgd, '/$', '', '')
+            return fnamemodify(fgd_clean, ':h')
         endif
     endif
     var git_dir = finddir('.git', expand('%:p:h') .. ';')

@@ -14,10 +14,14 @@ end
 
 local function get_git_root()
   -- Prefer vim-fugitive when available (handles fugitive:// virtual buffers)
-  if vim.fn.exists('*FugitiveWorkTree') == 1 then
-    local ft = vim.fn.FugitiveWorkTree()
-    if type(ft) == 'string' and ft ~= '' then
-      return ft
+  -- FugitiveGitDir() reads b:git_dir directly — works in fugitiveblame and
+  -- all other fugitive buffer types without internal errors.
+  if vim.fn.exists('*FugitiveGitDir') == 1 then
+    local fgd = vim.fn.FugitiveGitDir()
+    if type(fgd) == 'string' and fgd ~= '' then
+      -- fgd is the .git dir; its parent is the work tree root
+      local fgd_clean = fgd:gsub('/$', '')
+      return vim.fn.fnamemodify(fgd_clean, ':h')
     end
   end
   local git_dir = vim.fn.finddir('.git', vim.fn.expand('%:p:h') .. ';')

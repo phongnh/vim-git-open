@@ -141,20 +141,11 @@ function! s:get_relative_path() abort
 endfunction
 
 " Get current line number or range
-function! s:get_line_range() abort
-    let l:mode = mode()
-    if l:mode ==# 'v' || l:mode ==# 'V' || l:mode ==# "\<C-v>"
-        " Visual mode - get range
-        let l:start = line("'<")
-        let l:end = line("'>")
-        if l:start == l:end
-            return l:start
-        else
-            return l:start . '-' . l:end
-        endif
+function! s:get_line_range(line1, line2) abort
+    if a:line1 == a:line2
+        return a:line1
     else
-        " Normal mode - get current line
-        return line('.')
+        return a:line1 . '-' . a:line2
     endif
 endfunction
 
@@ -365,7 +356,7 @@ function! git_open#legacy#open_branch() abort
     call s:open_browser(l:url)
 endfunction
 
-function! git_open#legacy#open_file() abort range
+function! git_open#legacy#open_file(line1, line2) abort
     let l:info = s:get_repo_info()
     if empty(l:info)
         return
@@ -376,7 +367,7 @@ function! git_open#legacy#open_file() abort range
         return
     endif
 
-    let l:line_range = s:get_line_range()
+    let l:line_range = s:get_line_range(a:line1, a:line2)
 
     let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'file', '', l:line_range)
     call s:open_browser(l:url)

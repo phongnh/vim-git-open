@@ -38,7 +38,7 @@ endif
 " Commands
 command! -nargs=0 OpenGitRepo call git_open#legacy#open_repo()
 command! -nargs=0 OpenGitBranch call git_open#legacy#open_branch()
-command! -nargs=0 -range OpenGitFile <line1>,<line2>call git_open#legacy#open_file()
+command! -nargs=0 -range OpenGitFile call git_open#legacy#open_file(<line1>, <line2>)
 command! -nargs=0 OpenGitCommit call git_open#legacy#open_commit()
 command! -nargs=? OpenGitRequest call git_open#legacy#open_request(<q-args>)
 command! -nargs=0 OpenGitFileLastChange call git_open#legacy#open_file_last_change()

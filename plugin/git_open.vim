@@ -39,7 +39,7 @@ endif
 # Commands
 command! -nargs=0 OpenGitRepo GitOpen.OpenRepo()
 command! -nargs=0 OpenGitBranch GitOpen.OpenBranch()
-command! -nargs=0 -range OpenGitFile <line1>,<line2>GitOpen.OpenFile()
+command! -nargs=0 -range OpenGitFile GitOpen.OpenFile(<line1>, <line2>)
 command! -nargs=0 OpenGitCommit GitOpen.OpenCommit()
 command! -nargs=? OpenGitRequest GitOpen.OpenRequest(<q-args>)
 command! -nargs=0 OpenGitFileLastChange GitOpen.OpenFileLastChange()

@@ -130,20 +130,11 @@ def GetRelativePath(): string
     return rel_path
 enddef
 
-def GetLineRange(): any
-    var current_mode = mode()
-    if current_mode ==# 'v' || current_mode ==# 'V' || current_mode ==# "\<C-v>"
-        # Visual mode - get range
-        var line_start = line("'<")
-        var line_end = line("'>")
-        if line_start == line_end
-            return line_start
-        else
-            return line_start .. '-' .. line_end
-        endif
+def GetLineRange(line1: number, line2: number): any
+    if line1 == line2
+        return line1
     else
-        # Normal mode - get current line
-        return line('.')
+        return line1 .. '-' .. line2
     endif
 enddef
 
@@ -380,20 +371,19 @@ export def OpenRequests()
     OpenBrowser(url)
 enddef
 
-export def OpenFile()
+export def OpenFile(line1: number, line2: number)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
-    
+
     if empty(expand('%'))
         Warn('No file in current buffer')
         return
     endif
-    
-    # Get line range (supports visual selection)
-    var line_range = GetLineRange()
-    
+
+    var line_range = GetLineRange(line1, line2)
+
     var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range)
     OpenBrowser(url)
 enddef

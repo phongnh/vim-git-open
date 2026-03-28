@@ -21,8 +21,8 @@ vim.api.nvim_create_user_command('OpenGitBranch', function()
   git_open.open_branch()
 end, {})
 
-vim.api.nvim_create_user_command('OpenGitFile', function()
-  git_open.open_file()
+vim.api.nvim_create_user_command('OpenGitFile', function(opts)
+  git_open.open_file(opts.line1, opts.line2)
 end, { range = true })
 
 vim.api.nvim_create_user_command('OpenGitCommit', function()

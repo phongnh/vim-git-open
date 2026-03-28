@@ -131,20 +131,11 @@ local function get_relative_path()
   return rel_path
 end
 
-local function get_line_range()
-  local mode = vim.fn.mode()
-  if mode == 'v' or mode == 'V' or mode == '\22' then
-    -- Visual mode - get range
-    local line_start = vim.fn.line("'<")
-    local line_end = vim.fn.line("'>")
-    if line_start == line_end then
-      return tostring(line_start)
-    else
-      return line_start .. '-' .. line_end
-    end
+local function get_line_range(line1, line2)
+  if line1 == line2 then
+    return tostring(line1)
   else
-    -- Normal mode - get current line
-    return tostring(vim.fn.line('.'))
+    return line1 .. '-' .. line2
   end
 end
 
@@ -343,20 +334,19 @@ function M.open_branch()
   open_browser(url)
 end
 
-function M.open_file()
+function M.open_file(line1, line2)
   local info = get_repo_info()
   if not info then
     return
   end
-  
+
   if vim.fn.expand('%') == '' then
     warn('No file in current buffer')
     return
   end
-  
-  -- Get line range (supports visual selection)
-  local line_range = get_line_range()
-  
+
+  local line_range = get_line_range(line1, line2)
+
   local url = build_url(info.provider, info.base_url, info.path, 'file', nil, line_range)
   open_browser(url)
 end

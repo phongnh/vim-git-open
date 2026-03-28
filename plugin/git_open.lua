@@ -109,13 +109,19 @@ local function register_multi_remote_commands()
     return
   end
 
+  -- Skip remotes that share the same domain as origin — they would produce
+  -- identical provider-named commands for an already-covered hosting service.
+  local origin_info = git_open.get_repo_info()
+  local origin_domain = origin_info and origin_info.domain or nil
+
   local provider_remote = {}
   local provider_domain = {}
   local overwritten = {}
 
   for _, remote_name in ipairs(remotes) do
     local info = git_open.get_repo_info_for_remote(remote_name)
-    if info then
+    -- Same domain as origin → already covered by the origin-based commands
+    if info and not (origin_domain and info.domain == origin_domain) then
       local p = info.provider
       if provider_remote[p] then
         table.insert(overwritten, string.format(

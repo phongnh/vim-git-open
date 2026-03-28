@@ -918,6 +918,10 @@ function M.get_all_remotes()
   return get_all_remotes()
 end
 
+function M.get_repo_info()
+  return get_repo_info()
+end
+
 function M.get_repo_info_for_remote(remote_name)
   return get_repo_info_for_remote(remote_name)
 end

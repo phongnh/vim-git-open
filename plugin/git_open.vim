@@ -64,6 +64,11 @@ def RegisterMultiRemoteCommands()
         return
     endif
 
+    # Skip remotes that share the same domain as origin — they would produce
+    # identical provider-named commands for an already-covered hosting service.
+    var origin_info = GitOpen.GetRepoInfo()
+    var origin_domain = empty(origin_info) ? '' : origin_info.domain
+
     # Track last remote per provider to warn about overwrites
     var provider_remote: dict<string> = {}
     var provider_domain: dict<string> = {}
@@ -72,6 +77,10 @@ def RegisterMultiRemoteCommands()
     for r in remotes
         var info = GitOpen.GetRepoInfoForRemote(r)
         if empty(info)
+            continue
+        endif
+        # Same domain as origin → already covered by the origin-based commands
+        if !empty(origin_domain) && info.domain ==# origin_domain
             continue
         endif
         var p = info.provider

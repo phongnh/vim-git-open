@@ -950,6 +950,10 @@ function! git_open#legacy#get_repo_info_for_remote(remote_name) abort
     return s:get_repo_info_for_remote(a:remote_name)
 endfunction
 
+function! git_open#legacy#get_repo_info() abort
+    return s:get_repo_info()
+endfunction
+
 function! git_open#legacy#open_repo_for_remote(remote_name, ...) abort
     let l:info = s:get_repo_info_for_remote(a:remote_name)
     if empty(l:info)

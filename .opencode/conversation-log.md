@@ -324,6 +324,50 @@ Chronological log of all user requests, requirements, and implementation decisio
 
 ---
 
+## Session 6: Per-Buffer Remote Selection — Documentation and Metadata
+**Date:** 2026-03-28 (continued)
+
+The implementation (all 6 plugin files) was committed in the previous session as `2bf7ece` on branch `alpha`. This session completed all documentation and metadata updates.
+
+### Docs: Complete doc/git_open.txt for v1.4.0
+- Version bumped to `1.4.0`
+- Features list: added "Per-buffer remote selection with :OpenGitRemote"
+- `:OpenGitRemote` command entry added (after `:GitkFile`)
+- `g:vim_git_open_remote` config variable entry added
+- `b:vim_git_open_remote` config variable entry added
+- Per-buffer remote examples block added to section 6
+- Neovim Lua config example updated with `remote = 'upstream'`
+- Troubleshooting entry added: "Wrong or unexpected remote"
+
+### Docs: Update README.md
+- Features list: added "Per-buffer remote selection with `:OpenGitRemote`"
+- Commands table: added `:OpenGitRemote[!] [remote]` row
+- Configuration section: added "Default Remote" subsection for `g:vim_git_open_remote`
+- Usage Examples: added "Per-Buffer Remote Selection" block
+
+### Docs: Update example_config.vim
+- Added commented `g:vim_git_open_remote = 'upstream'` example under Basic Configuration
+- Updated Lua config example to include commented `-- remote = 'upstream'` option
+
+### Meta: Update .opencode/agent.md
+- Commands table: added `OpenGitRemote[!] [remote]` row
+- Configuration Variables: added `g:vim_git_open_remote`, `b:vim_git_open_remote`, `b:vim_git_open_remote_warned`
+- Accumulated Discoveries: added #30 (`b:` vars accessible from autoload), #31 (lazy remote resolution), #32 (`git remote` via `system()`)
+
+### Meta: Update .opencode/skill.md
+- Commands table: added `OpenGitRemote[!] [remote]` row
+- Common Patterns: added "Per-Buffer Remote Resolution" section with resolution order, variable contract, and Vim9script code pattern
+
+### Meta: Update .opencode/conversation-log.md
+- Added Session 6 entry (this entry)
+
+### Sync: Copy all changed files to installed locations and commit
+- Files changed: `doc/git_open.txt`, `README.md`, `example_config.vim`, `.opencode/agent.md`, `.opencode/skill.md`, `.opencode/conversation-log.md`
+- Copied to `~/.cache/vim/plugged/vim-git-open/` and `~/.local/share/nvim/site/pack/core/opt/vim-git-open/`
+- **Commit:** (see git log)
+
+---
+
 ## Key Discoveries (Cumulative)
 
 1. `string()` in Vim9script adds quotes around numbers — use `'' .. value`
@@ -355,13 +399,16 @@ Chronological log of all user requests, requirements, and implementation decisio
 27. `GetGitRoot` must use 3-step detection: FugitiveGitDir (try/catch) → finddir(bufname) → finddir(cwd)
 28. `OpenBranch`/`OpenCommit` must set fallback explicitly — `BuildUrl`'s internal fallback is bypassed when any extra arg is passed
 29. `var [_, l1, c1, _]` repeated `_` discard not allowed in Vim9script — use distinct names
+30. `b:` variables are accessible from autoload functions — no special scoping needed
+31. Lazy remote resolution: resolve `b:vim_git_open_remote` on first use, not at startup
+32. `git remote` via `system()` for listing remotes — simpler than re-using `GitCommand`
 
 ---
 
 ## Repository Information
 
 - **SSH URL:** git@github.com:phongnh/vim-git-open.git
-- **Branch:** main
+- **Branch:** alpha (PR #1 open against main)
 - **License:** MIT
 - **Maintainer:** Phong Nguyen
 
@@ -441,3 +488,6 @@ Chronological log of all user requests, requirements, and implementation decisio
 | 631f320 | doc: clean up OpenGitkFileHistory section formatting |
 | 7131793 | doc: condense OpenGitkFileHistory to single-line command entry |
 | 975dd90 | doc: remove OpenGitkFileHistory entry, update OpenGitkFile! description |
+| b526b54 | Update docs and .opencode: remove OpenGitkFileHistory, fix OpenGitkFile! description |
+| 2bf7ece | feat: add per-buffer remote selection with :OpenGitRemote command |
+| (pending) | docs: update README, doc, example_config, .opencode for v1.4.0 |

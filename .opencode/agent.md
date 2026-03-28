@@ -58,6 +58,7 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 | `OpenGitkFile[!]` | Launch gitk for current file. `!` shows full rename history via `git log --follow` |
 | `Gitk [args]` | Alias for `OpenGitk` |
 | `GitkFile[!]` | Alias for `OpenGitkFile` |
+| `OpenGitRemote[!] [remote]` | Print, set, or reset per-buffer remote. No args: print current. With remote: validate+set. With `!`: reset to re-resolve |
 
 ### Configuration Variables
 ```vim
@@ -65,6 +66,9 @@ let g:vim_git_open_domains = {}              " Custom domain → base URL mappin
 let g:vim_git_open_providers = {}           " Custom domain → provider mappings
 let g:vim_git_open_browser_command = ''     " Override browser command
 let g:vim_git_open_gitlab_username = ''     " GitLab username (fallback: $GITLAB_USER/$GLAB_USER/$USER)
+let g:vim_git_open_remote = ''              " Global default remote name preference (read-only by plugin)
+" b:vim_git_open_remote                     " Buffer-local cached remote (set by plugin + :OpenGitRemote)
+" b:vim_git_open_remote_warned              " Suppresses repeated invalid-remote warning (once per buffer)
 ```
 
 ## Working Principles
@@ -135,6 +139,9 @@ redraw!
 27. **`GetGitRoot` 3-step detection**: (1) `try/catch call('FugitiveGitDir', [])` → `fnamemodify(gitdir, ':h')` for fugitive buffers; (2) `finddir('.git', expand('%:p:h') .. ';')` for normal buffers; (3) `finddir('.git', getcwd() .. ';')` fallback for terminal/quickfix/empty buffers.
 28. **`OpenBranch`/`OpenCommit` always passed an explicit arg** (even empty string) to `BuildUrl`, so the `len(extra) > 0` fallback in `BuildUrl` was never triggered in normal mode. Fix: explicitly call `GetCurrentBranch()`/`GetCurrentCommit()` in `OpenBranch`/`OpenCommit` when the argument is still empty after the visual check.
 29. **`var [_, l1, c1, _] = getpos(...)`** repeated `_` discard is not allowed in Vim9script. Use distinct names like `_b1, _o1` etc.
+    30. **`b:` variables are accessible from autoload functions** — `b:vim_git_open_remote` can be read and written directly inside `autoload/git_open.vim` and `autoload/git_open/legacy.vim` without any special scoping tricks.
+    31. **Lazy remote resolution**: resolve `b:vim_git_open_remote` on first use inside each command (not at startup). Resolution order: `b:` cached → `g:` validated → `origin` if present → first remote from `git remote`.
+    32. **`git remote` via `system()` not `GitCommand`**: for listing all remotes, call `system('git -C ' .. shellescape(root) .. ' remote')` and `split(output, '\n')` — simpler than re-using the existing `GitCommand` helper since no URL parsing is needed.
 
 ## Key Files
 

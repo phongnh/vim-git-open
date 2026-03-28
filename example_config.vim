@@ -18,6 +18,11 @@
 " Windows:
 " let g:vim_git_open_browser_command = 'start'
 
+" Set global default remote name preference (optional, auto-detected by default)
+" The plugin validates this name against actual remotes; falls back to 'origin'
+" if the specified remote is not found.
+" let g:vim_git_open_remote = 'upstream'
+
 " -----------------------------------------------------------------------------
 " Enterprise / Self-Hosted Git Configuration
 " -----------------------------------------------------------------------------
@@ -84,6 +89,9 @@ nnoremap <leader>gp :OpenGitRequest<CR>
 "   
 "   -- Browser command (optional)
 "   browser_command = 'open',
+"   
+"   -- Default remote name preference (optional)
+"   -- remote = 'upstream',
 " })
 " 
 " -- Keymaps

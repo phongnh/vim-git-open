@@ -14,6 +14,7 @@ A Vim plugin to open git resources (files, branches, commits, PRs/MRs) in your b
 - Auto-detect provider from git remote URL
 - Support for custom domain mappings
 - Line number support (single line or visual selection range)
+- Per-buffer remote selection with `:OpenGitRemote`
 - Works with legacy Vim, Vim9script, and Neovim (Lua)
 
 ## Supported Git Providers
@@ -71,6 +72,7 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | `:OpenGitkFile[!]` | Launch `gitk -- <current-file>`. With `!`, shows the full rename history by resolving all historical paths via `git log --follow` |
 | `:Gitk [args]` | Alias for `:OpenGitk` |
 | `:GitkFile[!]` | Alias for `:OpenGitkFile` |
+| `:OpenGitRemote[!] [remote]` | Print, set, or reset the active remote for the current buffer. No args: print current remote. With `[remote]`: validate and set. With `!`: reset so it re-resolves on next command |
 
 ### Line Number Support
 
@@ -164,6 +166,19 @@ Or export the environment variable in your shell:
 ```bash
 export GITLAB_USER=your.username
 ```
+
+### Default Remote
+
+Set a global default remote name. The plugin validates the name against the
+actual remotes in the repository and falls back to `origin` (or the first
+available remote) if not found:
+
+```vim
+let g:vim_git_open_remote = 'upstream'
+```
+
+Use `:OpenGitRemote` to override the remote for a specific buffer without
+changing the global default.
 
 ## Usage Examples
 
@@ -266,6 +281,22 @@ export GITLAB_USER=your.username
 
 " Open gitk with full rename history of the current file
 :OpenGitkFile!
+```
+
+### Per-Buffer Remote Selection
+
+```vim
+" Check which remote is active for this buffer
+:OpenGitRemote
+
+" Switch this buffer to use 'upstream'
+:OpenGitRemote upstream
+
+" Reset so the plugin re-resolves on the next command
+:OpenGitRemote!
+
+" Set a global default remote in vimrc
+let g:vim_git_open_remote = 'upstream'
 ```
 
 ### Example Keymaps

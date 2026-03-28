@@ -339,9 +339,51 @@ local function build_github_url(base_url, path, url_type, extra, line_info, ref)
   return url
 end
 
+-- Codeberg (Gitea/Forgejo) uses different URL paths from GitHub:
+--   branch view: /src/branch/{branch}
+--   file at commit: /src/commit/{commit}/{file}
+--   file at branch: /src/branch/{branch}/{file}
+--   single PR/issue: /issues/{number}  (not /pull/)
+--   commit: /commit/{hash}  (same as GitHub)
+local function build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
+  local url = base_url .. '/' .. path
+
+  if url_type == 'repo' then
+    return url
+  elseif url_type == 'branch' then
+    local branch = extra or get_current_branch()
+    return url .. '/src/branch/' .. branch
+  elseif url_type == 'file' then
+    local file = extra or get_relative_path()
+    -- ref is an optional branch/commit; fall back to HEAD commit
+    local resolved_ref = (ref and ref ~= '') and ref or get_current_commit()
+    -- Determine whether ref looks like a commit hash (40 hex chars) or a branch name
+    local ref_type = resolved_ref:match('^[0-9a-f]+$') and #resolved_ref == 40 and 'commit' or 'branch'
+    local file_url = url .. '/src/' .. ref_type .. '/' .. resolved_ref .. '/' .. file
+
+    -- Add line number anchor if provided
+    if line_info and line_info ~= '' then
+      file_url = file_url .. format_line_anchor('GitHub', line_info)
+    end
+
+    return file_url
+  elseif url_type == 'commit' then
+    local commit = extra or get_current_commit()
+    return url .. '/commit/' .. commit
+  elseif url_type == 'pr' then
+    if not extra or extra == '' then
+      warn('No PR number specified')
+      return nil
+    end
+    return url .. '/issues/' .. extra
+  end
+
+  return url
+end
+
 local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
   local url = base_url .. '/' .. path
-  
+
   if url_type == 'repo' then
     return url
   elseif url_type == 'branch' then
@@ -352,12 +394,12 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
     -- ref is an optional branch/commit; fall back to HEAD commit
     local commit = (ref and ref ~= '') and ref or get_current_commit()
     local file_url = url .. '/-/blob/' .. commit .. '/' .. file
-    
+
     -- Add line number anchor if provided
     if line_info and line_info ~= '' then
       file_url = file_url .. format_line_anchor('GitLab', line_info)
     end
-    
+
     return file_url
   elseif url_type == 'commit' then
     local commit = extra or get_current_commit()
@@ -369,15 +411,17 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
     end
     return url .. '/-/merge_requests/' .. extra
   end
-  
+
   return url
 end
 
 local function build_url(provider, base_url, path, url_type, extra, line_info, ref)
   if provider == 'GitLab' then
     return build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
+  elseif provider == 'Codeberg' then
+    return build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
   else
-    -- Default to GitHub (includes Codeberg)
+    -- Default to GitHub
     return build_github_url(base_url, path, url_type, extra, line_info, ref)
   end
 end

@@ -127,6 +127,11 @@ the browser. With [!], the URL is copied to the clipboard instead.
       - GitHub/Codeberg: Uses #L10 or #L10-L20 for ranges
       - GitLab: Uses #L10 or #L10-20 for ranges
 
+    URL path formats:
+      - GitHub: /blob/{ref}/{file}
+      - GitLab: /-/blob/{ref}/{file}
+      - Codeberg: /src/commit/{commit}/{file} or /src/branch/{branch}/{file}
+
                                                              *:OpenGitCommit*
 :OpenGitCommit[!] [commit]
     Open (or copy) a specified [commit] hash URL.

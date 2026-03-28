@@ -372,9 +372,47 @@ function! s:build_gitlab_url(base_url, path, type, ...) abort
     return l:url
 endfunction
 
-" Build URL for Codeberg (uses same structure as GitHub)
+" Build URL for Codeberg (Gitea/Forgejo) — different paths from GitHub:
+"   branch view: /src/branch/{branch}
+"   file at commit: /src/commit/{commit}/{file}
+"   file at branch: /src/branch/{branch}/{file}
+"   single PR/issue: /issues/{number}  (not /pull/)
+"   commit: /commit/{hash}  (same as GitHub)
 function! s:build_codeberg_url(base_url, path, type, ...) abort
-    return call('s:build_github_url', [a:base_url, a:path, a:type] + a:000)
+    let l:url = a:base_url . '/' . a:path
+
+    if a:type ==# 'repo'
+        return l:url
+    elseif a:type ==# 'branch'
+        let l:branch = a:0 > 0 ? a:1 : s:get_current_branch()
+        return l:url . '/src/branch/' . l:branch
+    elseif a:type ==# 'file'
+        let l:file = (a:0 > 0 && !empty(a:1)) ? a:1 : s:get_relative_path()
+        " a:3 (extra[2]) is an optional branch/commit ref; fall back to HEAD commit
+        let l:ref = (a:0 > 2 && !empty(a:3)) ? a:3 : s:get_current_commit()
+        " Determine whether ref looks like a commit hash (40 hex chars) or a branch name
+        let l:ref_type = l:ref =~# '^[0-9a-f]\{40\}$' ? 'commit' : 'branch'
+        let l:file_url = l:url . '/src/' . l:ref_type . '/' . l:ref . '/' . l:file
+
+        " Add line number anchor if provided (a:2)
+        if a:0 > 1 && !empty(a:2)
+            let l:file_url .= s:format_line_anchor('GitHub', a:2)
+        endif
+
+        return l:file_url
+    elseif a:type ==# 'commit'
+        let l:commit = a:0 > 0 ? a:1 : s:get_current_commit()
+        return l:url . '/commit/' . l:commit
+    elseif a:type ==# 'pr'
+        let l:pr = a:0 > 0 ? a:1 : ''
+        if empty(l:pr)
+            call s:warn('No PR number specified')
+            return ''
+        endif
+        return l:url . '/issues/' . l:pr
+    endif
+
+    return l:url
 endfunction
 
 " Build URL based on provider

@@ -331,6 +331,49 @@ def BuildGithubUrl(base_url: string, path: string, type: string, ...extra: list<
     return url
 enddef
 
+# Codeberg (Gitea/Forgejo) uses different URL paths from GitHub:
+#   branch view: /src/branch/{branch}
+#   file at commit: /src/commit/{commit}/{file}
+#   file at branch: /src/branch/{branch}/{file}
+#   single PR/issue: /issues/{number}  (not /pull/)
+#   commit: /commit/{hash}  (same as GitHub)
+def BuildCodebergUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
+    var url = base_url .. '/' .. path
+
+    if type ==# 'repo'
+        return url
+    elseif type ==# 'branch'
+        var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
+        return url .. '/src/branch/' .. branch
+    elseif type ==# 'file'
+        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
+        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
+        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
+        # Determine whether ref looks like a commit hash (40 hex chars) or a branch name
+        var ref_type = ref =~# '^[0-9a-f]\{40\}$' ? 'commit' : 'branch'
+        var file_url = url .. '/src/' .. ref_type .. '/' .. ref .. '/' .. file
+
+        # Add line number anchor if provided (extra[1])
+        if len(extra) > 1 && !empty(extra[1])
+            file_url ..= FormatLineAnchor('GitHub', extra[1])
+        endif
+
+        return file_url
+    elseif type ==# 'commit'
+        var commit = len(extra) > 0 ? extra[0] : GetCurrentCommit()
+        return url .. '/commit/' .. commit
+    elseif type ==# 'pr'
+        var pr = len(extra) > 0 ? extra[0] : ''
+        if empty(pr)
+            Warn('No PR number specified')
+            return ''
+        endif
+        return url .. '/issues/' .. pr
+    endif
+
+    return url
+enddef
+
 def BuildGitlabUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
     var url = base_url .. '/' .. path
     
@@ -369,8 +412,10 @@ enddef
 def BuildUrl(provider: string, base_url: string, path: string, type: string, ...extra: list<any>): string
     if provider ==# 'GitLab'
         return call(BuildGitlabUrl, [base_url, path, type] + extra)
+    elseif provider ==# 'Codeberg'
+        return call(BuildCodebergUrl, [base_url, path, type] + extra)
     else
-        # Default to GitHub (includes Codeberg)
+        # Default to GitHub
         return call(BuildGithubUrl, [base_url, path, type] + extra)
     endif
 enddef

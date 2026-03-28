@@ -78,7 +78,8 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 
 `:OpenGitFile` automatically includes the current line number in the URL. You can also:
 - Select lines in visual mode and run `:OpenGitFile` to open with a line range
-- The format adapts to the Git provider (GitHub uses `#L10-L20`, GitLab uses `#L10-20`)
+- The line anchor format adapts to the provider: GitHub/Codeberg use `#L10-L20`, GitLab uses `#L10-20`
+- The file path format also adapts: GitHub uses `/blob/{ref}/`, GitLab uses `/-/blob/{ref}/`, Codeberg uses `/src/commit/{hash}/` or `/src/branch/{branch}/`
 
 ### Visual Mode Support for OpenGitBranch and OpenGitCommit
 
@@ -122,7 +123,7 @@ let g:vim_git_open_providers = {
 Supported provider values:
 - `'GitHub'` - Uses GitHub URL structure
 - `'GitLab'` - Uses GitLab URL structure
-- `'Codeberg'` - Uses Codeberg/GitHub URL structure
+- `'Codeberg'` - Uses Codeberg/Gitea URL structure (`/src/branch/`, `/src/commit/`)
 
 ### Custom Browser Command
 

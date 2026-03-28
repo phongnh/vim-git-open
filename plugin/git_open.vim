@@ -38,9 +38,9 @@ endif
 
 # Commands
 command! -bang -nargs=0 OpenGitRepo GitOpen.OpenRepo(<bang>0)
-command! -bang -nargs=0 OpenGitBranch GitOpen.OpenBranch(<bang>0)
-command! -bang -nargs=0 -range OpenGitFile GitOpen.OpenFile(<line1>, <line2>, <bang>0)
-command! -bang -nargs=0 OpenGitCommit GitOpen.OpenCommit(<bang>0)
+command! -bang -nargs=? OpenGitBranch GitOpen.OpenBranch(<q-args>, <bang>0)
+command! -bang -nargs=? -range OpenGitFile GitOpen.OpenFile(<line1>, <line2>, <q-args>, <bang>0)
+command! -bang -nargs=? OpenGitCommit GitOpen.OpenCommit(<q-args>, <bang>0)
 command! -bang -nargs=? OpenGitRequest GitOpen.OpenRequest(<q-args>, <bang>0)
 command! -bang -nargs=0 OpenGitFileLastChange GitOpen.OpenFileLastChange(<bang>0)
 command! -bang -nargs=0 OpenGitMyRequests GitOpen.OpenMyRequests(<bang>0)

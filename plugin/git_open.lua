@@ -18,16 +18,16 @@ vim.api.nvim_create_user_command('OpenGitRepo', function(opts)
 end, { bang = true })
 
 vim.api.nvim_create_user_command('OpenGitBranch', function(opts)
-  git_open.open_branch(opts.bang)
-end, { bang = true })
+  git_open.open_branch(opts.args ~= '' and opts.args or nil, opts.bang)
+end, { bang = true, nargs = '?' })
 
 vim.api.nvim_create_user_command('OpenGitFile', function(opts)
-  git_open.open_file(opts.line1, opts.line2, opts.bang)
-end, { bang = true, range = true })
+  git_open.open_file(opts.line1, opts.line2, opts.args ~= '' and opts.args or nil, opts.bang)
+end, { bang = true, nargs = '?', range = true })
 
 vim.api.nvim_create_user_command('OpenGitCommit', function(opts)
-  git_open.open_commit(opts.bang)
-end, { bang = true })
+  git_open.open_commit(opts.args ~= '' and opts.args or nil, opts.bang)
+end, { bang = true, nargs = '?' })
 
 vim.api.nvim_create_user_command('OpenGitRequest', function(opts)
   git_open.open_request(opts.args, opts.bang)

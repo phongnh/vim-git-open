@@ -200,10 +200,11 @@ def BuildGithubUrl(base_url: string, path: string, type: string, ...extra: list<
         return url .. '/tree/' .. branch
     elseif type ==# 'file'
         var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
-        var commit = GetCurrentCommit()
-        var file_url = url .. '/blob/' .. commit .. '/' .. file
+        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
+        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
+        var file_url = url .. '/blob/' .. ref .. '/' .. file
         
-        # Add line number anchor if provided
+        # Add line number anchor if provided (extra[1])
         if len(extra) > 1 && !empty(extra[1])
             file_url ..= FormatLineAnchor('GitHub', extra[1])
         endif
@@ -234,10 +235,11 @@ def BuildGitlabUrl(base_url: string, path: string, type: string, ...extra: list<
         return url .. '/-/tree/' .. branch
     elseif type ==# 'file'
         var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
-        var commit = GetCurrentCommit()
-        var file_url = url .. '/-/blob/' .. commit .. '/' .. file
+        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
+        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
+        var file_url = url .. '/-/blob/' .. ref .. '/' .. file
         
-        # Add line number anchor if provided
+        # Add line number anchor if provided (extra[1])
         if len(extra) > 1 && !empty(extra[1])
             file_url ..= FormatLineAnchor('GitLab', extra[1])
         endif
@@ -345,13 +347,13 @@ export def OpenRepo(copy: bool = false)
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenBranch(copy: bool = false)
+export def OpenBranch(branch_arg: string = '', copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch')
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch_arg)
     OpenOrCopy(url, copy)
 enddef
 
@@ -390,7 +392,7 @@ export def OpenRequests(copy: bool = false)
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenFile(line1: number, line2: number, copy: bool = false)
+export def OpenFile(line1: number, line2: number, ref_arg: string = '', copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
@@ -403,17 +405,18 @@ export def OpenFile(line1: number, line2: number, copy: bool = false)
 
     var line_range = GetLineRange(line1, line2)
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range)
+    # extra[0]=file(empty=current), extra[1]=line_range, extra[2]=ref(branch/commit)
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range, ref_arg)
     OpenOrCopy(url, copy)
 enddef
 
-export def OpenCommit(copy: bool = false)
+export def OpenCommit(commit_arg: string = '', copy: bool = false)
     var info = GetRepoInfo()
     if empty(info)
         return
     endif
     
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit')
+    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit_arg)
     OpenOrCopy(url, copy)
 enddef
 

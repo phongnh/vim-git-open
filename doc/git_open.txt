@@ -73,20 +73,38 @@ the browser. With [!], the URL is copied to the clipboard instead.
     Open (or copy) the repository home page.
 
                                                             *:OpenGitBranch*
-:OpenGitBranch[!]
-    Open (or copy) the current branch URL.
+:OpenGitBranch[!] [branch]
+    Open (or copy) the current branch URL, or a specified [branch].
+
+    Examples: >
+        " Open current branch
+        :OpenGitBranch
+
+        " Open a specific branch
+        :OpenGitBranch main
+
+        " Copy a specific branch URL
+        :OpenGitBranch! feature/my-feature
+<
 
                                                               *:OpenGitFile*
-:[range]OpenGitFile[!]
-    Open (or copy) the current file at the current commit.
+:[range]OpenGitFile[!] [ref]
+    Open (or copy) the current file at the current commit, or at a specified
+    branch or commit [ref].
     
     Automatically includes the current line number in the URL.
     In visual mode or with a range, opens the file with line range.
     
     Examples: >
-        " Open file at current line
+        " Open file at current line (HEAD commit)
         :OpenGitFile
         
+        " Open file at a specific branch
+        :OpenGitFile main
+
+        " Open file at a specific commit
+        :OpenGitFile abc1234
+
         " Copy file URL at current line
         :OpenGitFile!
         
@@ -101,8 +119,19 @@ the browser. With [!], the URL is copied to the clipboard instead.
       - GitLab: Uses #L10 or #L10-20 for ranges
 
                                                             *:OpenGitCommit*
-:OpenGitCommit[!]
-    Open (or copy) the current commit URL.
+:OpenGitCommit[!] [commit]
+    Open (or copy) the current commit, or a specified [commit] hash.
+
+    Examples: >
+        " Open current (HEAD) commit
+        :OpenGitCommit
+
+        " Open a specific commit
+        :OpenGitCommit abc1234
+
+        " Copy current commit URL
+        :OpenGitCommit!
+<
 
                                                             *:OpenGitRequest*
 :OpenGitRequest[!] [number]
@@ -215,8 +244,15 @@ Basic usage:~
     " Open current branch
     :OpenGitBranch
     
+    " Open a specific branch
+    :OpenGitBranch main
+
     " Open current file in browser (includes current line number)
     :OpenGitFile
+
+    " Open current file at a specific branch or commit
+    :OpenGitFile main
+    :OpenGitFile abc1234
     
     " Copy current file URL to clipboard
     :OpenGitFile!
@@ -226,6 +262,12 @@ Basic usage:~
     
     " Open current commit
     :OpenGitCommit
+
+    " Open a specific commit
+    :OpenGitCommit abc1234
+
+    " Copy current commit URL
+    :OpenGitCommit!
 <
 
 Working with PRs/MRs:~

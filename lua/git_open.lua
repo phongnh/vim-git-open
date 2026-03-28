@@ -190,7 +190,7 @@ end
 -- URL Builders
 -- ============================================================================
 
-local function build_github_url(base_url, path, url_type, extra, line_info)
+local function build_github_url(base_url, path, url_type, extra, line_info, ref)
   local url = base_url .. '/' .. path
   
   if url_type == 'repo' then
@@ -200,7 +200,8 @@ local function build_github_url(base_url, path, url_type, extra, line_info)
     return url .. '/tree/' .. branch
   elseif url_type == 'file' then
     local file = extra or get_relative_path()
-    local commit = get_current_commit()
+    -- ref is an optional branch/commit; fall back to HEAD commit
+    local commit = (ref and ref ~= '') and ref or get_current_commit()
     local file_url = url .. '/blob/' .. commit .. '/' .. file
     
     -- Add line number anchor if provided
@@ -223,7 +224,7 @@ local function build_github_url(base_url, path, url_type, extra, line_info)
   return url
 end
 
-local function build_gitlab_url(base_url, path, url_type, extra, line_info)
+local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
   local url = base_url .. '/' .. path
   
   if url_type == 'repo' then
@@ -233,7 +234,8 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info)
     return url .. '/-/tree/' .. branch
   elseif url_type == 'file' then
     local file = extra or get_relative_path()
-    local commit = get_current_commit()
+    -- ref is an optional branch/commit; fall back to HEAD commit
+    local commit = (ref and ref ~= '') and ref or get_current_commit()
     local file_url = url .. '/-/blob/' .. commit .. '/' .. file
     
     -- Add line number anchor if provided
@@ -256,12 +258,12 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info)
   return url
 end
 
-local function build_url(provider, base_url, path, url_type, extra, line_info)
+local function build_url(provider, base_url, path, url_type, extra, line_info, ref)
   if provider == 'GitLab' then
-    return build_gitlab_url(base_url, path, url_type, extra, line_info)
+    return build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
   else
     -- Default to GitHub (includes Codeberg)
-    return build_github_url(base_url, path, url_type, extra, line_info)
+    return build_github_url(base_url, path, url_type, extra, line_info, ref)
   end
 end
 
@@ -343,17 +345,17 @@ function M.open_repo(copy)
   open_or_copy(url, copy)
 end
 
-function M.open_branch(copy)
+function M.open_branch(branch, copy)
   local info = get_repo_info()
   if not info then
     return
   end
   
-  local url = build_url(info.provider, info.base_url, info.path, 'branch')
+  local url = build_url(info.provider, info.base_url, info.path, 'branch', branch)
   open_or_copy(url, copy)
 end
 
-function M.open_file(line1, line2, copy)
+function M.open_file(line1, line2, ref, copy)
   local info = get_repo_info()
   if not info then
     return
@@ -366,17 +368,18 @@ function M.open_file(line1, line2, copy)
 
   local line_range = get_line_range(line1, line2)
 
-  local url = build_url(info.provider, info.base_url, info.path, 'file', nil, line_range)
+  -- extra=nil (use current file), line_info=line_range, ref=branch/commit
+  local url = build_url(info.provider, info.base_url, info.path, 'file', nil, line_range, ref)
   open_or_copy(url, copy)
 end
 
-function M.open_commit(copy)
+function M.open_commit(commit, copy)
   local info = get_repo_info()
   if not info then
     return
   end
   
-  local url = build_url(info.provider, info.base_url, info.path, 'commit')
+  local url = build_url(info.provider, info.base_url, info.path, 'commit', commit)
   open_or_copy(url, copy)
 end
 

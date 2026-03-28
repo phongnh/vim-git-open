@@ -210,10 +210,11 @@ function! s:build_github_url(base_url, path, type, ...) abort
         return l:url . '/tree/' . l:branch
     elseif a:type ==# 'file'
         let l:file = (a:0 > 0 && !empty(a:1)) ? a:1 : s:get_relative_path()
-        let l:commit = s:get_current_commit()
-        let l:file_url = l:url . '/blob/' . l:commit . '/' . l:file
+        " a:3 (extra[2]) is an optional branch/commit ref; fall back to HEAD commit
+        let l:ref = (a:0 > 2 && !empty(a:3)) ? a:3 : s:get_current_commit()
+        let l:file_url = l:url . '/blob/' . l:ref . '/' . l:file
 
-        " Add line number anchor if provided
+        " Add line number anchor if provided (a:2)
         if a:0 > 1 && !empty(a:2)
             let l:file_url .= s:format_line_anchor('GitHub', a:2)
         endif
@@ -245,10 +246,11 @@ function! s:build_gitlab_url(base_url, path, type, ...) abort
         return l:url . '/-/tree/' . l:branch
     elseif a:type ==# 'file'
         let l:file = (a:0 > 0 && !empty(a:1)) ? a:1 : s:get_relative_path()
-        let l:commit = s:get_current_commit()
-        let l:file_url = l:url . '/-/blob/' . l:commit . '/' . l:file
+        " a:3 (extra[2]) is an optional branch/commit ref; fall back to HEAD commit
+        let l:ref = (a:0 > 2 && !empty(a:3)) ? a:3 : s:get_current_commit()
+        let l:file_url = l:url . '/-/blob/' . l:ref . '/' . l:file
 
-        " Add line number anchor if provided
+        " Add line number anchor if provided (a:2)
         if a:0 > 1 && !empty(a:2)
             let l:file_url .= s:format_line_anchor('GitLab', a:2)
         endif
@@ -371,8 +373,12 @@ function! git_open#legacy#open_branch(...) abort
         return
     endif
 
-    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'branch')
-    call s:open_or_copy(l:url, a:0 > 0 && a:1)
+    " a:1 = branch (optional), a:2 = copy flag (optional)
+    let l:branch = a:0 > 0 ? a:1 : ''
+    let l:copy = a:0 > 1 && a:2
+
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'branch', l:branch)
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
 function! git_open#legacy#open_file(line1, line2, ...) abort
@@ -388,8 +394,13 @@ function! git_open#legacy#open_file(line1, line2, ...) abort
 
     let l:line_range = s:get_line_range(a:line1, a:line2)
 
-    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'file', '', l:line_range)
-    call s:open_or_copy(l:url, a:0 > 0 && a:1)
+    " a:1 = ref/branch (optional), a:2 = copy flag (optional)
+    let l:ref = a:0 > 0 ? a:1 : ''
+    let l:copy = a:0 > 1 && a:2
+
+    " extra[0]=file(empty=current), extra[1]=line_range, extra[2]=ref
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'file', '', l:line_range, l:ref)
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
 function! git_open#legacy#open_commit(...) abort
@@ -398,8 +409,12 @@ function! git_open#legacy#open_commit(...) abort
         return
     endif
 
-    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit')
-    call s:open_or_copy(l:url, a:0 > 0 && a:1)
+    " a:1 = commit (optional), a:2 = copy flag (optional)
+    let l:commit = a:0 > 0 ? a:1 : ''
+    let l:copy = a:0 > 1 && a:2
+
+    let l:url = s:build_url(l:info.provider, l:info.base_url, l:info.path, 'commit', l:commit)
+    call s:open_or_copy(l:url, l:copy)
 endfunction
 
 function! git_open#legacy#open_request(...) abort

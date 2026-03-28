@@ -59,9 +59,9 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | Command | Description |
 |---------|-------------|
 | `:OpenGitRepo[!]` | Open (or copy) the repository home page |
-| `:OpenGitBranch[!]` | Open (or copy) the current branch URL |
-| `:[range]OpenGitFile[!]` | Open (or copy) the current file at current commit (supports line numbers) |
-| `:OpenGitCommit[!]` | Open (or copy) the current commit URL |
+| `:OpenGitBranch[!] [branch]` | Open (or copy) the current branch, or a specified branch |
+| `:[range]OpenGitFile[!] [ref]` | Open (or copy) the current file at current commit, or at a specified branch/commit |
+| `:OpenGitCommit[!] [commit]` | Open (or copy) the current commit, or a specified commit |
 | `:OpenGitRequest[!] [number]` | Open (or copy) pull/merge request (auto-detects provider). Auto-parses from commit if no number given |
 | `:OpenGitFileLastChange[!]` | Open (or copy) the PR/MR or commit that last changed the current file |
 | `:OpenGitMyRequests[!]` | Open (or copy) all my pull requests / merge requests for the current git provider |
@@ -146,8 +146,15 @@ export BROWSER=firefox
 " Open current branch
 :OpenGitBranch
 
+" Open a specific branch
+:OpenGitBranch main
+
 " Open current file in browser (includes current line number)
 :OpenGitFile
+
+" Open current file at a specific branch or commit
+:OpenGitFile main
+:OpenGitFile abc1234
 
 " Copy current file URL to clipboard
 :OpenGitFile!
@@ -158,6 +165,12 @@ export BROWSER=firefox
 
 " Open current commit
 :OpenGitCommit
+
+" Open a specific commit
+:OpenGitCommit abc1234
+
+" Copy current commit URL to clipboard
+:OpenGitCommit!
 ```
 
 ### Working with Requests (PRs/MRs)

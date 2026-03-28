@@ -661,10 +661,10 @@ def LaunchGitk(args: list<string>, git_root: string)
         # shellescape individual args or the quotes become literal characters.
         var save_dir = getcwd()
         try
-            execute 'cd ' .. fnameescape(git_root)
+            noautocmd silent execute 'lcd ' .. fnameescape(git_root)
             execute 'Launch gitk ' .. join(args)
         finally
-            execute 'cd ' .. fnameescape(save_dir)
+            noautocmd silent execute 'lcd ' .. fnameescape(save_dir)
         endtry
     elseif has('job')
         # Vim 8.0+ job_start with cwd support

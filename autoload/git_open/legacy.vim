@@ -563,8 +563,12 @@ function! git_open#legacy#open_my_requests(...) abort
 
     if l:info.provider ==# 'GitLab'
         let l:url = l:info.base_url . '/dashboard/merge_requests?assignee_username=' . expand('$USER') . (empty(l:state) ? '' : '&' . l:state[1:])
+    elseif l:info.provider ==# 'GitHub'
+        " Always scope to author:@me; inject into the q param
+        let l:q = empty(l:state) ? '?q=is%3Apr' : l:state
+        let l:url = l:info.base_url . '/pulls' . l:q . '+author%3A%40me'
     else
-        " GitHub and Codeberg: state is already a full query string or empty
+        " Codeberg: state is already a full query string or empty
         let l:url = l:info.base_url . '/pulls' . l:state
     endif
 

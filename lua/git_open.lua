@@ -537,8 +537,12 @@ function M.open_my_requests(state_arg, copy)
   if info.provider == 'GitLab' then
     local base = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. (vim.fn.expand('$USER') or '')
     url = base .. (state ~= '' and ('&' .. state:sub(2)) or '')
+  elseif info.provider == 'GitHub' then
+    -- Always scope to author:@me; inject into the q param
+    local q = state ~= '' and state or '?q=is%3Apr'
+    url = info.base_url .. '/pulls' .. q .. '+author%3A%40me'
   else
-    -- GitHub and Codeberg: state is already a full query string or empty
+    -- Codeberg: state is already a full query string or empty
     url = info.base_url .. '/pulls' .. state
   end
 

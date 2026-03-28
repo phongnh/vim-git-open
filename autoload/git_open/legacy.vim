@@ -196,16 +196,24 @@ function! s:parse_pr_mr_from_commit(provider) abort
 endfunction
 
 " Parse state flag from command args: -open, -closed, -merged, -all
-" Returns the query string suffix to append to the pulls URL (GitHub/Codeberg).
-" -open / empty: '' (no query; /pulls defaults to open)
-" -closed/-merged: '?q=is%3Apr+is%3Aclosed'
-" -all:            '?q=is%3Apr'
-function! s:parse_request_state(args) abort
+" Returns the query string suffix to append to the pulls URL.
+" GitHub:   uses ?q=is%3Apr+is%3A<state> search query
+" Codeberg: uses ?state=<state> param (Gitea-based, no merged state)
+function! s:parse_request_state(args, provider) abort
     let l:arg = tolower(trim(a:args))
-    if l:arg ==# '-closed' || l:arg ==# '-merged'
-        return '?q=is%3Apr+is%3Aclosed'
-    elseif l:arg ==# '-all'
-        return '?q=is%3Apr'
+    if a:provider ==# 'Codeberg'
+        if l:arg ==# '-closed' || l:arg ==# '-merged'
+            return '?state=closed'
+        elseif l:arg ==# '-all'
+            return '?state=all'
+        endif
+    else
+        " GitHub
+        if l:arg ==# '-closed' || l:arg ==# '-merged'
+            return '?q=is%3Apr+is%3Aclosed'
+        elseif l:arg ==# '-all'
+            return '?q=is%3Apr'
+        endif
     endif
     return ''
 endfunction
@@ -541,7 +549,7 @@ function! git_open#legacy#open_my_requests(...) abort
     endif
 
     " a:1 = state arg (optional), a:2 = copy flag (optional)
-    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '')
+    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '', l:info.provider)
     let l:copy = a:0 > 1 && a:2
 
     if l:info.provider ==# 'GitLab'
@@ -561,7 +569,7 @@ function! git_open#legacy#open_requests(...) abort
     endif
 
     " a:1 = state arg (optional), a:2 = copy flag (optional)
-    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '')
+    let l:state = s:parse_request_state(a:0 > 0 ? a:1 : '', l:info.provider)
     let l:copy = a:0 > 1 && a:2
 
     let l:repo_url = l:info.base_url . '/' . l:info.path

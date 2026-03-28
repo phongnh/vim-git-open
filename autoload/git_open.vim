@@ -187,16 +187,24 @@ def ParsePrMrFromCommit(provider: string): string
 enddef
 
 # Parse state flag from command args: -open, -closed, -merged, -all
-# Returns the query string suffix to append to the pulls URL (GitHub/Codeberg).
-# -open / empty: '' (no query; /pulls defaults to open)
-# -closed/-merged: '?q=is%3Apr+is%3Aclosed'
-# -all:            '?q=is%3Apr'
-def ParseRequestState(args: string): string
+# Returns the query string suffix to append to the pulls URL.
+# GitHub:   uses ?q=is%3Apr+is%3A<state> search query
+# Codeberg: uses ?state=<state> param (Gitea-based, no merged state)
+def ParseRequestState(args: string, provider: string): string
     var arg = tolower(trim(args))
-    if arg ==# '-closed' || arg ==# '-merged'
-        return '?q=is%3Apr+is%3Aclosed'
-    elseif arg ==# '-all'
-        return '?q=is%3Apr'
+    if provider ==# 'Codeberg'
+        if arg ==# '-closed' || arg ==# '-merged'
+            return '?state=closed'
+        elseif arg ==# '-all'
+            return '?state=all'
+        endif
+    else
+        # GitHub
+        if arg ==# '-closed' || arg ==# '-merged'
+            return '?q=is%3Apr+is%3Aclosed'
+        elseif arg ==# '-all'
+            return '?q=is%3Apr'
+        endif
     endif
     return ''
 enddef
@@ -420,7 +428,7 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
         return
     endif
 
-    var state = ParseRequestState(state_arg)
+    var state = ParseRequestState(state_arg, info.provider)
     var url: string
     if info.provider ==# 'GitLab'
         url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER')
@@ -438,7 +446,7 @@ export def OpenRequests(state_arg: string = '', copy: bool = false)
         return
     endif
 
-    var state = ParseRequestState(state_arg)
+    var state = ParseRequestState(state_arg, info.provider)
     var repo_url = info.base_url .. '/' .. info.path
     var url: string
     if info.provider ==# 'GitLab'

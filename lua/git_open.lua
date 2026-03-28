@@ -287,8 +287,6 @@ local function parse_request_state(args, provider)
   elseif provider == 'Codeberg' then
     if arg == '-closed' or arg == '-merged' then
       return '?state=closed'
-    elseif arg == '-all' then
-      return '?state=all'
     end
   else
     -- GitHub
@@ -817,8 +815,14 @@ function M.open_my_requests(state_arg, copy)
     -- With state flag: append author:@me to keep scoped to current user
     url = info.base_url .. '/pulls' .. (state ~= '' and (state .. '+author%3A%40me') or '')
   else
-    -- Codeberg: state is already a full query string or empty
-    url = info.base_url .. '/pulls' .. state
+    -- Codeberg: always scope to current user with type=created_by;
+    -- add state=closed only for -closed/-merged; -all shows all states
+    local cb_arg = vim.trim(state_arg or ''):lower()
+    if cb_arg == '-closed' or cb_arg == '-merged' then
+      url = info.base_url .. '/pulls?state=closed&type=created_by'
+    else
+      url = info.base_url .. '/pulls?type=created_by'
+    end
   end
 
   open_or_copy(url, copy)

@@ -278,8 +278,6 @@ def ParseRequestState(args: string, provider: string): string
     elseif provider ==# 'Codeberg'
         if arg ==# '-closed' || arg ==# '-merged'
             return '?state=closed'
-        elseif arg ==# '-all'
-            return '?state=all'
         endif
     else
         # GitHub
@@ -669,8 +667,14 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
         # With state flag: append author:@me to keep scoped to current user
         url = info.base_url .. '/pulls' .. (empty(state) ? '' : state .. '+author%3A%40me')
     else
-        # Codeberg: state is already a full query string or empty
-        url = info.base_url .. '/pulls' .. state
+        # Codeberg: always scope to current user with type=created_by;
+        # add state=closed only for -closed/-merged; -all shows all states
+        var cb_arg = tolower(trim(state_arg))
+        if cb_arg ==# '-closed' || cb_arg ==# '-merged'
+            url = info.base_url .. '/pulls?state=closed&type=created_by'
+        else
+            url = info.base_url .. '/pulls?type=created_by'
+        endif
     endif
 
     OpenOrCopy(url, copy)

@@ -282,8 +282,6 @@ function! s:parse_request_state(args, provider) abort
     elseif a:provider ==# 'Codeberg'
         if l:arg ==# '-closed' || l:arg ==# '-merged'
             return '?state=closed'
-        elseif l:arg ==# '-all'
-            return '?state=all'
         endif
     else
         " GitHub
@@ -783,8 +781,14 @@ function! git_open#legacy#open_my_requests(...) abort
         " With state flag: append author:@me to keep scoped to current user
         let l:url = l:info.base_url . '/pulls' . (empty(l:state) ? '' : l:state . '+author%3A%40me')
     else
-        " Codeberg: state is already a full query string or empty
-        let l:url = l:info.base_url . '/pulls' . l:state
+        " Codeberg: always scope to current user with type=created_by;
+        " add state=closed only for -closed/-merged; -all shows all states
+        let l:cb_arg = tolower(trim(a:0 > 0 ? a:1 : ''))
+        if l:cb_arg ==# '-closed' || l:cb_arg ==# '-merged'
+            let l:url = l:info.base_url . '/pulls?state=closed&type=created_by'
+        else
+            let l:url = l:info.base_url . '/pulls?type=created_by'
+        endif
     endif
 
     call s:open_or_copy(l:url, l:copy)

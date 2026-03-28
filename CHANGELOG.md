@@ -1,5 +1,54 @@
 # vim-git-open - CHANGELOG
 
+## Version 1.3.0
+
+### New Features
+
+#### Gitk Commands
+- **New commands: `:OpenGitk`, `:OpenGitkFile`, `:OpenGitkFileHistory`** — launch gitk for repository, current file, or full rename history
+- **`:Gitk`** — alias for `:OpenGitk`
+- **`:GitkFile`** — alias for `:OpenGitkFile`
+- `:OpenGitk` tab-completes branches and tracked files
+- `:OpenGitkFile!` adds `--follow` to trace rename history across renames
+- `:OpenGitkFileHistory` resolves all historical paths via `git log --follow` and passes them to gitk
+
+#### Visual Mode for OpenGitBranch and OpenGitCommit
+- `:OpenGitBranch` now supports visual mode: selected text is used as the branch name
+- `:OpenGitCommit` now supports visual mode: selected text is used as the commit hash
+- In normal mode with no argument, both commands continue to use the current branch / HEAD commit
+
+### Bug Fixes
+
+#### GetGitRoot — Fugitive Virtual Buffer Support
+- Fixed git root detection inside fugitive virtual buffers (`fugitive://` scheme, `fugitiveblame` filetype)
+- **Root cause (Vim9script):** `exists('*FugitiveGitDir')` inside a `def` function is always `false` at compile time, even when vim-fugitive is loaded. Fixed by replacing the `exists()` guard with `try/catch` around `call('FugitiveGitDir', [])`.
+- GetGitRoot now uses a 3-step detection strategy:
+  1. `call('FugitiveGitDir', [])` via `try/catch` — handles fugitive virtual buffers
+  2. `finddir('.git', expand('%:p:h') .. ';')` — handles normal file buffers
+  3. `finddir('.git', getcwd() .. ';')` — fallback for terminal/quickfix/empty buffers
+
+#### OpenGitBranch / OpenGitCommit Normal Mode Fallback
+- Fixed: when called in normal mode with no argument, `OpenGitBranch` and `OpenGitCommit` now correctly fall back to the current branch / HEAD commit
+- Previously, the fallback inside `BuildUrl` was bypassed because `OpenBranch`/`OpenCommit` always passed an explicit (empty) argument, making `len(extra) > 0` always true
+
+### Internal
+
+#### Completion Refactor
+- Extracted `Unique(items)` helper (replaces `UniqueAdd` that mutated in-place) across all three implementations
+- Extracted `FuzzyFilter(items, arg)` helper to consolidate fuzzy matching logic
+
+### Updated Files
+- `autoload/git_open.vim` — GetGitRoot fix, OpenBranch/OpenCommit fallback, visual selection, Gitk commands, completion refactor
+- `autoload/git_open/legacy.vim` — same
+- `lua/git_open.lua` — same; also removed duplicate `get_git_root()` function
+- `plugin/git_open.vim` — added Gitk/GitkFile/GitkFileHistory commands and aliases
+- `plugin/git_open_legacy.vim` — same
+- `plugin/git_open.lua` — same
+- `README.md` — documented new commands, visual mode, Gitk aliases, fugitive troubleshooting
+- `doc/git_open.txt` — same
+
+---
+
 ## Version 1.1.0
 
 ### New Features

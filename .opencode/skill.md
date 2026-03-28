@@ -176,14 +176,56 @@ enddef
 " Codeberg: '-closed' → '?state=closed'
 ```
 
-### GitLab Username Resolution
+### GetGitRoot — 3-Step Detection
+All three implementations use this logic in order:
+
+1. **`call('FugitiveGitDir', [])` via `try/catch`** — handles fugitive virtual buffers (`fugitive://`, `fugitiveblame`). Returns `fnamemodify(gitdir, ':h')`.
+2. **`finddir('.git', expand('%:p:h') .. ';')`** — normal file buffers. Returns `fnamemodify(git_dir, ':p:h')`.
+3. **`finddir('.git', getcwd() .. ';')`** — fallback for terminal/quickfix/empty buffers.
+
 ```vim
-" GetGitLabUsername() — resolution order:
-" 1. g:vim_git_open_gitlab_username
-" 2. $GITLAB_USER
-" 3. $GLAB_USER
-" 4. $USER
+" Vim9script — CORRECT pattern (compile-time exists() always false in def)
+def GetGitRoot(): string
+    try
+        var gitdir = '' .. call('FugitiveGitDir', [])
+        if !empty(gitdir)
+            return fnamemodify(gitdir, ':h')
+        endif
+    catch
+    endtry
+    var git_dir = finddir('.git', expand('%:p:h') .. ';')
+    if empty(git_dir)
+        git_dir = finddir('.git', getcwd() .. ';')
+    endif
+    if empty(git_dir)
+        return ''
+    endif
+    return fnamemodify(git_dir, ':p:h')
+enddef
 ```
+
+**Why `try/catch` not `exists('*FugitiveGitDir')`:**
+`exists('*FuncName')` inside a Vim9 `def` is resolved at compile time — always `false` for late-loaded plugins.
+
+**Why `FugitiveGitDir()` not `FugitiveWorkTree()`:**
+`FugitiveWorkTree()` triggers E15 in Vim 9.2. `FugitiveGitDir()` reads `b:git_dir` directly.
+
+### Branch/Commit Fallback in OpenBranch/OpenCommit
+After the visual selection check, explicitly call the fallback if still empty:
+```vim
+" Vim9script
+export def OpenBranch(branch: string = '', copy: bool = false)
+    var b = branch
+    if empty(b)
+        b = GetVisualSelection()
+    endif
+    if empty(b)
+        b = GetCurrentBranch()   # explicit fallback — do NOT rely on BuildUrl
+    endif
+    ...
+enddef
+```
+This is necessary because `BuildUrl` checks `len(extra) > 0` — if `OpenBranch` passes even an empty string, the fallback inside `BuildUrl` is bypassed.
 
 ### Branch Completion
 Two `for-each-ref` calls:
@@ -212,3 +254,6 @@ When making changes, update:
 8. **`-search` flags** belong only in `CompleteMyRequestState`, not `CompleteRequestState`
 9. **Copy files to both installed locations** before committing
 10. **No emojis** unless explicitly requested
+11. **`exists('*FuncName')` in Vim9 `def` is compile-time** — always `false` for late-loaded plugins. Use `try/catch call('FuncName', [])` instead.
+12. **`GetGitRoot` must use 3-step detection** — FugitiveGitDir (try/catch) → finddir(bufname) → finddir(cwd). See the pattern in Common Patterns section above.
+13. **`OpenBranch`/`OpenCommit` must set fallback explicitly** — do not rely on `BuildUrl`'s internal fallback, which is bypassed when any extra arg (even empty string) is passed.

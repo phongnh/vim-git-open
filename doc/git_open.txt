@@ -2,7 +2,7 @@
 
 Author:  Phong Nguyen
 License: MIT
-Version: 1.0.0
+Version: 1.2.0
 
 ==============================================================================
 CONTENTS                                                   *git-open-contents*
@@ -74,12 +74,15 @@ the browser. With [!], the URL is copied to the clipboard instead.
 :OpenGitRepo[!]
     Open (or copy) the repository home page.
 
-                                                            *:OpenGitBranch*
+                                                             *:OpenGitBranch*
 :OpenGitBranch[!] [branch]
-    Open (or copy) the current branch URL, or a specified [branch].
+    Open (or copy) a specified [branch] URL.
+
+    In normal mode with no argument, opens the current branch.
+    In visual mode, the selected text is used as the branch name.
 
     Examples: >
-        " Open current branch
+        " Open current branch (normal mode)
         :OpenGitBranch
 
         " Open a specific branch
@@ -87,6 +90,9 @@ the browser. With [!], the URL is copied to the clipboard instead.
 
         " Copy a specific branch URL
         :OpenGitBranch! feature/my-feature
+
+        " Open branch whose name is visually selected
+        :'<,'>OpenGitBranch
 <
 
                                                               *:OpenGitFile*
@@ -120,12 +126,15 @@ the browser. With [!], the URL is copied to the clipboard instead.
       - GitHub/Codeberg: Uses #L10 or #L10-L20 for ranges
       - GitLab: Uses #L10 or #L10-20 for ranges
 
-                                                            *:OpenGitCommit*
+                                                             *:OpenGitCommit*
 :OpenGitCommit[!] [commit]
-    Open (or copy) the current commit, or a specified [commit] hash.
+    Open (or copy) a specified [commit] hash URL.
+
+    In normal mode with no argument, opens the current HEAD commit.
+    In visual mode, the selected text is used as the commit hash.
 
     Examples: >
-        " Open current (HEAD) commit
+        " Open current (HEAD) commit (normal mode)
         :OpenGitCommit
 
         " Open a specific commit
@@ -133,6 +142,9 @@ the browser. With [!], the URL is copied to the clipboard instead.
 
         " Copy current commit URL
         :OpenGitCommit!
+
+        " Open commit whose hash is visually selected
+        :'<,'>OpenGitCommit
 <
 
                                                             *:OpenGitRequest*
@@ -236,6 +248,14 @@ the browser. With [!], the URL is copied to the clipboard instead.
         " Full history for specific files
         :OpenGitkFileHistory path/to/file.txt other/file.go
 <
+
+                                                                    *:Gitk*
+:Gitk [args]
+    Alias for |:OpenGitk|. Accepts the same arguments.
+
+                                                                 *:GitkFile*
+:GitkFile[!]
+    Alias for |:OpenGitkFile|. Accepts `!` to add `--follow`.
 
 ==============================================================================
 5. CONFIGURATION                                      *git-open-configuration*
@@ -452,6 +472,12 @@ Neovim Lua configuration:~
 
 ==============================================================================
 7. TROUBLESHOOTING                                  *git-open-troubleshooting*
+
+"Not a git repository" error in fugitive buffers~
+
+If you see this error inside a fugitive blame view or `fugitive://` buffer,
+make sure vim-fugitive is installed. The plugin detects the git root via
+`FugitiveGitDir()` for all fugitive virtual buffers automatically.
 
 "Not a git repository" error~
 

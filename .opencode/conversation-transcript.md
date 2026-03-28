@@ -110,6 +110,71 @@ Usage examples expanded with:
 
 ---
 
+## Session 4 (2026-03-28): Gitk Commands, Visual Selection, GetGitRoot Fixes
+
+### Exchange 1: Status Check
+
+**User:** "What did we do so far?"
+
+**Assistant:** Provided a comprehensive summary covering:
+- Goal and three implementations (feature parity, 4-space/2-space indentation)
+- All accumulated discoveries (#1–#24)
+- What was accomplished vs still pending (update docs, update .opencode/ files, copy, commit)
+
+---
+
+### Exchange 2: Continue Pending Work
+
+**User:** "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+
+**Assistant actions** (all of Session 4's work):
+
+#### Phase 1 — Gitk commands (commits: f4958d8 → 6ecff94)
+1. Added `:OpenGitk`, `:OpenGitkFile`, `:OpenGitkFileHistory` to all three implementations and both entry points (`plugin/git_open.vim`, `plugin/git_open_legacy.vim`, `plugin/git_open.lua`)
+2. Fixed `:Launch` path: `silent lcd` to suppress directory echo (**7afa8fd**)
+3. Fixed `OpenGitk`: don't shellescape args in `:Launch` path (**2c8c39f**)
+4. Redesigned `OpenGitkFile`: bang → `--follow`; full rename history → separate `OpenGitkFileHistory` (**fb99375**, **1c0098d**)
+5. Replaced `CompleteGitkArgs` with `CompleteGitkBranch` for `OpenGitk`/`OpenGitkFile` (**15954a0**)
+6. Added tracked file completion to `CompleteGitkArgs` (**f65379f**)
+7. Extracted `UniqueAdd`/`FuzzyFilter` helpers (**caacf35**), then renamed `UniqueAdd` → `Unique` returning new list (**6ecff94**)
+
+#### Phase 2 — Aliases + Visual selection (commits: 0ab5f8e, 586b859)
+8. Added `:Gitk` / `:GitkFile` aliases (**0ab5f8e**)
+9. Added visual selection support to `OpenGitBranch` and `OpenGitCommit`: selected text becomes branch name / commit hash (**586b859**)
+
+#### Phase 3 — GetGitRoot fixes (commits: c09d49b → 0de4cfa)
+10. Added `FugitiveGitDir()` step for fugitive virtual buffers (**c09d49b**)
+11. Fixed Vim9script compile errors: repeated `_` discard, bare `getregion()` (**8d7b7ce**)
+12. Fixed `call()` string usage for `FugitiveWorkTree` (**da5b2c1**)
+13. Switched from `FugitiveWorkTree()` to `FugitiveGitDir()` — former triggers E15 in Vim 9.2 (**f53adf7**)
+14. Simplified to 3-step detection: FugitiveGitDir → finddir(bufname) → finddir(cwd) (**35e395b**)
+15. Added debug logging gated by `g:vim_git_open_debug` (**e663e36**)
+16. Replaced `exists('*FugitiveGitDir')` with `try/catch call('FugitiveGitDir', [])` — `exists()` inside a Vim9 `def` is compile-time, always `false` for late-loaded plugins (**07fbac3**)
+17. Removed debug logging helpers and fixed duplicate `get_git_root()` in `lua/git_open.lua` (**0de4cfa**)
+
+#### Phase 4 — OpenBranch/OpenCommit normal mode fallback (commit: f6e2a6e)
+18. Fixed: `OpenBranch`/`OpenCommit` were passing explicit (empty) arg to `BuildUrl`, which made `len(extra) > 0` always true, bypassing `BuildUrl`'s internal branch/commit fallback. Fix: call `GetCurrentBranch()`/`GetCurrentCommit()` explicitly in `OpenBranch`/`OpenCommit` when the arg is still empty after the visual check (**f6e2a6e**)
+
+#### Phase 5 — Documentation and .opencode/ updates (this session)
+19. Updated `README.md`:
+    - Commands table: clarified `OpenGitBranch`/`OpenGitCommit` with visual mode behavior; added `:Gitk`/`:GitkFile` aliases
+    - Added "Visual Mode Support for OpenGitBranch and OpenGitCommit" section
+    - Added visual mode usage examples and keymaps for branch/commit
+    - Added troubleshooting entry for fugitive virtual buffers
+20. Updated `doc/git_open.txt`:
+    - `:OpenGitBranch` and `:OpenGitCommit` entries now document normal mode vs. visual mode behavior
+    - Added `:Gitk` and `:GitkFile` alias entries
+    - Added fugitive virtual buffer troubleshooting entry
+    - Version bumped to 1.2.0
+21. Updated `CHANGELOG.md` — added Version 1.3.0 section covering all Session 4 work
+22. Updated `.opencode/agent.md` — commands table updated with gitk commands/aliases; discoveries #25–#29 added
+23. Updated `.opencode/skill.md` — added `GetGitRoot` 3-step detection pattern and `OpenBranch`/`OpenCommit` fallback pattern; added reminders #11–#13
+24. Updated `.opencode/conversation-log.md` — Session 4 entries added; discoveries list extended to #29; commit table updated
+25. Updated `.opencode/conversation-transcript.md` (this file) — Session 4 transcript added
+26. Copied all changed files to both installed locations and committed/pushed
+
+---
+
 ## End of Transcript
 
-*Sessions 1–2: 2026-03-27 | Session 3: 2026-03-28*
+*Sessions 1–2: 2026-03-27 | Sessions 3–4: 2026-03-28*

@@ -209,6 +209,96 @@ Chronological log of all user requests, requirements, and implementation decisio
 
 ---
 
+## Session 4: Gitk Commands, Visual Selection, and GetGitRoot Fixes
+**Date:** 2026-03-28 (continued)
+
+### Feature: OpenGitk, OpenGitkFile, OpenGitkFileHistory
+- New commands to launch gitk for repository, current file, or full rename history
+- `:OpenGitkFile!` adds `--follow` for rename tracking
+- `:OpenGitkFileHistory` resolves all historical paths via `git log --follow`
+- All three implementations updated
+- **Commit:** f4958d8
+
+### Fix: OpenGitk — shellescape in Launch path
+- Don't double-shellescape args when using `:Launch` path
+- **Commit:** 2c8c39f
+
+### Fix: Launch path — silent lcd
+- Use `silent lcd` to suppress directory echo
+- **Commit:** 7afa8fd
+
+### Redesign: OpenGitkFile
+- Bang variant adds `--follow` (previously showed full rename history)
+- Full rename history now lives in `:OpenGitkFileHistory`
+- **Commits:** fb99375, 1c0098d
+
+### Refactor: CompleteGitkBranch
+- Replaced `CompleteGitkArgs` with `CompleteGitkBranch` for `OpenGitk` and `OpenGitkFile`
+- **Commit:** 15954a0
+
+### Feature: File completion for OpenGitk
+- Added tracked file completion to `CompleteGitkArgs`
+- **Commit:** f65379f
+
+### Refactor: Completion helpers
+- Extracted `UniqueAdd` / `FuzzyFilter` helpers across all three implementations
+- **Commit:** caacf35
+
+### Refactor: Unique helper
+- Renamed `UniqueAdd` → `Unique(items)`, returns new list instead of mutating
+- **Commit:** 6ecff94
+
+### Feature: Gitk and GitkFile command aliases
+- `:Gitk` = alias for `:OpenGitk`
+- `:GitkFile` = alias for `:OpenGitkFile`
+- **Commit:** 0ab5f8e
+
+### Feature: Visual selection for OpenGitBranch and OpenGitCommit
+- In visual mode, selected text is used as branch name / commit hash
+- **Commit:** 586b859
+
+### Fix: GetGitRoot — fugitive virtual buffer support (step 1)
+- Added `FugitiveGitDir()` detection for `fugitive://` and `fugitiveblame` buffers
+- **Commit:** c09d49b
+
+### Fix: GetGitRoot — Vim9script compile errors
+- Fixed `var [_, l1, c1, _]` repeated `_` discard (not allowed in Vim9)
+- Fixed bare `getregion()` call (use `call('getregion', [...])`)
+- **Commit:** 8d7b7ce
+
+### Fix: GetGitRoot — use call() string for FugitiveWorkTree
+- **Commit:** da5b2c1
+
+### Fix: GetGitRoot — use FugitiveGitDir instead of FugitiveWorkTree
+- `FugitiveWorkTree()` triggers E15 in Vim 9.2; `FugitiveGitDir()` reads `b:git_dir` directly
+- **Discovery:** Use `FugitiveGitDir()` not `FugitiveWorkTree()` for fugitive root detection
+- **Commit:** f53adf7
+
+### Fix: GetGitRoot — 3-step detection with getcwd() fallback
+- Step 1: `FugitiveGitDir()` via try/catch; Step 2: finddir(bufname); Step 3: finddir(cwd)
+- **Commit:** 35e395b
+
+### Debug: GetGitRoot debug logging (temporary, reverted)
+- Added `g:vim_git_open_debug` gated logging (added then removed same session)
+- **Commits:** e663e36, 0de4cfa
+
+### Fix: GetGitRoot Vim9script — replace exists() with try/catch
+- `exists('*FugitiveGitDir')` inside a `def` is always `false` at compile time
+- **Discovery:** `exists('*FuncName')` in Vim9 `def` is resolved at compile time — always false for late-loaded plugins. Use `try/catch call('FuncName', [])` instead.
+- **Commit:** 07fbac3
+
+### Fix: Duplicate get_git_root in Lua
+- Removed leftover duplicate `get_git_root()` function from `lua/git_open.lua`
+- **Commit:** 0de4cfa
+
+### Fix: OpenBranch/OpenCommit normal mode fallback
+- In normal mode with no arg, now correctly falls back to current branch / HEAD commit
+- **Root cause:** `OpenBranch`/`OpenCommit` passed explicit (empty) arg to `BuildUrl`, making `len(extra) > 0` always true, bypassing the fallback inside `BuildUrl`
+- **Discovery:** `OpenBranch`/`OpenCommit` must call `GetCurrentBranch()`/`GetCurrentCommit()` explicitly; do not rely on `BuildUrl`'s internal fallback
+- **Commit:** f6e2a6e
+
+---
+
 ## Key Discoveries (Cumulative)
 
 1. `string()` in Vim9script adds quotes around numbers — use `'' .. value`
@@ -235,6 +325,11 @@ Chronological log of all user requests, requirements, and implementation decisio
 22. GitLab `OpenGitMyRequests` uses `/dashboard/merge_requests` family of URLs
 23. Separate `CompleteMyRequestState` needed; `-search` only belongs in MyRequests completion
 24. `-search=<state>` parsing: split on `=`, map second part to `&state=<value>`
+25. `exists('*FuncName')` in Vim9 `def` is compile-time — always false for late-loaded plugins; use `try/catch call('FuncName', [])` instead
+26. `FugitiveGitDir()` not `FugitiveWorkTree()` — the latter triggers E15 in Vim 9.2
+27. `GetGitRoot` must use 3-step detection: FugitiveGitDir (try/catch) → finddir(bufname) → finddir(cwd)
+28. `OpenBranch`/`OpenCommit` must set fallback explicitly — `BuildUrl`'s internal fallback is bypassed when any extra arg is passed
+29. `var [_, l1, c1, _]` repeated `_` discard not allowed in Vim9script — use distinct names
 
 ---
 
@@ -296,3 +391,24 @@ Chronological log of all user requests, requirements, and implementation decisio
 | 10f267a | Rework GitLab OpenGitMyRequests: dashboard page, -search flag |
 | 97348da | Add CompleteMyRequestState and -search=<state> compound flag |
 | 0ea5cd7 | Update README usage: document state flags |
+| cee21de | Update .opencode files: sync conversation log, transcript, agent, and skill |
+| f4958d8 | Add OpenGitk, OpenGitkFile, OpenGitkFileHistory commands |
+| 2c8c39f | Fix OpenGitk: don't shellescape args in :Launch path |
+| 7afa8fd | Fix :Launch path: use silent lcd to suppress directory echo |
+| fb99375 | Redesign OpenGitkFile: always show full rename history |
+| 1c0098d | Redesign OpenGitkFile: bang for full rename history |
+| 15954a0 | Replace CompleteGitkArgs with CompleteGitkBranch for OpenGitk and OpenGitkFile |
+| f65379f | Add file completion to OpenGitk via CompleteGitkArgs |
+| caacf35 | Refactor completion functions: extract UniqueAdd/FuzzyFilter helpers |
+| 6ecff94 | Refactor: rename UniqueAdd->Unique, return new list instead of mutating |
+| 0ab5f8e | Add Gitk and GitkFile as aliases for OpenGitk and OpenGitkFile |
+| 586b859 | Add visual selection support to OpenGitBranch and OpenGitCommit |
+| c09d49b | Fix git root detection in fugitive virtual buffers |
+| 8d7b7ce | Fix Vim9script compile errors in GetGitRoot and GetVisualSelection |
+| da5b2c1 | Fix Vim9script compile error: use call() string for FugitiveWorkTree |
+| f53adf7 | Fix GetGitRoot: use FugitiveGitDir() instead of FugitiveWorkTree() |
+| 35e395b | Simplify GetGitRoot: 3-step detection with getcwd() fallback |
+| e663e36 | Add debug logging to GetGitRoot (gated by g:vim_git_open_debug) |
+| 07fbac3 | Fix GetGitRoot step 1: replace exists() guard with try/catch in Vim9script |
+| 0de4cfa | Remove debug logging helpers and fix duplicate get_git_root in Lua |
+| f6e2a6e | Fix OpenBranch/OpenCommit: use current branch/HEAD when no arg given |

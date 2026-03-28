@@ -60,9 +60,9 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | Command | Description |
 |---------|-------------|
 | `:OpenGitRepo[!]` | Open (or copy) the repository home page |
-| `:OpenGitBranch[!] [branch]` | Open (or copy) the current branch, or a specified branch |
+| `:OpenGitBranch[!] [branch]` | Open (or copy) a specified branch, or the current branch in normal mode. In visual mode, opens the selected text as the branch name |
 | `:[range]OpenGitFile[!] [ref]` | Open (or copy) the current file at current commit, or at a specified branch/commit |
-| `:OpenGitCommit[!] [commit]` | Open (or copy) the current commit, or a specified commit |
+| `:OpenGitCommit[!] [commit]` | Open (or copy) a specified commit, or HEAD in normal mode. In visual mode, opens the selected text as the commit hash |
 | `:OpenGitRequest[!] [number]` | Open (or copy) pull/merge request (auto-detects provider). Auto-parses from commit if no number given |
 | `:OpenGitFileLastChange[!]` | Open (or copy) the PR/MR or commit that last changed the current file |
 | `:OpenGitMyRequests[!] [state]` | Open (or copy) my pull/merge requests. Optional state: `-open`, `-closed`, `-merged`, `-all`. GitLab also accepts `-search` to use the search page |
@@ -70,12 +70,20 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | `:OpenGitk [args]` | Launch `gitk` with optional free-form args (branch names, paths, etc.). Tab-completes branches and tracked files |
 | `:OpenGitkFile[!]` | Launch `gitk -- <current-file>`. With `!`, adds `--follow` to trace rename history |
 | `:OpenGitkFileHistory [files...]` | Launch `gitk` with the full rename history of the current file (or given files). Resolves all historical paths via `git log --follow` |
+| `:Gitk [args]` | Alias for `:OpenGitk` |
+| `:GitkFile[!]` | Alias for `:OpenGitkFile` |
 
 ### Line Number Support
 
 `:OpenGitFile` automatically includes the current line number in the URL. You can also:
 - Select lines in visual mode and run `:OpenGitFile` to open with a line range
 - The format adapts to the Git provider (GitHub uses `#L10-L20`, GitLab uses `#L10-20`)
+
+### Visual Mode Support for OpenGitBranch and OpenGitCommit
+
+`:OpenGitBranch` and `:OpenGitCommit` support visual mode:
+- In normal mode with no argument, they use the current branch / HEAD commit
+- In visual mode, the selected text is used as the branch name or commit hash
 
 ## Configuration
 
@@ -175,6 +183,9 @@ export GITLAB_USER=your.username
 " Open a specific branch
 :OpenGitBranch main
 
+" Open a branch by selecting its name in visual mode and running:
+:'<,'>OpenGitBranch
+
 " Open current file in browser (includes current line number)
 :OpenGitFile
 
@@ -194,6 +205,9 @@ export GITLAB_USER=your.username
 
 " Open a specific commit
 :OpenGitCommit abc1234
+
+" Open a commit by selecting its hash in visual mode:
+:'<,'>OpenGitCommit
 
 " Copy current commit URL to clipboard
 :OpenGitCommit!
@@ -274,6 +288,8 @@ nnoremap <leader>gO :OpenGitRepo!<CR>
 
 " Open current branch
 nnoremap <leader>gb :OpenGitBranch<CR>
+" Open branch under visual selection
+vnoremap <leader>gb :OpenGitBranch<CR>
 
 " Open current file
 nnoremap <leader>gf :OpenGitFile<CR>
@@ -286,6 +302,8 @@ vnoremap <leader>gF :OpenGitFile!<CR>
 
 " Open current commit
 nnoremap <leader>gc :OpenGitCommit<CR>
+" Open commit hash under visual selection
+vnoremap <leader>gc :OpenGitCommit<CR>
 
 " Open PR/MR (auto-detects provider)
 nnoremap <leader>gp :OpenGitRequest<CR>
@@ -352,6 +370,10 @@ The plugin ships all three implementations in a single branch and selects the ri
 All three implementations have full feature parity.
 
 ## Troubleshooting
+
+### "Not a git repository" error in fugitive buffers
+
+If you get this error inside a fugitive blame view (`fugitive://` buffers or `fugitiveblame` filetype), the plugin now automatically detects the git root via `FugitiveGitDir()`. Make sure [vim-fugitive](https://github.com/tpope/vim-fugitive) is installed and loaded.
 
 ### "Not a git repository" error
 

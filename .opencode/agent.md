@@ -47,13 +47,18 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 | Command | Description |
 |---------|-------------|
 | `OpenGitRepo[!]` | Open/copy repository home page |
-| `OpenGitBranch[!] [branch]` | Open/copy branch view |
+| `OpenGitBranch[!] [branch]` | Open/copy branch view. Normal mode: current branch. Visual mode: selected text as branch name |
 | `[range]OpenGitFile[!] [ref]` | Open/copy file with line numbers |
-| `OpenGitCommit[!] [commit]` | Open/copy commit |
+| `OpenGitCommit[!] [commit]` | Open/copy commit. Normal mode: HEAD. Visual mode: selected text as commit hash |
 | `OpenGitRequest[!] [number]` | Open/copy PR/MR (provider-agnostic) |
 | `OpenGitFileLastChange[!]` | Open/copy PR/MR or commit that last changed current file |
 | `OpenGitMyRequests[!] [state]` | Open/copy my PRs/MRs. Flags: `-open -closed -merged -all`; GitLab also: `-search [-search=open\|closed\|merged\|all]` |
 | `OpenGitRequests[!] [state]` | Open/copy repo PR/MR page. Flags: `-open -closed -merged -all` |
+| `OpenGitk [args]` | Launch gitk with optional args. Tab-completes branches and tracked files |
+| `OpenGitkFile[!]` | Launch gitk for current file. `!` adds `--follow` |
+| `OpenGitkFileHistory [files...]` | Launch gitk with full rename history of current file |
+| `Gitk [args]` | Alias for `OpenGitk` |
+| `GitkFile[!]` | Alias for `OpenGitkFile` |
 
 ### Configuration Variables
 ```vim
@@ -126,6 +131,11 @@ redraw!
 22. **GitLab `OpenGitMyRequests`**: dashboard page `/dashboard/merge_requests` shows MRs authored by current user by default. `/dashboard/merge_requests/merged` for closed/merged. `-search` flag uses `/dashboard/merge_requests/search?author_username=<u>` with optional `&state=` param.
 23. **Separate completion functions**: `CompleteMyRequestState` (for `OpenGitMyRequests`) includes `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`; `CompleteRequestState` (for `OpenGitRequests`) only has `-open`, `-closed`, `-merged`, `-all`.
 24. **`-search=<state>` parsing**: split on `=`, first part is `-search`, second part (if present) maps to `&state=<value>` on the search URL.
+25. **`exists('*FuncName')` inside a Vim9 `def` is compile-time**, not call-time. For late-loaded plugins (e.g., vim-fugitive), this always returns `false`. Fix: use `try/catch` around `call('FuncName', [])` instead.
+26. **`FugitiveGitDir()` not `FugitiveWorkTree()`**: `FugitiveWorkTree()` calls internal `s:Tree()` which triggers E15 in Vim 9.2. `FugitiveGitDir()` reads `b:git_dir` directly — always set by fugitive on all its buffers.
+27. **`GetGitRoot` 3-step detection**: (1) `try/catch call('FugitiveGitDir', [])` → `fnamemodify(gitdir, ':h')` for fugitive buffers; (2) `finddir('.git', expand('%:p:h') .. ';')` for normal buffers; (3) `finddir('.git', getcwd() .. ';')` fallback for terminal/quickfix/empty buffers.
+28. **`OpenBranch`/`OpenCommit` always passed an explicit arg** (even empty string) to `BuildUrl`, so the `len(extra) > 0` fallback in `BuildUrl` was never triggered in normal mode. Fix: explicitly call `GetCurrentBranch()`/`GetCurrentCommit()` in `OpenBranch`/`OpenCommit` when the argument is still empty after the visual check.
+29. **`var [_, l1, c1, _] = getpos(...)`** repeated `_` discard is not allowed in Vim9script. Use distinct names like `_b1, _o1` etc.
 
 ## Key Files
 

@@ -442,9 +442,9 @@ export def OpenMyRequests(state_arg: string = '', copy: bool = false)
     if info.provider ==# 'GitLab'
         url = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. expand('$USER') .. (empty(state) ? '' : '&' .. state[1 :])
     elseif info.provider ==# 'GitHub'
-        # Always scope to author:@me; inject into the q param
-        var q = empty(state) ? '?q=is%3Apr' : state
-        url = info.base_url .. '/pulls' .. q .. '+author%3A%40me'
+        # Scope to author:@me; append state filter into q param when specified
+        var q = empty(state) ? '?q=author%3A%40me' : state .. '+author%3A%40me'
+        url = info.base_url .. '/pulls' .. q
     else
         # Codeberg: state is already a full query string or empty
         url = info.base_url .. '/pulls' .. state

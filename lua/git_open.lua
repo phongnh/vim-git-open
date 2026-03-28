@@ -538,9 +538,9 @@ function M.open_my_requests(state_arg, copy)
     local base = info.base_url .. '/dashboard/merge_requests?assignee_username=' .. (vim.fn.expand('$USER') or '')
     url = base .. (state ~= '' and ('&' .. state:sub(2)) or '')
   elseif info.provider == 'GitHub' then
-    -- Always scope to author:@me; inject into the q param
-    local q = state ~= '' and state or '?q=is%3Apr'
-    url = info.base_url .. '/pulls' .. q .. '+author%3A%40me'
+    -- Scope to author:@me; append state filter into q param when specified
+    local q = state ~= '' and (state .. '+author%3A%40me') or '?q=author%3A%40me'
+    url = info.base_url .. '/pulls' .. q
   else
     -- Codeberg: state is already a full query string or empty
     url = info.base_url .. '/pulls' .. state

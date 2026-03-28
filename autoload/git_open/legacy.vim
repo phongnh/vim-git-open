@@ -10,6 +10,12 @@ set cpoptions&vim
 " Helper Functions
 " ============================================================================
 
+function! s:warn(msg) abort
+    echohl ErrorMsg
+    echom a:msg
+    echohl None
+endfunction
+
 " Get the git root directory
 function! s:get_git_root() abort
     let l:git_dir = finddir('.git', expand('%:p:h') . ';')
@@ -228,7 +234,7 @@ function! s:build_github_url(base_url, path, type, ...) abort
     elseif a:type ==# 'pr'
         let l:pr = a:0 > 0 ? a:1 : ''
         if empty(l:pr)
-            echoerr 'No PR number specified'
+            call s:warn('No PR number specified')
             return ''
         endif
         return l:url . '/pull/' . l:pr
@@ -263,7 +269,7 @@ function! s:build_gitlab_url(base_url, path, type, ...) abort
     elseif a:type ==# 'mr'
         let l:mr = a:0 > 0 ? a:1 : ''
         if empty(l:mr)
-            echoerr 'No MR number specified'
+            call s:warn('No MR number specified')
             return ''
         endif
         return l:url . '/-/merge_requests/' . l:mr
@@ -299,7 +305,7 @@ function! s:open_browser(url) abort
     endif
 
     if empty(g:vim_git_open_browser_command)
-        echoerr 'No browser command configured. Set g:vim_git_open_browser_command'
+        call s:warn('No browser command configured. Set g:vim_git_open_browser_command')
         return
     endif
 
@@ -320,7 +326,7 @@ endfunction
 function! s:get_repo_info() abort
     let l:remote = s:parse_remote_url()
     if empty(l:remote)
-        echoerr 'Not a git repository or no remote configured'
+        call s:warn('Not a git repository or no remote configured')
         return {}
     endif
 
@@ -366,7 +372,7 @@ function! git_open#legacy#open_file() abort range
     endif
 
     if empty(expand('%'))
-        echoerr 'No file in current buffer'
+        call s:warn('No file in current buffer')
         return
     endif
 
@@ -395,7 +401,7 @@ function! git_open#legacy#open_request(...) abort
     let l:number = a:0 > 0 && !empty(a:1) ? a:1 : s:parse_pr_mr_from_commit(l:info.provider)
 
     if empty(l:number)
-        echoerr 'No request number specified and could not parse from commit message'
+        call s:warn('No request number specified and could not parse from commit message')
         return
     endif
 
@@ -412,13 +418,13 @@ function! git_open#legacy#open_file_last_change() abort
 
     let l:file_path = s:get_relative_path()
     if empty(l:file_path)
-        echoerr 'Current file is not in a git repository'
+        call s:warn('Current file is not in a git repository')
         return
     endif
 
     let l:commit = s:git_command('log -1 --format=%H -- ' . shellescape(l:file_path))
     if empty(l:commit)
-        echoerr 'No commits found for current file'
+        call s:warn('No commits found for current file')
         return
     endif
 

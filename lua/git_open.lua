@@ -8,6 +8,10 @@ local M = {}
 -- Helper Functions
 -- ============================================================================
 
+local function warn(msg)
+  vim.api.nvim_echo({{msg, 'ErrorMsg'}}, true, {})
+end
+
 local function get_git_root()
   local git_dir = vim.fn.finddir('.git', vim.fn.expand('%:p:h') .. ';')
   if git_dir == '' then
@@ -219,7 +223,7 @@ local function build_github_url(base_url, path, url_type, extra, line_info)
     return url .. '/commit/' .. commit
   elseif url_type == 'pr' then
     if not extra or extra == '' then
-      vim.api.nvim_err_writeln('No PR number specified')
+      warn('No PR number specified')
       return nil
     end
     return url .. '/pull/' .. extra
@@ -252,7 +256,7 @@ local function build_gitlab_url(base_url, path, url_type, extra, line_info)
     return url .. '/-/commit/' .. commit
   elseif url_type == 'mr' then
     if not extra or extra == '' then
-      vim.api.nvim_err_writeln('No MR number specified')
+      warn('No MR number specified')
       return nil
     end
     return url .. '/-/merge_requests/' .. extra
@@ -281,7 +285,7 @@ local function open_browser(url)
   
   local browser_cmd = vim.g.vim_git_open_browser_command
   if not browser_cmd or browser_cmd == '' then
-    vim.api.nvim_err_writeln('No browser command configured. Set g:vim_git_open_browser_command')
+    warn('No browser command configured. Set g:vim_git_open_browser_command')
     return
   end
   
@@ -300,7 +304,7 @@ end
 local function get_repo_info()
   local remote = parse_remote_url()
   if not remote then
-    vim.api.nvim_err_writeln('Not a git repository or no remote configured')
+    warn('Not a git repository or no remote configured')
     return nil
   end
   
@@ -346,7 +350,7 @@ function M.open_file()
   end
   
   if vim.fn.expand('%') == '' then
-    vim.api.nvim_err_writeln('No file in current buffer')
+    warn('No file in current buffer')
     return
   end
   
@@ -379,7 +383,7 @@ function M.open_request(number)
   end
 
   if not req or req == '' then
-    vim.api.nvim_err_writeln('No request number specified and could not parse from commit message')
+    warn('No request number specified and could not parse from commit message')
     return
   end
 
@@ -397,14 +401,14 @@ function M.open_file_last_change()
   -- Get the file path relative to git root
   local file_path = get_relative_path()
   if not file_path then
-    vim.api.nvim_echo({{'Current file is not in a git repository', 'ErrorMsg'}}, true, {})
+    warn('Current file is not in a git repository')
     return
   end
   
   -- Get the latest commit hash for this file
   local commit = git_command('log -1 --format=%H -- ' .. vim.fn.shellescape(file_path))
   if not commit or commit == '' then
-    vim.api.nvim_echo({{'No commits found for current file', 'ErrorMsg'}}, true, {})
+    warn('No commits found for current file')
     return
   end
   

@@ -8,6 +8,12 @@ vim9script
 # Helper Functions
 # ============================================================================
 
+def Warn(msg: string)
+    echohl ErrorMsg
+    echom msg
+    echohl None
+enddef
+
 def GetGitRoot(): string
     var git_dir = finddir('.git', expand('%:p:h') .. ';')
     if empty(git_dir)
@@ -218,7 +224,7 @@ def BuildGithubUrl(base_url: string, path: string, type: string, ...extra: list<
     elseif type ==# 'pr'
         var pr = len(extra) > 0 ? extra[0] : ''
         if empty(pr)
-            echoerr 'No PR number specified'
+            Warn('No PR number specified')
             return ''
         endif
         return url .. '/pull/' .. pr
@@ -252,7 +258,7 @@ def BuildGitlabUrl(base_url: string, path: string, type: string, ...extra: list<
     elseif type ==# 'mr'
         var mr = len(extra) > 0 ? extra[0] : ''
         if empty(mr)
-            echoerr 'No MR number specified'
+            Warn('No MR number specified')
             return ''
         endif
         return url .. '/-/merge_requests/' .. mr
@@ -280,7 +286,7 @@ def OpenBrowser(url: string)
     endif
     
     if empty(g:vim_git_open_browser_command)
-        echoerr 'No browser command configured. Set g:vim_git_open_browser_command'
+        Warn('No browser command configured. Set g:vim_git_open_browser_command')
         return
     endif
     
@@ -300,7 +306,7 @@ enddef
 def GetRepoInfo(): dict<string>
     var remote = ParseRemoteUrl()
     if empty(remote)
-        echoerr 'Not a git repository or no remote configured'
+        Warn('Not a git repository or no remote configured')
         return {}
     endif
     
@@ -381,7 +387,7 @@ export def OpenFile()
     endif
     
     if empty(expand('%'))
-        echoerr 'No file in current buffer'
+        Warn('No file in current buffer')
         return
     endif
     
@@ -411,7 +417,7 @@ export def OpenRequest(req_arg: string = '')
     var number = !empty(req_arg) ? req_arg : ParsePrMrFromCommit(info.provider)
 
     if empty(number)
-        echoerr 'No request number specified and could not parse from commit message'
+        Warn('No request number specified and could not parse from commit message')
         return
     endif
 
@@ -429,14 +435,14 @@ export def OpenFileLastChange()
     # Get the file path relative to git root
     var file_path = GetRelativePath()
     if empty(file_path)
-        echoerr 'Current file is not in a git repository'
+        Warn('Current file is not in a git repository')
         return
     endif
     
     # Get the latest commit hash for this file
     var commit = GitCommand('log -1 --format=%H -- ' .. shellescape(file_path))
     if empty(commit)
-        echoerr 'No commits found for current file'
+        Warn('No commits found for current file')
         return
     endif
     

@@ -51,8 +51,57 @@ def GitCommand(args: string): string
     return substitute(output, '\n\+$', '', '')
 enddef
 
+def GetAllRemoteNames(git_root: string): list<string>
+    var output = trim(system('git -C ' .. shellescape(git_root) .. ' remote'))
+    if empty(output)
+        return []
+    endif
+    return filter(split(output, '\n'), (_, v) => !empty(v))
+enddef
+
+def GetCurrentRemote(git_root: string): string
+    # Step 1: already resolved for this buffer
+    if exists('b:vim_git_open_remote') && !empty(b:vim_git_open_remote)
+        return b:vim_git_open_remote
+    endif
+
+    var remotes = GetAllRemoteNames(git_root)
+    if empty(remotes)
+        return ''
+    endif
+
+    # Step 2: honour g:vim_git_open_remote if valid
+    if exists('g:vim_git_open_remote') && !empty(g:vim_git_open_remote)
+        if index(remotes, g:vim_git_open_remote) >= 0
+            b:vim_git_open_remote = g:vim_git_open_remote
+            return b:vim_git_open_remote
+        else
+            # Warn once per buffer then fall through
+            if !exists('b:vim_git_open_remote_warned')
+                Warn("git-open: remote '" .. g:vim_git_open_remote .. "' not found, falling back")
+                b:vim_git_open_remote_warned = 1
+            endif
+        endif
+    endif
+
+    # Step 3: prefer 'origin'
+    if index(remotes, 'origin') >= 0
+        b:vim_git_open_remote = 'origin'
+        return b:vim_git_open_remote
+    endif
+
+    # Step 4: first available remote
+    b:vim_git_open_remote = remotes[0]
+    return b:vim_git_open_remote
+enddef
+
 def ParseRemoteUrl(): dict<string>
-    var remote = GitCommand('config --get remote.origin.url')
+    var git_root = GetGitRoot()
+    var remote_name = empty(git_root) ? '' : GetCurrentRemote(git_root)
+    if empty(remote_name)
+        return {}
+    endif
+    var remote = GitCommand('config --get remote.' .. remote_name .. '.url')
     if empty(remote)
         return {}
     endif
@@ -461,6 +510,54 @@ enddef
 export def CompleteMyRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
     return FuzzyFilter(['-open', '-closed', '-merged', '-all',
                 \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], arglead)
+enddef
+
+export def CompleteGitRemote(arglead: string, cmdline: string, cursorpos: number): list<string>
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        return []
+    endif
+    return FuzzyFilter(GetAllRemoteNames(git_root), arglead)
+enddef
+
+export def OpenGitRemote(name: string = '', reset: bool = false)
+    var git_root = GetGitRoot()
+    if empty(git_root)
+        Warn('git-open: not a git repository')
+        return
+    endif
+
+    if reset
+        if exists('b:vim_git_open_remote')
+            unlet b:vim_git_open_remote
+        endif
+        if exists('b:vim_git_open_remote_warned')
+            unlet b:vim_git_open_remote_warned
+        endif
+        echo 'git-open: remote reset (will re-resolve on next command)'
+        return
+    endif
+
+    if empty(name)
+        var current = GetCurrentRemote(git_root)
+        if empty(current)
+            Warn('git-open: no remotes found')
+        else
+            echo "git-open: current remote is '" .. current .. "'"
+        endif
+        return
+    endif
+
+    var remotes = GetAllRemoteNames(git_root)
+    if index(remotes, name) < 0
+        Warn("git-open: remote '" .. name .. "' not found (available: " .. join(remotes, ', ') .. ')')
+        return
+    endif
+    b:vim_git_open_remote = name
+    if exists('b:vim_git_open_remote_warned')
+        unlet b:vim_git_open_remote_warned
+    endif
+    echo "git-open: remote set to '" .. name .. "' for this buffer"
 enddef
 
 # ============================================================================

@@ -44,8 +44,67 @@ local function git_command(args)
   return vim.trim(output)
 end
 
+local function get_all_remote_names(git_root)
+  local cmd = string.format('git -C %s remote', vim.fn.shellescape(git_root))
+  local output = vim.trim(vim.fn.system(cmd))
+  if output == '' then
+    return {}
+  end
+  local names = {}
+  for _, name in ipairs(vim.split(output, '\n', { plain = true, trimempty = true })) do
+    table.insert(names, name)
+  end
+  return names
+end
+
+local function get_current_remote(git_root)
+  -- Step 1: already resolved for this buffer
+  local cached = vim.b.vim_git_open_remote
+  if cached and cached ~= '' then
+    return cached
+  end
+
+  local remotes = get_all_remote_names(git_root)
+  if #remotes == 0 then
+    return nil
+  end
+
+  -- Step 2: honour vim.g.vim_git_open_remote if valid
+  local pref = vim.g.vim_git_open_remote
+  if pref and pref ~= '' then
+    for _, r in ipairs(remotes) do
+      if r == pref then
+        vim.b.vim_git_open_remote = pref
+        return pref
+      end
+    end
+    -- pref not in remotes — warn once per buffer then fall through
+    if not vim.b.vim_git_open_remote_warned then
+      warn("git-open: remote '" .. pref .. "' not found, falling back")
+      vim.b.vim_git_open_remote_warned = 1
+    end
+  end
+
+  -- Step 3: prefer 'origin'
+  for _, r in ipairs(remotes) do
+    if r == 'origin' then
+      vim.b.vim_git_open_remote = 'origin'
+      return 'origin'
+    end
+  end
+
+  -- Step 4: first available remote
+  vim.b.vim_git_open_remote = remotes[1]
+  return remotes[1]
+end
+
 local function parse_remote_url()
-  local remote = git_command('config --get remote.origin.url')
+  local git_root = get_git_root()
+  local remote_name = git_root and get_current_remote(git_root) or nil
+  if not remote_name or remote_name == '' then
+    return nil
+  end
+  local remote = git_command('config --get remote.' .. remote_name .. '.url')
   if not remote or remote == '' then
     return nil
   end
@@ -508,6 +567,50 @@ function M.complete_my_request_state(arglead)
     '-search', '-search=open', '-search=closed', '-search=merged', '-search=all' }, arglead)
 end
 
+function M.complete_git_remote(arglead)
+  local git_root = get_git_root()
+  if not git_root then
+    return {}
+  end
+  return fuzzy_filter(get_all_remote_names(git_root), arglead)
+end
+
+function M.open_git_remote(name, reset)
+  local git_root = get_git_root()
+  if not git_root then
+    warn('git-open: not a git repository')
+    return
+  end
+
+  if reset then
+    vim.b.vim_git_open_remote = nil
+    vim.b.vim_git_open_remote_warned = nil
+    print('git-open: remote reset (will re-resolve on next command)')
+    return
+  end
+
+  if not name or name == '' then
+    local current = get_current_remote(git_root)
+    if not current or current == '' then
+      warn('git-open: no remotes found')
+    else
+      print("git-open: current remote is '" .. current .. "'")
+    end
+    return
+  end
+
+  local remotes = get_all_remote_names(git_root)
+  for _, r in ipairs(remotes) do
+    if r == name then
+      vim.b.vim_git_open_remote = name
+      vim.b.vim_git_open_remote_warned = nil
+      print("git-open: remote set to '" .. name .. "' for this buffer")
+      return
+    end
+  end
+  warn("git-open: remote '" .. name .. "' not found (available: " .. table.concat(remotes, ', ') .. ')')
+end
+
 -- ============================================================================
 -- Public API Functions
 -- ============================================================================
@@ -737,7 +840,15 @@ function M.setup(opts)
   if opts.providers then
     vim.g.vim_git_open_providers = opts.providers
   end
-  
+
+  if opts.remote then
+    if not vim.g.vim_git_open_remote then
+      vim.g.vim_git_open_remote = opts.remote
+    end
+  elseif not vim.g.vim_git_open_remote then
+    vim.g.vim_git_open_remote = ''
+  end
+
   if opts.browser_command then
     vim.g.vim_git_open_browser_command = opts.browser_command
   elseif not vim.g.vim_git_open_browser_command then

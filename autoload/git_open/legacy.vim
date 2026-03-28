@@ -51,8 +51,57 @@ function! s:git_command(args) abort
 endfunction
 
 " Parse git remote URL
+function! s:get_all_remote_names(git_root) abort
+    let l:output = trim(system('git -C ' . shellescape(a:git_root) . ' remote'))
+    if empty(l:output)
+        return []
+    endif
+    return filter(split(l:output, '\n'), '!empty(v:val)')
+endfunction
+
+function! s:get_current_remote(git_root) abort
+    " Step 1: already resolved for this buffer
+    if exists('b:vim_git_open_remote') && !empty(b:vim_git_open_remote)
+        return b:vim_git_open_remote
+    endif
+
+    let l:remotes = s:get_all_remote_names(a:git_root)
+    if empty(l:remotes)
+        return ''
+    endif
+
+    " Step 2: honour g:vim_git_open_remote if valid
+    if exists('g:vim_git_open_remote') && !empty(g:vim_git_open_remote)
+        if index(l:remotes, g:vim_git_open_remote) >= 0
+            let b:vim_git_open_remote = g:vim_git_open_remote
+            return b:vim_git_open_remote
+        else
+            if !exists('b:vim_git_open_remote_warned')
+                call s:warn("git-open: remote '" . g:vim_git_open_remote . "' not found, falling back")
+                let b:vim_git_open_remote_warned = 1
+            endif
+        endif
+    endif
+
+    " Step 3: prefer 'origin'
+    if index(l:remotes, 'origin') >= 0
+        let b:vim_git_open_remote = 'origin'
+        return b:vim_git_open_remote
+    endif
+
+    " Step 4: first available remote
+    let b:vim_git_open_remote = l:remotes[0]
+    return b:vim_git_open_remote
+endfunction
+
+" Parse git remote URL
 function! s:parse_remote_url() abort
-    let l:remote = s:git_command('config --get remote.origin.url')
+    let l:git_root = s:get_git_root()
+    let l:remote_name = empty(l:git_root) ? '' : s:get_current_remote(l:git_root)
+    if empty(l:remote_name)
+        return {}
+    endif
+    let l:remote = s:git_command('config --get remote.' . l:remote_name . '.url')
     if empty(l:remote)
         return {}
     endif
@@ -478,6 +527,54 @@ endfunction
 function! git_open#legacy#complete_my_request_state(arglead, cmdline, cursorpos) abort
     return s:fuzzy_filter(['-open', '-closed', '-merged', '-all',
                 \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], a:arglead)
+endfunction
+
+function! git_open#legacy#complete_git_remote(arglead, cmdline, cursorpos) abort
+    let l:git_root = s:get_git_root()
+    if empty(l:git_root)
+        return []
+    endif
+    return s:fuzzy_filter(s:get_all_remote_names(l:git_root), a:arglead)
+endfunction
+
+function! git_open#legacy#open_git_remote(name, reset) abort
+    let l:git_root = s:get_git_root()
+    if empty(l:git_root)
+        call s:warn('git-open: not a git repository')
+        return
+    endif
+
+    if a:reset
+        if exists('b:vim_git_open_remote')
+            unlet b:vim_git_open_remote
+        endif
+        if exists('b:vim_git_open_remote_warned')
+            unlet b:vim_git_open_remote_warned
+        endif
+        echo 'git-open: remote reset (will re-resolve on next command)'
+        return
+    endif
+
+    if empty(a:name)
+        let l:current = s:get_current_remote(l:git_root)
+        if empty(l:current)
+            call s:warn('git-open: no remotes found')
+        else
+            echo "git-open: current remote is '" . l:current . "'"
+        endif
+        return
+    endif
+
+    let l:remotes = s:get_all_remote_names(l:git_root)
+    if index(l:remotes, a:name) < 0
+        call s:warn("git-open: remote '" . a:name . "' not found (available: " . join(l:remotes, ', ') . ')')
+        return
+    endif
+    let b:vim_git_open_remote = a:name
+    if exists('b:vim_git_open_remote_warned')
+        unlet b:vim_git_open_remote_warned
+    endif
+    echo "git-open: remote set to '" . a:name . "' for this buffer"
 endfunction
 
 " ============================================================================

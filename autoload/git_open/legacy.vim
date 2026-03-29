@@ -2,10 +2,6 @@
 " Maintainer:   Phong Nguyen
 " Version:      1.0.0
 
-" Save cpoptions
-let s:save_cpo = &cpoptions
-set cpoptions&vim
-
 " ============================================================================
 " Helper Functions
 " ============================================================================
@@ -1095,7 +1091,3 @@ function! git_open#legacy#open_my_requests_for_remote(remote_name, ...) abort
     endif
     call s:open_or_copy(l:url, l:copy)
 endfunction
-
-" Restore cpoptions
-let &cpoptions = s:save_cpo
-unlet s:save_cpo

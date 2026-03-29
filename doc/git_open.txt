@@ -286,8 +286,14 @@ When a repository has non-origin remotes configured, the plugin scans them at
 startup, detects each one's provider, and registers provider-named commands
 for each.
 
-Commands are registered once at |VimEnter|. If the repository has no
-non-origin remotes, no extra commands are created.
+Commands are registered once near startup. To avoid interfering with the
+terminal TUI capability-query handshake, registration is deferred:
+  - Vim / Legacy Vimscript: `timer_start(0, ...)` defers by one event-loop
+    tick after |VimEnter|.
+  - Neovim / Lua: the |UIEnter| autocmd fires after the built-in TUI is
+    fully attached (does not fire in --headless mode).
+
+If the repository has no non-origin remotes, no extra commands are created.
 
 If two non-origin remotes resolve to the same provider (e.g. two GitHub
 remotes), the last remote scanned wins and a warning is printed at startup.

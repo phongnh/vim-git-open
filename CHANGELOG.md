@@ -1,5 +1,44 @@
 # vim-git-open - CHANGELOG
 
+## Post-1.4.0 Fixes (beta branch)
+
+### Bug Fixes
+
+#### Startup Escape Sequence Leak (multi-remote scan)
+- The multi-remote scan at startup called `system()` synchronously during `VimEnter`, which briefly
+  suspended the TUI. The terminal's DECRQM response (`^[[?12;1$y`) to Vim's cursor-blink probe
+  arrived during that window and printed as raw text.
+- **Vim / Legacy Vimscript fix:** wrapped the scan in `timer_start(0, callback)` to defer it by
+  one event-loop tick, past the TUI capability-query handshake.
+- **Neovim / Lua fix:** switched the autocmd from `VimEnter + vim.schedule()` to `UIEnter`, which
+  fires after the built-in TUI is fully attached and is semantically the correct event.
+- Removed the now-unnecessary `redraw!` workaround that was applied in an earlier session.
+
+#### Unnecessary `cpoptions` Guard Removed
+- Removed the save/restore `cpoptions` guard from `autoload/git_open/legacy.vim`.
+- Vim's autoload mechanism already resets `cpoptions` to Vim defaults before sourcing any autoload
+  file; the guard is only required in `plugin/`, `ftplugin/`, `syntax/`, etc.
+
+### Style / Tooling
+
+#### stylua Formatting
+- Added `stylua.toml` at the project root:
+  `column_width = 120`, `indent_type = "Spaces"`, `indent_width = 2`,
+  `quote_style = "AutoPreferDouble"`, `line_endings = "Unix"`.
+- Ran `stylua` on all Lua files (`plugin/git_open.lua`, `lua/git_open.lua`).
+- Added a local `.git/hooks/pre-commit` hook (not committed) that runs `stylua` on staged `.lua`
+  files and re-stages after formatting.
+
+### Updated Files
+- `plugin/git_open.vim` — `timer_start(0, (_) => RegisterMultiRemoteCommands())` at `VimEnter`
+- `plugin/git_open_legacy.vim` — `timer_start(0, {-> s:register_multi_remote_commands()})` at `VimEnter`
+- `plugin/git_open.lua` — `UIEnter` autocmd; stylua-formatted
+- `autoload/git_open/legacy.vim` — `cpoptions` guard removed
+- `lua/git_open.lua` — stylua-formatted at `column_width=120`
+- `stylua.toml` — new file
+
+---
+
 ## Version 1.4.0
 
 ### New Features

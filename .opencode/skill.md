@@ -243,7 +243,54 @@ Two `for-each-ref` calls:
 - Sort by `-committerdate`, filter `HEAD`, deduplicate local-first
 - Use `matchfuzzy()` in Vim9/Lua; check `exists('*matchfuzzy')` in legacy
 
-### Per-Buffer Remote Resolution
+### Startup Deferral for `system()` Calls
+
+Multi-remote scanning calls `system()` at startup. Calling it synchronously during `VimEnter`
+briefly suspends the TUI, causing the terminal's DECRQM response (`^[[?12;1$y`) to print as
+raw text. Always defer:
+
+**Vim / Legacy Vimscript** — wrap in `timer_start(0, ...)`:
+```vim
+" Vim9script
+autocmd VimEnter * timer_start(0, (_) => RegisterMultiRemoteCommands())
+
+" Legacy
+autocmd VimEnter * call timer_start(0, {-> s:register_multi_remote_commands()})
+```
+
+**Neovim / Lua** — use `UIEnter` (fires after the built-in TUI is fully attached):
+```lua
+vim.api.nvim_create_autocmd("UIEnter", {
+  once = true,
+  callback = function()
+    register_multi_remote_commands()
+  end,
+})
+```
+
+`UIEnter` does NOT fire in `--headless` mode. `timer_start(0, ...)` defers by exactly one
+event-loop tick — equivalent to `vim.schedule()` but available in Vim.
+
+### stylua Formatting
+
+All Lua files must be formatted with `stylua` before committing. Project config is in
+`stylua.toml` at the repo root:
+
+```toml
+column_width = 120
+indent_type = "Spaces"
+indent_width = 2
+quote_style = "AutoPreferDouble"
+line_endings = "Unix"
+```
+
+Run:
+```bash
+stylua plugin/git_open.lua lua/git_open.lua
+```
+
+A local `.git/hooks/pre-commit` hook (not committed) does this automatically for staged `.lua`
+files. `column_width = 120` avoids wrapping long Neovim API calls.
 Resolution order (first match wins):
 1. `b:vim_git_open_remote` — already cached for this buffer
 2. `g:vim_git_open_remote` — global preference (validated against actual remotes)
@@ -302,3 +349,8 @@ When making changes, update:
 11. **`exists('*FuncName')` in Vim9 `def` is compile-time** — always `false` for late-loaded plugins. Use `try/catch call('FuncName', [])` instead.
 12. **`GetGitRoot` must use 3-step detection** — FugitiveGitDir (try/catch) → finddir(bufname) → finddir(cwd). See the pattern in Common Patterns section above.
 13. **`OpenBranch`/`OpenCommit` must set fallback explicitly** — do not rely on `BuildUrl`'s internal fallback, which is bypassed when any extra arg (even empty string) is passed.
+14. **`cpoptions` guard not needed in `autoload/` files** — Vim resets `cpoptions` before sourcing autoload files. Only needed in `plugin/`, `ftplugin/`, `syntax/` etc.
+15. **Never run `gg=G` on files with `\` continuation lines** — Vim's indenter re-indents them destructively.
+16. **Defer `system()` calls at startup** — use `timer_start(0, ...)` (Vim) or `UIEnter` autocmd (Neovim) to avoid TUI escape sequence leakage. See "Startup Deferral" pattern above.
+17. **`UIEnter` does not fire in `--headless` mode** — only fires when a UI is attached.
+18. **Run `stylua` on all modified Lua files before committing** — see `stylua.toml` and the "stylua Formatting" pattern above.

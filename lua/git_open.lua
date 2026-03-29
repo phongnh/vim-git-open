@@ -671,20 +671,17 @@ function M.complete_request_state(arglead)
 end
 
 function M.complete_my_request_state(arglead)
-  return fuzzy_filter(
-    {
-      "-open",
-      "-closed",
-      "-merged",
-      "-all",
-      "-search",
-      "-search=open",
-      "-search=closed",
-      "-search=merged",
-      "-search=all",
-    },
-    arglead
-  )
+  return fuzzy_filter({
+    "-open",
+    "-closed",
+    "-merged",
+    "-all",
+    "-search",
+    "-search=open",
+    "-search=closed",
+    "-search=merged",
+    "-search=all",
+  }, arglead)
 end
 
 function M.complete_git_remote(arglead)

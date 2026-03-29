@@ -267,8 +267,11 @@ local function register_multi_remote_commands()
   vim.cmd('redraw!')
 end
 
-vim.api.nvim_create_autocmd('VimEnter', {
+-- UIEnter fires after the builtin TUI is fully attached (after VimEnter),
+-- so terminal capability queries are already consumed and system() calls
+-- will not leak escape sequences into the display.
+vim.api.nvim_create_autocmd('UIEnter', {
   group = vim.api.nvim_create_augroup('git_open_multi_remote', { clear = true }),
   once = true,
-  callback = function() vim.schedule(register_multi_remote_commands) end,
+  callback = register_multi_remote_commands,
 })

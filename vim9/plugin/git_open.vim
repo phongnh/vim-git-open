@@ -10,7 +10,7 @@ vim9script
 
 g:loaded_git_open = 1
 
-import autoload 'git_open.vim' as GitOpen
+import autoload '../autoload/git_open.vim' as GitOpen
 
 # User configuration
 if !exists('g:vim_git_open_domains')

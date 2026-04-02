@@ -14,7 +14,7 @@ You are an expert Vim plugin developer specializing in the vim-git-open project.
 A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs) in a web browser.
 
 **Repository:** git@github.com:phongnh/vim-git-open.git
-**Branch:** main
+**Branch:** beta
 **License:** MIT
 **Maintainer:** Phong Nguyen
 
@@ -143,6 +143,13 @@ redraw!
     31. **Lazy remote resolution**: resolve `b:vim_git_open_remote` on first use inside each command (not at startup). Resolution order: `b:` cached → `g:` validated → `origin` if present → first remote from `git remote`.
     32. **`git remote` via `system()` not `GitCommand`**: for listing all remotes, call `system('git -C ' .. shellescape(root) .. ' remote')` and `split(output, '\n')` — simpler than re-using the existing `GitCommand` helper since no URL parsing is needed.
     33. **Codeberg `OpenMyRequests` query assembly**: `type=created_by` comes first; only append it when a non-default flag is given. No flag/`-open` → bare `/pulls`; `-all` → `?type=created_by`; `-closed`/`-merged` → `?type=created_by&state=closed`. The Codeberg branch does NOT use the `state` output of `ParseRequestState`.
+34. **Terminal escape sequence `^[[?12;1$y`** is a DECRQM response — Vim sends `\e[?12$p` to probe cursor blinking during startup TUI handshake. If `system()` is called synchronously at `VimEnter`, it suspends the TUI briefly; the terminal's response arrives during that window and prints as raw text. Fix: defer the scan past the handshake.
+35. **`timer_start(0, callback)` in Vim** defers execution by one event-loop tick — equivalent to `vim.schedule()` in Neovim. Used in `VimEnter` autocmd to push the multi-remote `system()` calls past the TUI capability-query handshake.
+36. **`UIEnter` (Neovim-only)** fires after the builtin TUI is fully attached, which is after `VimEnter`. Semantically the correct event for anything that must run after the terminal is fully ready. Does NOT fire in `--headless` mode (no UI). Preferred over `VimEnter + vim.schedule()` for Neovim.
+37. **`cpoptions` guard is not needed in `autoload/` files** — Vim's autoload mechanism already resets `cpoptions` to Vim defaults before sourcing an autoload file. The save/restore pattern is only necessary in `plugin/`, `ftplugin/`, `syntax/` etc. where the file may be sourced in an arbitrary user environment.
+38. **`gg=G` (Vim's built-in Vimscript indenter) is destructive on files with `\` line continuations** — it re-indents continuation lines relative to the `execute` body depth rather than preserving manual alignment. Do not run `gg=G` on these files.
+39. **`stylua.toml`** added to project root: `column_width = 120`, `indent_type = "Spaces"`, `indent_width = 2`, `quote_style = "AutoPreferDouble"`, `line_endings = "Unix"`. `column_width = 120` matches the longest existing line and avoids wrapping long Neovim API calls.
+40. **`.git/hooks/pre-commit`** (not committed — git hooks are local): runs `stylua` on any staged `.lua` file, re-stages after formatting, skips silently if `stylua` not installed.
 
 ## Key Files
 
@@ -158,6 +165,7 @@ redraw!
 | `doc/git_open.txt` | Vim help file |
 | `CHANGELOG.md` | Version history |
 | `example_config.vim` | Configuration examples |
+| `stylua.toml` | Lua formatter config (`column_width=120`, 2-space, double-quotes) |
 | `.opencode/agent.md` | This file |
 | `.opencode/conversation-log.md` | Full development log |
 | `.opencode/skill.md` | Development guidelines |
@@ -168,6 +176,7 @@ Before completing any task:
 - [ ] All three implementations updated (Vim9script, legacy, Lua)
 - [ ] Entry points updated if commands changed
 - [ ] Code style consistent (4-space Vim, 2-space Lua)
+- [ ] Run `stylua` on any modified Lua files before committing
 - [ ] Feature parity maintained
 - [ ] Error handling comprehensive
 - [ ] Documentation updated (README, doc/git_open.txt)

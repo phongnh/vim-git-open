@@ -58,6 +58,8 @@ cp -r vim-git-open/autoload ~/.vim/
 
 All commands support a `!` (bang) variant that **copies the URL to the clipboard** instead of opening the browser.
 
+### Origin remote (default)
+
 | Command | Description |
 |---------|-------------|
 | `:OpenGitRepo[!]` | Open (or copy) the repository home page |
@@ -73,6 +75,48 @@ All commands support a `!` (bang) variant that **copies the URL to the clipboard
 | `:Gitk [args]` | Alias for `:OpenGitk` |
 | `:GitkFile[!]` | Alias for `:OpenGitkFile` |
 | `:OpenGitRemote[!] [remote]` | Print, set, or reset the active remote for the current buffer. No args: print current remote. With `[remote]`: validate and set. With `!`: reset so it re-resolves on next command |
+
+### Multi-remote support
+
+If your repository has additional remotes beyond `origin`, the plugin automatically detects their provider at startup and registers a set of provider-named commands for each one.
+
+**GitHub** (when a non-origin remote points to GitHub):
+
+| Command | Description |
+|---------|-------------|
+| `:OpenGitHubRepo[!]` | Open (or copy) the repository home page |
+| `:OpenGitHubBranch[!] [branch]` | Open (or copy) a branch |
+| `:[range]OpenGitHubFile[!] [ref]` | Open (or copy) the current file |
+| `:OpenGitHubCommit[!] [commit]` | Open (or copy) a commit |
+| `:OpenGitHubPR[!] [number]` | Open (or copy) a pull request |
+| `:OpenGitHubPRs[!] [state]` | Open (or copy) the pull requests page |
+| `:OpenGitHubMyPRs[!] [state]` | Open (or copy) my pull requests |
+
+**GitLab** (when a non-origin remote points to GitLab):
+
+| Command | Description |
+|---------|-------------|
+| `:OpenGitLabRepo[!]` | Open (or copy) the repository home page |
+| `:OpenGitLabBranch[!] [branch]` | Open (or copy) a branch |
+| `:[range]OpenGitLabFile[!] [ref]` | Open (or copy) the current file |
+| `:OpenGitLabCommit[!] [commit]` | Open (or copy) a commit |
+| `:OpenGitLabMR[!] [number]` | Open (or copy) a merge request |
+| `:OpenGitLabMRs[!] [state]` | Open (or copy) the merge requests page |
+| `:OpenGitLabMyMRs[!] [state]` | Open (or copy) my merge requests |
+
+**Codeberg** (when a non-origin remote points to Codeberg):
+
+| Command | Description |
+|---------|-------------|
+| `:OpenCodebergRepo[!]` | Open (or copy) the repository home page |
+| `:OpenCodebergBranch[!] [branch]` | Open (or copy) a branch |
+| `:[range]OpenCodebergFile[!] [ref]` | Open (or copy) the current file |
+| `:OpenCodebergCommit[!] [commit]` | Open (or copy) a commit |
+| `:OpenCodebergPR[!] [number]` | Open (or copy) a pull request |
+| `:OpenCodebergPRs[!] [state]` | Open (or copy) the pull requests page |
+| `:OpenCodebergMyPRs[!] [state]` | Open (or copy) my pull requests |
+
+Commands are registered once at startup. If you have no non-origin remotes, no provider-named commands are created. If two non-origin remotes resolve to the same provider (e.g. two GitHub remotes), the last one wins and a warning is printed at startup indicating which remote and domain the commands now point to.
 
 ### Line Number Support
 

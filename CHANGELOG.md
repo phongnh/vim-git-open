@@ -1,5 +1,81 @@
 # vim-git-open - CHANGELOG
 
+## Post-1.4.0 Fixes (beta branch)
+
+### Bug Fixes
+
+#### Startup Escape Sequence Leak (multi-remote scan)
+- The multi-remote scan at startup called `system()` synchronously during `VimEnter`, which briefly
+  suspended the TUI. The terminal's DECRQM response (`^[[?12;1$y`) to Vim's cursor-blink probe
+  arrived during that window and printed as raw text.
+- **Vim / Legacy Vimscript fix:** wrapped the scan in `timer_start(0, callback)` to defer it by
+  one event-loop tick, past the TUI capability-query handshake.
+- **Neovim / Lua fix:** switched the autocmd from `VimEnter + vim.schedule()` to `UIEnter`, which
+  fires after the built-in TUI is fully attached and is semantically the correct event.
+- Removed the now-unnecessary `redraw!` workaround that was applied in an earlier session.
+
+#### Unnecessary `cpoptions` Guard Removed
+- Removed the save/restore `cpoptions` guard from `autoload/git_open/legacy.vim`.
+- Vim's autoload mechanism already resets `cpoptions` to Vim defaults before sourcing any autoload
+  file; the guard is only required in `plugin/`, `ftplugin/`, `syntax/`, etc.
+
+### Style / Tooling
+
+#### stylua Formatting
+- Added `stylua.toml` at the project root:
+  `column_width = 120`, `indent_type = "Spaces"`, `indent_width = 2`,
+  `quote_style = "AutoPreferDouble"`, `line_endings = "Unix"`.
+- Ran `stylua` on all Lua files (`plugin/git_open.lua`, `lua/git_open.lua`).
+- Added a local `.git/hooks/pre-commit` hook (not committed) that runs `stylua` on staged `.lua`
+  files and re-stages after formatting.
+
+### Updated Files
+- `plugin/git_open.vim` — `timer_start(0, (_) => RegisterMultiRemoteCommands())` at `VimEnter`
+- `plugin/git_open_legacy.vim` — `timer_start(0, {-> s:register_multi_remote_commands()})` at `VimEnter`
+- `plugin/git_open.lua` — `UIEnter` autocmd; stylua-formatted
+- `autoload/git_open/legacy.vim` — `cpoptions` guard removed
+- `lua/git_open.lua` — stylua-formatted at `column_width=120`
+- `stylua.toml` — new file
+
+---
+
+## Version 1.4.0
+
+### New Features
+
+#### Multi-Remote Support
+- **Provider-named commands** are now automatically registered at startup for each non-origin remote
+- At `VimEnter`, the plugin scans all configured remotes (excluding `origin`), detects the provider for each, and registers a full set of commands scoped to that remote
+- **GitHub remote commands**: `OpenGitHubRepo[!]`, `OpenGitHubBranch[!]`, `OpenGitHubFile[!]`, `OpenGitHubCommit[!]`, `OpenGitHubPR[!]`, `OpenGitHubPRs[!]`, `OpenGitHubMyPRs[!]`
+- **GitLab remote commands**: `OpenGitLabRepo[!]`, `OpenGitLabBranch[!]`, `OpenGitLabFile[!]`, `OpenGitLabCommit[!]`, `OpenGitLabMR[!]`, `OpenGitLabMRs[!]`, `OpenGitLabMyMRs[!]`
+- **Codeberg remote commands**: `OpenCodebergRepo[!]`, `OpenCodebergBranch[!]`, `OpenCodebergFile[!]`, `OpenCodebergCommit[!]`, `OpenCodebergPR[!]`, `OpenCodebergPRs[!]`, `OpenCodebergMyPRs[!]`
+- Commands are only registered for providers actually present in the repo — no extra commands for providers with no remote
+- If two non-origin remotes resolve to the same provider, last-one-wins; a warning is printed at startup identifying which remote/domain the commands now point to and which was overwritten
+- All commands support bang (`!`) for clipboard copy, visual mode for branch/commit selection, line range for file commands, and state flags for PR/MR listing — identical to the origin equivalents
+- Tab-completion for branch names and state flags is wired to all provider-named commands
+
+### Internal
+
+#### ParseRemoteUrl Refactor
+- `ParseRemoteUrl` (all three implementations) now accepts a `remote_name` parameter (default `'origin'`) instead of hardcoding `remote.origin.url`
+- `GetRepoInfo` / `get_repo_info` explicitly passes `'origin'` — behaviour is identical to before
+- New `GetAllRemotes` / `get_all_remotes`: returns list of all remote names excluding `origin`
+- New `GetRepoInfoForRemote` / `get_repo_info_for_remote`: like `GetRepoInfo` but for a named remote; no error on missing remote (caller handles it)
+- New per-remote public API functions: `OpenRepoForRemote`, `OpenBranchForRemote`, `OpenFileForRemote`, `OpenCommitForRemote`, `OpenRequestForRemote`, `OpenRequestsForRemote`, `OpenMyRequestsForRemote`
+- These are thin wrappers — all URL-building logic stays in the existing `BuildUrl` / `BuildGithubUrl` / `BuildGitlabUrl` functions
+
+### Updated Files
+- `autoload/git_open.vim` — `ParseRemoteUrl` refactor; new `GetAllRemotes`, `GetRepoInfoForRemote`, per-remote API functions
+- `autoload/git_open/legacy.vim` — same; new public functions exposed via `git_open#legacy#` namespace
+- `lua/git_open.lua` — same; new `M.get_all_remotes`, `M.get_repo_info_for_remote`, per-remote API functions
+- `plugin/git_open.vim` — dynamic command registration via `execute` + `VimEnter` autocommand
+- `plugin/git_open_legacy.vim` — same; commands use `git_open#legacy#*` functions
+- `plugin/git_open.lua` — dynamic command registration via `nvim_create_user_command` + `VimEnter` autocmd
+- `README.md` — new "Multi-remote support" section with command tables
+- `doc/git_open.txt` — new section 5 documenting all provider-named commands
+
+---
+
 ## Version 1.3.0
 
 ### New Features

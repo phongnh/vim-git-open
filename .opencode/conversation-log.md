@@ -401,9 +401,83 @@ The implementation (all 6 plugin files) was committed in the previous session as
 - `doc/git_open.txt`: expanded `:OpenGitMyRequests` entry with per-provider URLs and Codeberg state table
 - `.opencode/` files updated (this session)
 
+## Session 8: Beta Branch Rebase Context
+**Date:** 2026-03-29
+
+### Context
+The `alpha` branch work was rebased / continued on a new `beta` branch. The `beta` branch contains
+all commits from sessions 1–7 plus the new fixes in session 9. Repository information updated:
+**Branch:** beta (PR pending against main).
+
 ---
 
-## Key Discoveries (Cumulative)
+## Session 9: Startup Escape Sequence Fix, UIEnter, cpo Cleanup, stylua
+**Date:** 2026-03-30
+
+### Fix: Defer multi-remote scan past VimEnter TUI handshake
+
+**Root cause:** The multi-remote scan calls `system()` synchronously during `VimEnter`. This briefly
+suspends the TUI; the terminal's DECRQM response (`^[[?12;1$y` — Vim's cursor-blink capability
+probe `\e[?12$p`) arrived during that window and printed as raw text to the screen.
+
+**Vim / Legacy Vimscript fix:** Wrapped the `RegisterMultiRemoteCommands()` / `s:register_multi_remote_commands()`
+call in `timer_start(0, callback)` inside the `VimEnter` autocmd. `timer_start(0, ...)` defers
+execution by one event-loop tick — enough to push the scan past the TUI handshake.
+
+**Discovery 34:** `^[[?12;1$y` is a DECRQM response from the terminal to Vim's cursor-blink probe.
+**Discovery 35:** `timer_start(0, callback)` defers by one event-loop tick in Vim — equivalent to `vim.schedule()`.
+
+- **Commit:** `8abb7fe`
+
+### Fix: Switch Lua plugin from VimEnter+vim.schedule() to UIEnter
+
+The initial Lua fix used `VimEnter + vim.schedule()`. This was replaced with a `UIEnter` autocmd,
+which is semantically the correct event: it fires after the built-in TUI is fully attached
+(after `VimEnter`). `UIEnter` does NOT fire in `--headless` mode.
+
+**Discovery 36:** `UIEnter` (Neovim-only) fires after the builtin TUI is fully attached. Does not
+fire in `--headless`. Preferred over `VimEnter + vim.schedule()` for Neovim.
+
+- **Commit:** `2a96cef`
+
+### Cleanup: Remove unnecessary cpoptions guard from autoload/git_open/legacy.vim
+
+Vim's autoload mechanism resets `cpoptions` to Vim defaults before sourcing any autoload file.
+The save/restore guard is only needed in `plugin/`, `ftplugin/`, `syntax/`, etc.
+
+**Discovery 37:** `cpoptions` guard is not needed in `autoload/` files.
+
+- **Commit:** `8bf7ead`
+
+### Style: Run stylua on all Lua files
+
+Ran `stylua` (with default settings) on `plugin/git_open.lua` and `lua/git_open.lua`.
+
+**Discovery 38:** `gg=G` is destructive on files with `\` continuation lines — do not use it.
+
+- **Commit:** `2e34314`
+
+### Style: Add stylua.toml and reformat at column_width=120
+
+Added `stylua.toml` at project root:
+`column_width = 120`, `indent_type = "Spaces"`, `indent_width = 2`,
+`quote_style = "AutoPreferDouble"`, `line_endings = "Unix"`.
+Reformatted all Lua files at the new column width.
+
+Added local `.git/hooks/pre-commit` hook (not committed): runs `stylua` on staged `.lua` files
+and re-stages after formatting; skips silently if `stylua` not installed.
+
+**Discovery 39:** `stylua.toml` with `column_width = 120`.
+**Discovery 40:** `.git/hooks/pre-commit` for auto-stylua (local, not committed).
+
+- **Commit:** `ddc3137`
+
+### Docs: Update all documentation and metadata (this session)
+
+Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/skill.md`,
+`.opencode/conversation-log.md`, `.opencode/conversation-transcript.md`.
+
+---
 
 1. `string()` in Vim9script adds quotes around numbers — use `'' .. value`
 2. Vim9script variadic forwarding: use `call(FuncRef, [args] + extra)`
@@ -438,13 +512,20 @@ The implementation (all 6 plugin files) was committed in the previous session as
 31. Lazy remote resolution: resolve `b:vim_git_open_remote` on first use, not at startup
 32. `git remote` via `system()` for listing remotes — simpler than re-using `GitCommand`
 33. Codeberg `OpenMyRequests` assembles its own query string: `type=created_by` comes first, only appended when a non-default flag is given; no flag/`-open` → bare `/pulls`; `-all` → `?type=created_by`; `-closed`/`-merged` → `?type=created_by&state=closed`
+34. `^[[?12;1$y` is a DECRQM response — Vim's TUI cursor-blink probe (`\e[?12$p`) sent at startup; arrives as raw text if `system()` runs during that window.
+35. `timer_start(0, callback)` defers by one event-loop tick in Vim — equivalent to `vim.schedule()`. Used to push multi-remote scan past the TUI handshake.
+36. `UIEnter` (Neovim-only) fires after the built-in TUI is fully attached. Does not fire in `--headless`. Preferred over `VimEnter + vim.schedule()` for Neovim.
+37. `cpoptions` guard not needed in `autoload/` files — Vim resets it before sourcing autoload files.
+38. `gg=G` is destructive on files with `\` continuation lines — do not use it.
+39. `stylua.toml`: `column_width=120`, 2-space indent, double-quotes, Unix line endings.
+40. `.git/hooks/pre-commit` runs `stylua` on staged `.lua` files (local, not committed).
 
 ---
 
 ## Repository Information
 
 - **SSH URL:** git@github.com:phongnh/vim-git-open.git
-- **Branch:** alpha (PR #1 open against main)
+- **Branch:** beta (PR pending against main)
 - **License:** MIT
 - **Maintainer:** Phong Nguyen
 
@@ -531,3 +612,8 @@ The implementation (all 6 plugin files) was committed in the previous session as
 | 4affced | fix: use /pulls/{n} for Codeberg single PR URL |
 | 15a0778 | fix: correct Codeberg OpenMyRequests URL (type=created_by, no state=all) |
 | c184550 | fix: type=created_by before state, no flag/-open returns bare /pulls |
+| 8abb7fe | Fix: defer multi-remote scan past VimEnter TUI handshake (timer_start) |
+| 2a96cef | Fix: use UIEnter instead of VimEnter+vim.schedule() for multi-remote scan in Lua |
+| 8bf7ead | Cleanup: remove unnecessary cpoptions guard from autoload/git_open/legacy.vim |
+| 2e34314 | Style: run stylua on all Lua files |
+| ddc3137 | Style: add stylua.toml and reformat Lua files at column_width=120 |

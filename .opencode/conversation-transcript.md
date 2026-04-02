@@ -294,6 +294,54 @@ Copied all changed files to both installed locations.
 
 ---
 
+## Sessions 8–9 Summary (2026-03-29 – 2026-03-30)
+
+### Session 8: Beta Branch Context
+
+The `alpha` branch work was rebased onto a new `beta` branch. All prior commits are present.
+Repository Information updated in all `.opencode/` files: branch is now `beta`.
+
+---
+
+### Session 9: Startup Fixes, cpo Cleanup, stylua
+
+**User:** "What did we do so far?" → Received full context block; identified pending doc pass.
+
+**User:** "Continue if you have next steps…"
+
+**Assistant actions:**
+
+1. **Fix startup escape sequence leak** (`8abb7fe`):
+   - Multi-remote `system()` calls deferred via `timer_start(0, ...)` (Vim) and
+     `UIEnter` autocmd (Neovim) to avoid DECRQM raw text (`^[[?12;1$y`) at startup.
+
+2. **Switch Lua to UIEnter** (`2a96cef`):
+   - Replaced `VimEnter + vim.schedule()` with `UIEnter` in `plugin/git_open.lua`.
+
+3. **Remove cpoptions guard** (`8bf7ead`):
+   - Removed save/restore `cpoptions` guard from `autoload/git_open/legacy.vim`
+     (not needed in autoload files; Vim resets it automatically).
+
+4. **Run stylua** (`2e34314`):
+   - Ran `stylua` on `plugin/git_open.lua` and `lua/git_open.lua`.
+
+5. **Add stylua.toml and reformat** (`ddc3137`):
+   - Added `stylua.toml` (`column_width=120`, 2-space, double-quotes, Unix).
+   - Reformatted all Lua files; added local pre-commit hook (not committed).
+
+6. **Documentation pass** (this session):
+   - `CHANGELOG.md` — added "Post-1.4.0 Fixes (beta branch)" section.
+   - `doc/git_open.txt` — updated multi-remote section: deferred timer/UIEnter note.
+   - `.opencode/agent.md` — discoveries 34–40, branch=beta, `stylua.toml` in Key Files,
+     stylua step in Quality Checklist.
+   - `.opencode/skill.md` — Startup Deferral pattern section, stylua Formatting section,
+     reminders 14–18.
+   - `.opencode/conversation-log.md` — Sessions 8–9 entries, discoveries 34–40, commit table.
+   - `.opencode/conversation-transcript.md` — this block.
+   - Synced all changed files to both installed locations, committed and pushed.
+
+---
+
 ## End of Transcript
 
-*Sessions 1–2: 2026-03-27 | Sessions 3–7: 2026-03-28*
+*Sessions 1–2: 2026-03-27 | Sessions 3–7: 2026-03-28 | Sessions 8–9: 2026-03-29/30*

@@ -486,9 +486,9 @@ def GetVisualSelection(): string
     if exists('*getregion')
         return trim(join(call('getregion', [getpos("'<"), getpos("'>")]), "\n"))
     endif
-    var line = getline("'<")
-    var [_b1, l1, c1, _o1] = getpos("'<")
-    var [_b2, l2, c2, _o2] = getpos("'>")
+    const line = getline("'<")
+    const [_b1, l1, c1, _o1] = getpos("'<")
+    const [_b2, l2, c2, _o2] = getpos("'>")
     if l1 != l2
         return trim(strpart(line, c1 - 1))
     endif

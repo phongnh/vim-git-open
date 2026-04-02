@@ -11,9 +11,10 @@ if has('vim9script')
     " Add vim9/ subdirectory to runtimepath so vim9/autoload/git_open.vim
     " is found when the Vim9script plugin sources it via 'import autoload'
     let s:vim9dir = fnamemodify(resolve(expand('<sfile>:p')), ':h:h') .. '/vim9'
-    if isdirectory(s:vim9dir) && index(split(&runtimepath, ','), s:vim9dir) < 0
+    if &runtimepath !~# s:vim9dir
         execute 'set runtimepath^=' . fnameescape(s:vim9dir)
     endif
+    unlet! s:vim9dir
     source <sfile>:p:h:h/vim9/plugin/git_open.vim
     finish
 endif

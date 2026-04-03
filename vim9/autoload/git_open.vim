@@ -47,7 +47,7 @@ def GitCommand(args: string): string
     endif
     
     var cmd = 'git -C ' .. shellescape(git_root) .. ' ' .. args
-    var output = system(cmd)
+    silent var output = system(cmd)
     return substitute(output, '\n\+$', '', '')
 enddef
 

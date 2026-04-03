@@ -42,7 +42,7 @@ function! s:git_command(args) abort
     endif
 
     let l:cmd = 'git -C ' . shellescape(l:git_root) . ' ' . a:args
-    let l:output = system(l:cmd)
+    silent let l:output = system(l:cmd)
     return substitute(l:output, '\n\+$', '', '')
 endfunction
 

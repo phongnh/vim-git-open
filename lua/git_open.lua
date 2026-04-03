@@ -8,6 +8,8 @@ local M = {}
 -- Helper Functions
 -- ============================================================================
 
+local unpack = table.unpack or unpack
+
 local function warn(msg)
   vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
 end
@@ -33,20 +35,22 @@ local function get_git_root()
   return nil
 end
 
+local function system(cmd, opts)
+  local result = vim.system(cmd, vim.list_extend(opts or {}, { text = true })):wait()
+  return result.code == 0 and vim.trim(result.stdout) or ""
+end
+
 local function git_command(args)
   local git_root = get_git_root()
   if not git_root then
     return nil
   end
 
-  local cmd = string.format("git -C %s %s", vim.fn.shellescape(git_root), args)
-  local output = vim.fn.system(cmd)
-  return vim.trim(output)
+  return system({ "git", "-C", git_root, unpack(args or {}) })
 end
 
 local function get_all_remote_names(git_root)
-  local cmd = string.format("git -C %s remote", vim.fn.shellescape(git_root))
-  local output = vim.trim(vim.fn.system(cmd))
+  local output = system({ "git", "-C", git_root, "remote" })
   if output == "" then
     return {}
   end
@@ -105,7 +109,7 @@ local function parse_remote_url()
   if not remote_name or remote_name == "" then
     return nil
   end
-  local remote = git_command("config --get remote." .. remote_name .. ".url")
+  local remote = git_command({ "config", "--get", "remote." .. remote_name .. ".url" })
   if not remote or remote == "" then
     return nil
   end
@@ -134,7 +138,7 @@ end
 
 -- parse_remote_url_for_name: fetches remote URL for a specific named remote (bypasses per-buffer resolution)
 local function parse_remote_url_for_name(remote_name)
-  local remote = git_command("config --get remote." .. remote_name .. ".url")
+  local remote = git_command({ "config", "--get", "remote." .. remote_name .. ".url" })
   if not remote or remote == "" then
     return nil
   end
@@ -198,11 +202,11 @@ local function get_base_url(domain)
 end
 
 local function get_current_branch()
-  return git_command("rev-parse --abbrev-ref HEAD")
+  return git_command({ "rev-parse", "--abbrev-ref", "HEAD" })
 end
 
 local function get_current_commit()
-  return git_command("rev-parse HEAD")
+  return git_command({ "rev-parse", "HEAD" })
 end
 
 local function get_relative_path()
@@ -279,7 +283,7 @@ local function parse_pr_mr_number(message, provider)
 end
 
 local function parse_pr_mr_from_commit(provider)
-  local commit_msg = git_command("log -1 --pretty=%B")
+  local commit_msg = git_command({ "log", "-1", "--pretty=%B" })
   return parse_pr_mr_number(commit_msg, provider)
 end
 
@@ -488,7 +492,6 @@ local function copy_to_clipboard(url)
 
   vim.fn.setreg("+", url)
   vim.fn.setreg("*", url)
-  vim.cmd("redraw")
   print("Copied: " .. url)
 end
 
@@ -519,7 +522,7 @@ local function get_repo_info()
 end
 
 local function get_all_remotes()
-  local output = git_command("remote")
+  local output = git_command({ "remote" })
   if not output or output == "" then
     return {}
   end
@@ -604,12 +607,7 @@ local function launch_gitk(args, git_root)
 end
 
 local function get_gitk_old_paths(rel_path, git_root)
-  local cmd = string.format(
-    "git -C %s log --follow --name-only --format= -- %s",
-    vim.fn.shellescape(git_root),
-    vim.fn.shellescape(rel_path)
-  )
-  local output = vim.trim(vim.fn.system(cmd))
+  local output = system({ "git", "-C", git_root, "log", "--follow", "--name-only", "--format=", "--", rel_path })
   if output == "" then
     return { rel_path }
   end
@@ -626,9 +624,11 @@ end
 
 function M.complete_branch(arglead)
   -- Local branches sorted by most recent commit (-committerdate)
-  local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
+  local local_raw =
+    git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=2)'", "refs/heads/" })
   -- Remote branches sorted by most recent commit, strip refs/remotes/<remote>/
-  local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=3)' refs/remotes/")
+  local remote_raw =
+    git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=3)'", "refs/remotes/" })
   local local_branches = (local_raw and local_raw ~= "")
       and vim.split(local_raw, "\n", { plain = true, trimempty = true })
     or {}
@@ -643,8 +643,10 @@ end
 
 function M.complete_gitk_branch(arglead)
   -- Local branches (plain name), then remote branches with full remote/ prefix
-  local local_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/heads/")
-  local remote_raw = git_command("for-each-ref --sort=-committerdate --format='%(refname:lstrip=2)' refs/remotes/")
+  local local_raw =
+    git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=2)'", "refs/heads/" })
+  local remote_raw =
+    git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=3)'", "refs/remotes/" })
   local local_branches = (local_raw and local_raw ~= "")
       and vim.split(local_raw, "\n", { plain = true, trimempty = true })
     or {}
@@ -660,7 +662,7 @@ end
 function M.complete_gitk_args(arglead)
   -- Branches (local plain + remote with prefix) then tracked files
   local branches = M.complete_gitk_branch("")
-  local files_raw = git_command("ls-files")
+  local files_raw = git_command({ "ls-files" })
   local files = (files_raw and files_raw ~= "") and vim.split(files_raw, "\n", { plain = true, trimempty = true }) or {}
   local combined = vim.list_extend(vim.list_extend({}, branches), files)
   return fuzzy_filter(unique(combined), arglead)
@@ -831,14 +833,14 @@ function M.open_file_last_change(copy)
   end
 
   -- Get the latest commit hash for this file
-  local commit = git_command("log -1 --format=%H -- " .. vim.fn.shellescape(file_path))
+  local commit = git_command({ "log", "-1", "--format=%H", "--", file_path })
   if not commit or commit == "" then
     warn("No commits found for current file")
     return
   end
 
   -- Get the commit message
-  local message = git_command("log -1 --format=%B " .. commit)
+  local message = git_command({ "log", "-1", "--format=%B", commit })
 
   -- Try to parse PR/MR number from commit message
   local pr_mr_number = parse_pr_mr_number(message, info.provider)

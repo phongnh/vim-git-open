@@ -522,10 +522,59 @@ Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/sk
 
 ---
 
+## Session 10: Plugin Restructure, Multi-Remote Commands, and Lua vim.system Migration
+**Date:** 2026-04-02 to 2026-04-03
+
+### Refactor: Restructure plugin layout (2cdd899)
+- `autoload/git_open/legacy.vim` → **deleted**; legacy core moved to `autoload/git_open.vim`
+- `plugin/git_open_legacy.vim` → **deleted**; legacy commands now in `plugin/git_open.vim` fallback path
+- Vim9script core moved to `vim9/autoload/git_open.vim`
+- Vim9script entry point moved to `vim9/plugin/git_open.vim`
+- `plugin/git_open.vim` becomes the unified dispatcher: prepends `vim9/` to runtimepath, sources `vim9/plugin/git_open.vim`, then `finish`es; fallback to legacy if no vim9script
+
+### Feature: Multi-remote provider-named commands (7093025, v1.4.0)
+- At `VimEnter` (deferred via `timer_start(0, ...)`) scan all remotes
+- Skip remotes sharing origin's domain
+- Register provider-named commands for unique-domain remotes:
+  - GitHub: `OpenGitHubRepo/Branch/File/Commit/PR/PRs/MyPRs[!]`
+  - GitLab: `OpenGitLabRepo/Branch/File/Commit/MR/MRs/MyMRs[!]`
+  - Codeberg: `OpenCodebergRepo/Branch/File/Commit/PR/PRs/MyPRs[!]`
+- Remote name embedded as quoted literal in each `execute`d command
+- `GetRepoInfo()` and `GetRepoInfoForRemote(remote)` exposed as public API
+- **Discovery #41:** `import autoload '../autoload/git_open.vim' as GitOpen` — relative path resolves from `vim9/plugin/` to `vim9/autoload/`; no extra runtimepath needed inside Vim9 files
+- **Discovery #42:** Multi-remote commands embed remote as `string(r)` literal; `<bang>0` etc. expand at invocation
+- **Discovery #43:** Skip remotes sharing origin domain to avoid duplicate provider commands
+
+### Misc: Use `const` (aead2cb)
+- Replaced `var` with `const` for truly constant bindings in Vim9script
+
+### Cleanup: Remove unused scripts (2546b69)
+- Deleted `scripts/test-lua.sh` and `scripts/test-vim.sh`
+
+### Fix: Relative import path for vim9 autoload (c72379f)
+- `vim9/plugin/git_open.vim` uses `import autoload '../autoload/git_open.vim'` (relative) to correctly resolve across the `vim9/` subdirectory boundary
+- **Discovery #44:** Absolute autoload path in Vim9script `import` can fail if the `vim9/` subdirectory is not yet on runtimepath at import time; relative path always works
+
+### Fix: Improve vim9 loading in dispatcher (e2f5372)
+- `plugin/git_open.vim` checks runtimepath before prepending `vim9/` to avoid duplicates
+
+### Fix: `silent system()` to suppress escape sequences (a428232)
+- Added `silent` keyword before `system()` calls in `autoload/git_open.vim` (legacy) and `vim9/autoload/git_open.vim`
+- **Discovery #45:** `silent var output = system(cmd)` suppresses stderr escape sequences from appearing in Vim's command-line area
+
+### Refactor: Switch Lua from `vim.fn.system` to `vim.system` (5184c95)
+- `lua/git_open.lua` now uses `vim.system(cmd_list, {text=true}):wait()` for all subprocess calls
+- Arguments passed as a Lua list — no shell quoting or `shellescape` needed
+- Exit code checked via `result.code`; returns `""` on failure
+- Helper: `local function system(cmd, opts) ... end`
+- **Discovery #46:** `vim.system` (Neovim ≥0.10) is preferred over `vim.fn.system`: proper subprocess, no shell, exit-code checking, no escape-sequence leakage
+
+---
+
 ## Repository Information
 
 - **SSH URL:** git@github.com:phongnh/vim-git-open.git
-- **Branch:** beta (PR pending against main)
+- **Branch:** main
 - **License:** MIT
 - **Maintainer:** Phong Nguyen
 
@@ -617,3 +666,12 @@ Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/sk
 | 8bf7ead | Cleanup: remove unnecessary cpoptions guard from autoload/git_open/legacy.vim |
 | 2e34314 | Style: run stylua on all Lua files |
 | ddc3137 | Style: add stylua.toml and reformat Lua files at column_width=120 |
+| 98b10fe | feat: per-buffer remote selection with :OpenGitRemote |
+| 7093025 | feat: multi-remote support — provider-named commands for non-origin remotes (v1.4.0) |
+| aead2cb | Use const |
+| 2546b69 | Remove unused scripts |
+| 2cdd899 | Restructure plugin (vim9/ subdir, legacy in autoload/git_open.vim) |
+| c72379f | Use relative path for import to fix vim9 autoload |
+| e2f5372 | Improve loading vim9 |
+| a428232 | silent system() to avoid printing escape sequences in Vim |
+| 5184c95 | Switch vim.fn.system to vim.system |

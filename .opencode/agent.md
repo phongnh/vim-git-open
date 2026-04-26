@@ -20,13 +20,14 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 
 ### Three Implementations (Feature Parity is Sacred)
 1. **Vim9script** — default for Vim 9.0+
-   - `autoload/git_open.vim` — core logic
-   - `plugin/git_open.vim` — entry point (dispatches to Vim9 or legacy)
+   - `vim9/autoload/git_open.vim` — core logic (imported via `import autoload`)
+   - `vim9/plugin/git_open.vim` — Vim9script entry point
+   - `plugin/git_open.vim` — dispatcher: adds `vim9/` to runtimepath, then `source`s `vim9/plugin/git_open.vim`; falls through to legacy if no vim9script
    - Style: 4-space indentation
 
 2. **Legacy Vimscript** — fallback for Vim 7.0+
-   - `autoload/git_open/legacy.vim` — core logic
-   - `plugin/git_open_legacy.vim` — entry point
+   - `autoload/git_open.vim` — core logic
+   - `plugin/git_open.vim` — handles legacy path after Vim9 check
    - Style: 4-space indentation
 
 3. **Lua** — for Neovim
@@ -35,8 +36,10 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
    - Style: 2-space indentation
 
 ### Loading Mechanism
-- `plugin/git_open.vim` checks `has('vim9script')` — loads Vim9 path or legacy path
-- `plugin/git_open.lua` is autoloaded by Neovim; `plugin/git_open.vim` guards with `has('nvim')`
+- `plugin/git_open.vim` guards `has('nvim')` and `exists('g:loaded_git_open')` first
+- If `has('vim9script')`: prepends `vim9/` to runtimepath, sources `vim9/plugin/git_open.vim`, then `finish`es
+- Otherwise: falls through to set up legacy Vimscript commands using `autoload/git_open.vim`
+- `plugin/git_open.lua` is autoloaded by Neovim (no `has('nvim')` guard needed — Lua files are Neovim-only)
 - No duplicate loading
 
 ### Installed Locations (must be kept in sync after every change)
@@ -60,6 +63,18 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 | `GitkFile[!]` | Alias for `OpenGitkFile` |
 | `OpenGitRemote[!] [remote]` | Print, set, or reset per-buffer remote. No args: print current. With remote: validate+set. With `!`: reset to re-resolve |
 
+### Provider-Named Commands (Multi-Remote)
+Registered dynamically at startup (after `VimEnter`) for each non-origin remote whose domain
+differs from origin. Provider is auto-detected from the remote URL.
+
+| Provider | Commands registered |
+|----------|---------------------|
+| GitHub | `OpenGitHubRepo[!]`, `OpenGitHubBranch[!]`, `OpenGitHubFile[!]`, `OpenGitHubCommit[!]`, `OpenGitHubPR[!]`, `OpenGitHubPRs[!]`, `OpenGitHubMyPRs[!]` |
+| GitLab | `OpenGitLabRepo[!]`, `OpenGitLabBranch[!]`, `OpenGitLabFile[!]`, `OpenGitLabCommit[!]`, `OpenGitLabMR[!]`, `OpenGitLabMRs[!]`, `OpenGitLabMyMRs[!]` |
+| Codeberg | `OpenCodebergRepo[!]`, `OpenCodebergBranch[!]`, `OpenCodebergFile[!]`, `OpenCodebergCommit[!]`, `OpenCodebergPR[!]`, `OpenCodebergPRs[!]`, `OpenCodebergMyPRs[!]` |
+
+If two non-origin remotes share the same provider, the last one wins and a `WarningMsg` is shown.
+
 ### Configuration Variables
 ```vim
 let g:vim_git_open_domains = {}              " Custom domain → base URL mappings
@@ -75,10 +90,10 @@ let g:vim_git_open_remote = ''              " Global default remote name prefere
 
 ### Feature Parity is Non-Negotiable
 When making any change, update **all three implementations** in this order:
-1. `autoload/git_open.vim` (Vim9script)
-2. `autoload/git_open/legacy.vim` (Legacy Vimscript)
+1. `vim9/autoload/git_open.vim` (Vim9script)
+2. `autoload/git_open.vim` (Legacy Vimscript)
 3. `lua/git_open.lua` (Lua)
-4. Entry points if commands change: `plugin/git_open.vim`, `plugin/git_open_legacy.vim`, `plugin/git_open.lua`
+4. Entry points if commands change: `plugin/git_open.vim`, `vim9/plugin/git_open.vim`, `plugin/git_open.lua`
 
 ### After Every Change
 1. Copy all modified files to both installed locations
@@ -101,7 +116,22 @@ echohl None
 vim.api.nvim_echo({{'git-open: <message>', 'ErrorMsg'}}, true, {})
 ```
 
-### Browser Opening
+### Git Command Execution
+```vim
+" Vim9script — silent suppresses escape sequences
+silent var output = system(cmd)
+```
+```lua
+-- Lua — use vim.system (not vim.fn.system) for proper subprocess handling
+local function system(cmd, opts)
+  local result = vim.system(cmd, vim.list_extend(opts or {}, { text = true })):wait()
+  return result.code == 0 and vim.trim(result.stdout) or ""
+end
+
+-- Pass args as a list, not a shell string:
+local output = system({ "git", "-C", git_root, "log", "--oneline" })
+```
+
 Always append `> /dev/null 2>&1` to suppress terminal output, then call `redraw!` (not `redraw`) before any `echo`:
 ```vim
 call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
@@ -150,16 +180,21 @@ redraw!
 38. **`gg=G` (Vim's built-in Vimscript indenter) is destructive on files with `\` line continuations** — it re-indents continuation lines relative to the `execute` body depth rather than preserving manual alignment. Do not run `gg=G` on these files.
 39. **`stylua.toml`** added to project root: `column_width = 120`, `indent_type = "Spaces"`, `indent_width = 2`, `quote_style = "AutoPreferDouble"`, `line_endings = "Unix"`. `column_width = 120` matches the longest existing line and avoids wrapping long Neovim API calls.
 40. **`.git/hooks/pre-commit`** (not committed — git hooks are local): runs `stylua` on any staged `.lua` file, re-stages after formatting, skips silently if `stylua` not installed.
+41. **Plugin restructure (2cdd899)**: `autoload/git_open/legacy.vim` → `autoload/git_open.vim` (legacy core); `plugin/git_open_legacy.vim` → removed; Vim9script moved to `vim9/autoload/git_open.vim` and `vim9/plugin/git_open.vim`; `plugin/git_open.vim` is now the unified dispatcher that adds `vim9/` to runtimepath and sources the Vim9 entry point.
+42. **`import autoload '../autoload/git_open.vim' as GitOpen`** — Vim9script uses a relative path import so the `vim9/` subdirectory does not need to be on runtimepath for the autoload lookup to work. Relative imports resolve from the importing file's directory.
+43. **`silent var output = system(cmd)` (Vim9script/legacy)** — adding `silent` before `system()` suppresses any incidental terminal output (e.g. escape sequences from stderr) in the Vim command-line area.
+44. **`vim.system` (Neovim Lua)** — use `vim.system(cmd_list, {text=true}):wait()` instead of `vim.fn.system(shell_string)`. Benefits: no shell quoting, proper exit-code checking (`result.code`), stdout/stderr separation, no escape-sequence leakage. Pass args as a Lua list: `{ "git", "-C", root, "log" }`.
+45. **Multi-remote provider-named commands** — at `VimEnter` (deferred via `timer_start(0,...)` / `UIEnter`) the plugin iterates all remotes, skips any that share origin's domain, and registers provider-named commands (e.g. `OpenGitHubRepo`, `OpenGitLabMR`) bound to that remote. If two remotes share the same provider, the last one wins with a `WarningMsg`.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `autoload/git_open.vim` | Vim9script core logic |
-| `autoload/git_open/legacy.vim` | Legacy Vimscript core logic |
+| `vim9/autoload/git_open.vim` | Vim9script core logic |
+| `vim9/plugin/git_open.vim` | Vim9script entry point (commands) |
+| `autoload/git_open.vim` | Legacy Vimscript core logic |
+| `plugin/git_open.vim` | Unified dispatcher: routes to Vim9 or legacy |
 | `lua/git_open.lua` | Lua/Neovim core logic |
-| `plugin/git_open.vim` | Vim9script/legacy dispatcher entry point |
-| `plugin/git_open_legacy.vim` | Legacy Vimscript entry point |
 | `plugin/git_open.lua` | Lua entry point (Neovim) |
 | `README.md` | User documentation |
 | `doc/git_open.txt` | Vim help file |
@@ -173,7 +208,7 @@ redraw!
 ## Quality Checklist
 
 Before completing any task:
-- [ ] All three implementations updated (Vim9script, legacy, Lua)
+- [ ] All three implementations updated (Vim9script in `vim9/`, legacy in `autoload/`, Lua)
 - [ ] Entry points updated if commands changed
 - [ ] Code style consistent (4-space Vim, 2-space Lua)
 - [ ] Run `stylua` on any modified Lua files before committing

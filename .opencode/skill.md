@@ -15,15 +15,17 @@ Expert skill for developing and maintaining the vim-git-open plugin — a Vim/Ne
 ```
 vim-git-open/
 ├── plugin/
-│   ├── git_open.vim          # Dispatcher: Vim9script or legacy (guards has('nvim'))
-│   ├── git_open_legacy.vim   # Legacy Vimscript entry point
+│   ├── git_open.vim          # Unified dispatcher: adds vim9/ to rtp, sources vim9/plugin; falls through to legacy
 │   └── git_open.lua          # Lua entry point (Neovim autoloads this)
+├── vim9/
+│   ├── autoload/
+│   │   └── git_open.vim      # Vim9script core (~1088 lines)
+│   └── plugin/
+│       └── git_open.vim      # Vim9script commands/autocmds
 ├── autoload/
-│   ├── git_open.vim          # Vim9script core (~500 lines)
-│   └── git_open/
-│       └── legacy.vim        # Legacy Vimscript core (~600 lines)
+│   └── git_open.vim          # Legacy Vimscript core (~1093 lines)
 ├── lua/
-│   └── git_open.lua          # Lua core (~580 lines)
+│   └── git_open.lua          # Lua core (~900+ lines)
 ├── doc/
 │   └── git_open.txt          # Vim help documentation
 ├── .opencode/
@@ -35,6 +37,7 @@ vim-git-open/
 ├── CONTRIBUTING.md
 ├── CHANGELOG.md
 ├── example_config.vim
+├── stylua.toml
 └── LICENSE
 ```
 
@@ -56,6 +59,11 @@ vim-git-open/
 | `GitkFile[!]` | Alias for `OpenGitkFile` |
 | `OpenGitRemote[!] [remote]` | Print/set/reset per-buffer remote. No args: print. With remote: validate+set. With `!`: reset |
 
+**Provider-named commands** (registered dynamically at startup for non-origin remotes):
+- GitHub: `OpenGitHubRepo/Branch/File/Commit/PR/PRs/MyPRs[!]`
+- GitLab: `OpenGitLabRepo/Branch/File/Commit/MR/MRs/MyMRs[!]`
+- Codeberg: `OpenCodebergRepo/Branch/File/Commit/PR/PRs/MyPRs[!]`
+
 **State flags for `OpenGitMyRequests`:** `-open`, `-closed`, `-merged`, `-all`, `-search`, `-search=open`, `-search=closed`, `-search=merged`, `-search=all`
 **State flags for `OpenGitRequests`:** `-open`, `-closed`, `-merged`, `-all`
 
@@ -71,9 +79,9 @@ Always use substring matching, never exact matching.
 
 ## Code Style
 
-### Vim9script (`autoload/git_open.vim`)
+### Vim9script (`vim9/autoload/git_open.vim`)
 ```vim
-vim9script  " after the legacy guard
+vim9script  " first line (no legacy guard needed — vim9/plugin/git_open.vim guards before sourcing)
 
 export def FunctionName(arg: string, flag: bool = false): string
     var result = ''
@@ -82,9 +90,9 @@ export def FunctionName(arg: string, flag: bool = false): string
 enddef
 ```
 
-### Legacy Vimscript (`autoload/git_open/legacy.vim`)
+### Legacy Vimscript (`autoload/git_open.vim`)
 ```vim
-function! git_open#legacy#function_name(arg, ...) abort
+function! git_open#function_name(arg, ...) abort
     let l:result = ''
     " 4-space indentation
     " Explicit scoping: s: l: g: a:
@@ -114,12 +122,12 @@ return M
 
 When adding any feature or fixing any bug:
 
-1. **Vim9script** (`autoload/git_open.vim`)
-2. **Legacy Vimscript** (`autoload/git_open/legacy.vim`)
+1. **Vim9script** (`vim9/autoload/git_open.vim`)
+2. **Legacy Vimscript** (`autoload/git_open.vim`)
 3. **Lua** (`lua/git_open.lua`)
 4. **Entry points** (only if commands change):
+   - `vim9/plugin/git_open.vim`
    - `plugin/git_open.vim`
-   - `plugin/git_open_legacy.vim`
    - `plugin/git_open.lua`
 5. **Copy to installed locations:**
    ```bash
@@ -132,12 +140,20 @@ When adding any feature or fixing any bug:
 
 ### Git Command Execution
 ```vim
-" Vim9script
-var output = trim(system('git -C ' .. shellescape(git_root) .. ' ' .. args))
+" Vim9script — silent suppresses escape sequences from stderr
+silent var output = system('git -C ' .. shellescape(git_root) .. ' ' .. args)
 ```
 ```lua
--- Lua
-local output = vim.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(git_root) .. ' ' .. args))
+-- Lua — use vim.system (not vim.fn.system); pass args as list, not shell string
+local unpack = table.unpack or unpack
+
+local function system(cmd, opts)
+  local result = vim.system(cmd, vim.list_extend(opts or {}, { text = true })):wait()
+  return result.code == 0 and vim.trim(result.stdout) or ""
+end
+
+-- Usage (no shellescape needed):
+local output = system({ "git", "-C", git_root, "log", "--oneline" })
 ```
 
 ### Error Messages (no stack trace)
@@ -291,7 +307,39 @@ stylua plugin/git_open.lua lua/git_open.lua
 
 A local `.git/hooks/pre-commit` hook (not committed) does this automatically for staged `.lua`
 files. `column_width = 120` avoids wrapping long Neovim API calls.
-Resolution order (first match wins):
+### Multi-Remote Provider Commands
+
+At startup (deferred past TUI handshake), the plugin registers provider-named commands for each
+non-origin remote whose domain differs from origin's domain:
+
+```vim
+" Vim9script (vim9/plugin/git_open.vim)
+def RegisterMultiRemoteCommands()
+    var remotes = GitOpen.GetAllRemotes()
+    var origin_info = GitOpen.GetRepoInfo()
+    var origin_domain = empty(origin_info) ? '' : origin_info.domain
+    for r in remotes
+        var info = GitOpen.GetRepoInfoForRemote(r)
+        if empty(info) || (!empty(origin_domain) && info.domain ==# origin_domain)
+            continue
+        endif
+        var rs = string(r)   # e.g. "'upstream'"
+        if info.provider ==# 'GitHub'
+            execute 'command! -bang -nargs=0 OpenGitHubRepo'
+                        \ 'call git_open#OpenRepoForRemote(' .. rs .. ', <bang>0)'
+            # ... etc for Branch, File, Commit, PR, PRs, MyPRs
+        endif
+    endfor
+enddef
+
+autocmd VimEnter * ++once call timer_start(0, (_) => RegisterMultiRemoteCommands())
+```
+
+Key points:
+- Remote name is embedded as a **quoted literal** in each `execute`d command string
+- `<bang>0`, `<q-args>`, `<line1>`, `<line2>`, `<count>` expand at **invocation time**
+- `GetRepoInfo()` and `GetRepoInfoForRemote(remote)` must be exported from the autoload module
+- Skip remotes sharing origin's domain to avoid duplicate provider commands
 1. `b:vim_git_open_remote` — already cached for this buffer
 2. `g:vim_git_open_remote` — global preference (validated against actual remotes)
 3. `origin` — if present in `git remote` output
@@ -339,7 +387,7 @@ When making changes, update:
 1. **Feature parity is non-negotiable** — all three must behave identically
 2. **Substring matching** for provider detection — not exact match
 3. **`redraw!`** (not `redraw`) after `system()` calls
-4. **`vim9script` guard order**: legacy guard first, then `vim9script` keyword
+4. **`vim9script` is the first line** in `vim9/autoload/git_open.vim` — no legacy guard needed there
 5. **`export type`** not supported in Vim 9.2.250 — use concrete types directly
 6. **GitLab uses `opened`** (not `open`) in state params
 7. **GitHub PRs use `?q=is%3Apr+...`** — not `?state=` (that hits the issues endpoint)
@@ -354,3 +402,7 @@ When making changes, update:
 16. **Defer `system()` calls at startup** — use `timer_start(0, ...)` (Vim) or `UIEnter` autocmd (Neovim) to avoid TUI escape sequence leakage. See "Startup Deferral" pattern above.
 17. **`UIEnter` does not fire in `--headless` mode** — only fires when a UI is attached.
 18. **Run `stylua` on all modified Lua files before committing** — see `stylua.toml` and the "stylua Formatting" pattern above.
+19. **`vim.system` not `vim.fn.system` in Lua** — use `vim.system({...}, {text=true}):wait()` with args as a list for proper subprocess handling and exit-code checking.
+20. **Vim9script uses relative import** — `import autoload '../autoload/git_open.vim' as GitOpen` resolves from `vim9/plugin/` to `vim9/autoload/`; no extra runtimepath manipulation needed inside the Vim9 files themselves.
+21. **`silent` before `system()` in Vim9script/legacy** — suppresses stderr escape sequences from appearing in the command-line area.
+22. **Multi-remote commands embed remote name as string literal** — use `string(r)` to produce `'remote_name'` and interpolate into `execute`d command strings; `<bang>0` etc. expand at invocation.

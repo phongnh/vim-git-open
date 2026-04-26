@@ -50,9 +50,9 @@ When suggesting features, please:
 ### Code Guidelines
 
 - **Vimscript (Legacy)**: Follow standard Vimscript conventions
-  - Use lowercase with underscores for function names
+  - Use CamelCase for public autoload functions (e.g. `git_open#github#BuildRepoUrl`)
   - Prefix script-local functions with `s:`
-  - Use `abort` on functions
+  - Use `abort` on all functions
   - Add comments for complex logic
 
 - **Vim9script**: Follow Vim9script conventions
@@ -112,26 +112,47 @@ Closes #123
 
 ## Adding New Git Providers
 
-To add a new Git provider:
+Provider modules live in `autoload/git_open/{provider}.vim` (lowercase filename,
+e.g. `autoload/git_open/bitbucket.vim`). Each module must implement the
+following interface. `repo_info` is the dict returned by `s:GetRepoInfo()` /
+`s:GetRepoInfoForRemote()` and has the keys `domain`, `path`, `provider`,
+`base_url`.
 
-1. **Implement URL builder function**:
-   - Legacy Vimscript: `s:build_PROVIDER_url()` in `autoload/git_open.vim`
-   - Vim9script: `BuildPROVIDERUrl()` in `vim9/autoload/git_open.vim`
-   - Lua: `build_PROVIDER_url()` in `lua/git_open.lua`
+```vim
+" Required — called by s:CallProvider()
+function! git_open#bitbucket#ParseRequestNumber(message)   abort | ... | endfunction
+function! git_open#bitbucket#BuildRepoUrl(repo_info)                          abort | ... | endfunction
+function! git_open#bitbucket#BuildBranchUrl(repo_info, branch)                abort | ... | endfunction
+function! git_open#bitbucket#BuildFileUrl(repo_info, file, line_info, ref)    abort | ... | endfunction
+function! git_open#bitbucket#BuildCommitUrl(repo_info, commit)                abort | ... | endfunction
+function! git_open#bitbucket#BuildRequestUrl(repo_info, number)               abort | ... | endfunction
+function! git_open#bitbucket#BuildRequestsUrl(repo_info, state_arg)           abort | ... | endfunction
+function! git_open#bitbucket#BuildMyRequestsUrl(repo_info, state_arg)         abort | ... | endfunction
+```
 
-2. **Add provider detection**:
-   - Update the `detect_provider()` / `DetectProvider()` function
+`line_info` is a string: a single line number (`'10'`) or a range (`'10-20'`),
+or empty. `ref` is a branch name or a 40-character commit SHA. `state_arg` is
+one of `''`, `'-open'`, `'-closed'`, `'-merged'`, `'-all'` (handling is
+provider-specific).
 
-3. **Update URL builder dispatcher**:
-   - Update the `build_url()` / `BuildUrl()` function
+To wire up the new provider:
+
+1. **Create** `autoload/git_open/bitbucket.vim` implementing the interface above.
+
+2. **Add provider detection** in `autoload/git_open.vim`:
+   - Add a branch to `s:DetectProvider()` for the new domain.
+
+3. **Register the provider name** in `s:ProviderFunction()` so `s:CallProvider()`
+   can dispatch to it.
 
 4. **Update documentation**:
-   - README.md
-   - doc/git_open.txt
+   - `README.md` — mention the new provider in the features list.
+   - `doc/git_open.txt` — add the provider to the `g:vim_git_open_providers`
+     supported values list.
 
 5. **Test thoroughly**:
-   - Test all commands with the new provider
-   - Test with both SSH and HTTPS URLs
+   - Test all commands with the new provider.
+   - Test with both SSH and HTTPS remote URLs.
 
 ## Version Parity
 

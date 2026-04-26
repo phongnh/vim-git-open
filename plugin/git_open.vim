@@ -54,32 +54,32 @@ if !exists('g:vim_git_open_browser_command')
 endif
 
 " Commands
-command! -bang -nargs=0 OpenGitRepo call git_open#open_repo(<bang>0)
-command! -bang -nargs=? -range=0 -complete=customlist,git_open#complete_branch OpenGitBranch call git_open#open_branch(<q-args>, <bang>0, <count> > 0)
-command! -bang -nargs=? -range -complete=customlist,git_open#complete_branch OpenGitFile call git_open#open_file(<line1>, <line2>, <q-args>, <bang>0)
-command! -bang -nargs=? -range=0 OpenGitCommit call git_open#open_commit(<q-args>, <bang>0, <count> > 0)
-command! -bang -nargs=? OpenGitRequest call git_open#open_request(<q-args>, <bang>0)
-command! -bang -nargs=0 OpenGitFileLastChange call git_open#open_file_last_change(<bang>0)
-command! -bang -nargs=? -complete=customlist,git_open#complete_my_request_state OpenGitMyRequests call git_open#open_my_requests(<q-args>, <bang>0)
-command! -bang -nargs=? -complete=customlist,git_open#complete_request_state OpenGitRequests call git_open#open_requests(<q-args>, <bang>0)
-command! -nargs=* -complete=customlist,git_open#complete_gitk_args OpenGitk call git_open#open_gitk(<q-args>)
-command! -bang -nargs=* -complete=customlist,git_open#complete_gitk_branch OpenGitkFile call git_open#open_gitk_file(<q-args>, <bang>0)
-command! -nargs=* -complete=customlist,git_open#complete_gitk_args Gitk call git_open#open_gitk(<q-args>)
-command! -bang -nargs=* -complete=customlist,git_open#complete_gitk_branch GitkFile call git_open#open_gitk_file(<q-args>, <bang>0)
-command! -bang -nargs=? -complete=customlist,git_open#complete_git_remote OpenGitRemote call git_open#open_git_remote(<q-args>, <bang>0)
+command! -bang -nargs=0 OpenGitRepo call git_open#OpenRepo(<bang>0)
+command! -bang -nargs=? -range=0 -complete=customlist,git_open#CompleteBranch OpenGitBranch call git_open#OpenBranch(<q-args>, <bang>0, <count> > 0)
+command! -bang -nargs=? -range -complete=customlist,git_open#CompleteBranch OpenGitFile call git_open#OpenFile(<line1>, <line2>, <q-args>, <bang>0)
+command! -bang -nargs=? -range=0 OpenGitCommit call git_open#OpenCommit(<q-args>, <bang>0, <count> > 0)
+command! -bang -nargs=? OpenGitRequest call git_open#OpenRequest(<q-args>, <bang>0)
+command! -bang -nargs=0 OpenGitFileLastChange call git_open#OpenFileLastChange(<bang>0)
+command! -bang -nargs=? -complete=customlist,git_open#CompleteMyRequestState OpenGitMyRequests call git_open#OpenMyRequests(<q-args>, <bang>0)
+command! -bang -nargs=? -complete=customlist,git_open#CompleteRequestState OpenGitRequests call git_open#OpenRequests(<q-args>, <bang>0)
+command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs OpenGitk call git_open#OpenGitk(<q-args>)
+command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch OpenGitkFile call git_open#OpenGitkFile(<q-args>, <bang>0)
+command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs Gitk call git_open#OpenGitk(<q-args>)
+command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch GitkFile call git_open#OpenGitkFile(<q-args>, <bang>0)
+command! -bang -nargs=? -complete=customlist,git_open#CompleteGitRemote OpenGitRemote call git_open#OpenGitRemote(<q-args>, <bang>0)
 
 " Register provider-named commands for each non-origin remote.
 " The remote name is embedded as a literal quoted string in each command body
 " so that <bang>0, <q-args> etc. expand correctly at invocation time.
 function! s:register_multi_remote_commands() abort
-    let l:remotes = git_open#get_all_remotes()
+    let l:remotes = git_open#GetAllRemotes()
     if empty(l:remotes)
         return
     endif
 
     " Skip remotes that share the same domain as origin — they would produce
     " identical provider-named commands for an already-covered hosting service.
-    let l:origin_info = git_open#get_repo_info()
+    let l:origin_info = git_open#GetRepoInfo()
     let l:origin_domain = empty(l:origin_info) ? '' : l:origin_info.domain
 
     let l:provider_remote = {}
@@ -87,7 +87,7 @@ function! s:register_multi_remote_commands() abort
     let l:overwritten = []
 
     for l:r in l:remotes
-        let l:info = git_open#get_repo_info_for_remote(l:r)
+        let l:info = git_open#GetRepoInfoForRemote(l:r)
         if empty(l:info)
             continue
         endif
@@ -109,76 +109,76 @@ function! s:register_multi_remote_commands() abort
         let l:rs = string(l:r)
         if l:p ==# 'GitHub'
             execute 'command! -bang -nargs=0 OpenGitHubRepo'
-                        \ 'call git_open#open_repo_for_remote(' . l:rs . ', <bang>0)'
+                        \ 'call git_open#OpenRepoForRemote(' . l:rs . ', <bang>0)'
             execute 'command! -bang -nargs=? -range=0'
-                        \ '-complete=customlist,git_open#complete_branch'
+                        \ '-complete=customlist,git_open#CompleteBranch'
                         \ 'OpenGitHubBranch'
-                        \ 'call git_open#open_branch_for_remote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
+                        \ 'call git_open#OpenBranchForRemote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
             execute 'command! -bang -nargs=? -range'
-                        \ '-complete=customlist,git_open#complete_branch'
+                        \ '-complete=customlist,git_open#CompleteBranch'
                         \ 'OpenGitHubFile'
-                        \ 'call git_open#open_file_for_remote(' . l:rs . ', <line1>, <line2>, <q-args>, <bang>0)'
+                        \ 'call git_open#OpenFileForRemote(' . l:rs . ', <line1>, <line2>, <q-args>, <bang>0)'
             execute 'command! -bang -nargs=? -range=0'
                         \ 'OpenGitHubCommit'
-                        \ 'call git_open#open_commit_for_remote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
+                        \ 'call git_open#OpenCommitForRemote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
             execute 'command! -bang -nargs=? OpenGitHubPR'
-                        \ 'call git_open#open_request_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenRequestForRemote(' . l:rs . ', <q-args>, <bang>0)'
             execute 'command! -bang -nargs=?'
-                        \ '-complete=customlist,git_open#complete_request_state'
+                        \ '-complete=customlist,git_open#CompleteRequestState'
                         \ 'OpenGitHubPRs'
-                        \ 'call git_open#open_requests_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenRequestsForRemote(' . l:rs . ', <q-args>, <bang>0)'
             execute 'command! -bang -nargs=?'
-                        \ '-complete=customlist,git_open#complete_my_request_state'
+                        \ '-complete=customlist,git_open#CompleteMyRequestState'
                         \ 'OpenGitHubMyPRs'
-                        \ 'call git_open#open_my_requests_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenMyRequestsForRemote(' . l:rs . ', <q-args>, <bang>0)'
         elseif l:p ==# 'GitLab'
             execute 'command! -bang -nargs=0 OpenGitLabRepo'
-                        \ 'call git_open#open_repo_for_remote(' . l:rs . ', <bang>0)'
+                        \ 'call git_open#OpenRepoForRemote(' . l:rs . ', <bang>0)'
             execute 'command! -bang -nargs=? -range=0'
-                        \ '-complete=customlist,git_open#complete_branch'
+                        \ '-complete=customlist,git_open#CompleteBranch'
                         \ 'OpenGitLabBranch'
-                        \ 'call git_open#open_branch_for_remote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
+                        \ 'call git_open#OpenBranchForRemote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
             execute 'command! -bang -nargs=? -range'
-                        \ '-complete=customlist,git_open#complete_branch'
+                        \ '-complete=customlist,git_open#CompleteBranch'
                         \ 'OpenGitLabFile'
-                        \ 'call git_open#open_file_for_remote(' . l:rs . ', <line1>, <line2>, <q-args>, <bang>0)'
+                        \ 'call git_open#OpenFileForRemote(' . l:rs . ', <line1>, <line2>, <q-args>, <bang>0)'
             execute 'command! -bang -nargs=? -range=0'
                         \ 'OpenGitLabCommit'
-                        \ 'call git_open#open_commit_for_remote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
+                        \ 'call git_open#OpenCommitForRemote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
             execute 'command! -bang -nargs=? OpenGitLabMR'
-                        \ 'call git_open#open_request_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenRequestForRemote(' . l:rs . ', <q-args>, <bang>0)'
             execute 'command! -bang -nargs=?'
-                        \ '-complete=customlist,git_open#complete_request_state'
+                        \ '-complete=customlist,git_open#CompleteRequestState'
                         \ 'OpenGitLabMRs'
-                        \ 'call git_open#open_requests_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenRequestsForRemote(' . l:rs . ', <q-args>, <bang>0)'
             execute 'command! -bang -nargs=?'
-                        \ '-complete=customlist,git_open#complete_my_request_state'
+                        \ '-complete=customlist,git_open#CompleteMyRequestState'
                         \ 'OpenGitLabMyMRs'
-                        \ 'call git_open#open_my_requests_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenMyRequestsForRemote(' . l:rs . ', <q-args>, <bang>0)'
         elseif l:p ==# 'Codeberg'
             execute 'command! -bang -nargs=0 OpenCodebergRepo'
-                        \ 'call git_open#open_repo_for_remote(' . l:rs . ', <bang>0)'
+                        \ 'call git_open#OpenRepoForRemote(' . l:rs . ', <bang>0)'
             execute 'command! -bang -nargs=? -range=0'
-                        \ '-complete=customlist,git_open#complete_branch'
+                        \ '-complete=customlist,git_open#CompleteBranch'
                         \ 'OpenCodebergBranch'
-                        \ 'call git_open#open_branch_for_remote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
+                        \ 'call git_open#OpenBranchForRemote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
             execute 'command! -bang -nargs=? -range'
-                        \ '-complete=customlist,git_open#complete_branch'
+                        \ '-complete=customlist,git_open#CompleteBranch'
                         \ 'OpenCodebergFile'
-                        \ 'call git_open#open_file_for_remote(' . l:rs . ', <line1>, <line2>, <q-args>, <bang>0)'
+                        \ 'call git_open#OpenFileForRemote(' . l:rs . ', <line1>, <line2>, <q-args>, <bang>0)'
             execute 'command! -bang -nargs=? -range=0'
                         \ 'OpenCodebergCommit'
-                        \ 'call git_open#open_commit_for_remote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
+                        \ 'call git_open#OpenCommitForRemote(' . l:rs . ', <q-args>, <bang>0, <count> > 0)'
             execute 'command! -bang -nargs=? OpenCodebergPR'
-                        \ 'call git_open#open_request_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenRequestForRemote(' . l:rs . ', <q-args>, <bang>0)'
             execute 'command! -bang -nargs=?'
-                        \ '-complete=customlist,git_open#complete_request_state'
+                        \ '-complete=customlist,git_open#CompleteRequestState'
                         \ 'OpenCodebergPRs'
-                        \ 'call git_open#open_requests_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenRequestsForRemote(' . l:rs . ', <q-args>, <bang>0)'
             execute 'command! -bang -nargs=?'
-                        \ '-complete=customlist,git_open#complete_my_request_state'
+                        \ '-complete=customlist,git_open#CompleteMyRequestState'
                         \ 'OpenCodebergMyPRs'
-                        \ 'call git_open#open_my_requests_for_remote(' . l:rs . ', <q-args>, <bang>0)'
+                        \ 'call git_open#OpenMyRequestsForRemote(' . l:rs . ', <q-args>, <bang>0)'
         endif
     endfor
 

@@ -678,7 +678,46 @@ Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/sk
 
 ---
 
-## Session 11: Vim9script Provider Modules
+## Session 12: Lua Provider Modules
+**Date:** 2026-04-27
+
+### Refactor: Extract Lua provider modules
+
+Applied the same provider-dispatch architecture to the Lua (Neovim) implementation.
+
+**New files created:**
+- `lua/git_open/github.lua` — GitHub provider (Lua)
+- `lua/git_open/gitlab.lua` — GitLab provider (Lua)
+- `lua/git_open/codeberg.lua` — Codeberg provider (Lua)
+
+Each provider module returns a table `M` with the full provider interface:
+`parse_request_number`, `build_repo_url`, `build_branch_url`, `build_file_url`,
+`build_commit_url`, `build_request_url`, `build_requests_url`, `build_my_requests_url`.
+
+Private URL helpers (module-local): `repo_base`, `branch_path`, `file_path`,
+`commit_path`, `request_path`, `requests_path`, `my_requests_path`, `requests_query`,
+`my_requests_query`, `format_line_anchor`. GitLab also has `get_gitlab_username`.
+
+**`lua/git_open.lua` rewritten:**
+- Removed: `build_github_url`, `build_codeberg_url`, `build_gitlab_url`, `build_url`,
+  `parse_request_state`, `format_line_anchor`, `parse_pr_mr_number`, `get_gitlab_username`
+- Added: `get_provider(provider)` (lazy `require`) + `call_provider(provider, func, ...)` dispatch
+- Renamed: `parse_pr_mr_from_commit` → `parse_request_number_from_commit`
+- Simplified: `parse_remote_url` extracted `parse_remote_url_string` helper (shared with `parse_remote_url_for_name`)
+- Simplified: `get_relative_path` — removed dead `gsub` fallback (pure `sub`)
+- Simplified: `get_gitk_old_paths` — uses `unique` helper instead of manual seen table
+- Fixed: `open_browser` uses `system({"sh", "-c", cmd})` (not `vim.fn.system`) + `redraw!`
+- Fixed: `copy_to_clipboard` adds `redraw!`
+- All `build_url(...)` call sites replaced with `call_provider(...)`
+- `info` → `repo_info` throughout public functions
+- `get_repo_info_from_remote` helper extracted (shared by `get_repo_info` and `get_repo_info_for_remote`)
+
+All four Lua files formatted with `stylua`.
+
+### Docs: Update `.opencode/` files
+- `agent.md`: added Lua provider files to implementation list and Key Files table; updated discoveries #46, #48, #53
+- `skill.md`: updated project structure; feature parity step 3; added Lua `call_provider` snippet to Provider Dispatch pattern
+- `conversation-log.md`: added this session entry
 **Date:** 2026-04-27
 
 ### Refactor: Extract Vim9script provider modules

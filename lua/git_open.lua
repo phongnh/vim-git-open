@@ -45,7 +45,6 @@ local function git_command(args)
   if not git_root then
     return nil
   end
-
   return system({ "git", "-C", git_root, unpack(args or {}) })
 end
 
@@ -89,7 +88,7 @@ local function get_current_remote(git_root)
     end
   end
 
-  -- Step 3: prefer 'origin'
+  -- Step 3: prefer "origin"
   for _, r in ipairs(remotes) do
     if r == "origin" then
       vim.b.vim_git_open_remote = "origin"
@@ -102,47 +101,8 @@ local function get_current_remote(git_root)
   return remotes[1]
 end
 
--- parse_remote_url: uses per-buffer remote resolution (get_current_remote)
-local function parse_remote_url()
-  local git_root = get_git_root()
-  local remote_name = git_root and get_current_remote(git_root) or nil
-  if not remote_name or remote_name == "" then
-    return nil
-  end
-  local remote = git_command({ "config", "--get", "remote." .. remote_name .. ".url" })
-  if not remote or remote == "" then
-    return nil
-  end
-
-  -- Handle SSH URLs: git@github.com:user/repo.git
-  local domain, path = remote:match("^git@([^:]+):(.*)%.git$")
-  if domain and path then
-    return { domain = domain, path = path }
-  end
-
-  -- Handle SSH URLs: ssh://git@github.com/user/repo.git
-  domain, path = remote:match("^ssh://git@([^/]+)/(.*)%.git$")
-  if domain and path then
-    return { domain = domain, path = path }
-  end
-
-  -- Handle HTTPS URLs: https://github.com/user/repo.git
-  domain, path = remote:match("^https?://([^/]+)/(.*)$")
-  if domain and path then
-    path = path:gsub("%.git$", "")
-    return { domain = domain, path = path }
-  end
-
-  return nil
-end
-
--- parse_remote_url_for_name: fetches remote URL for a specific named remote (bypasses per-buffer resolution)
-local function parse_remote_url_for_name(remote_name)
-  local remote = git_command({ "config", "--get", "remote." .. remote_name .. ".url" })
-  if not remote or remote == "" then
-    return nil
-  end
-
+-- Parse a raw remote URL string into { domain, path }
+local function parse_remote_url_string(remote)
   -- Handle SSH URLs: git@github.com:user/repo.git
   local domain, path = remote:match("^git@([^:]+):(.*)%.git$")
   if domain and path then
@@ -163,6 +123,29 @@ local function parse_remote_url_for_name(remote_name)
   end
 
   return nil
+end
+
+-- parse_remote_url: uses per-buffer remote resolution (get_current_remote)
+local function parse_remote_url()
+  local git_root = get_git_root()
+  local remote_name = git_root and get_current_remote(git_root) or nil
+  if not remote_name or remote_name == "" then
+    return nil
+  end
+  local remote = git_command({ "config", "--get", "remote." .. remote_name .. ".url" })
+  if not remote or remote == "" then
+    return nil
+  end
+  return parse_remote_url_string(remote)
+end
+
+-- parse_remote_url_for_name: bypasses per-buffer resolution
+local function parse_remote_url_for_name(remote_name)
+  local remote = git_command({ "config", "--get", "remote." .. remote_name .. ".url" })
+  if not remote or remote == "" then
+    return nil
+  end
+  return parse_remote_url_string(remote)
 end
 
 local function detect_provider(domain)
@@ -222,14 +205,7 @@ local function get_relative_path()
     git_root = git_root .. "/"
   end
 
-  -- Check if abs_path starts with git_root
-  if abs_path:sub(1, #git_root) == git_root then
-    return abs_path:sub(#git_root + 1)
-  end
-
-  -- Fallback: try original method
-  local rel_path = abs_path:gsub("^" .. vim.pesc(git_root), "")
-  return rel_path
+  return abs_path:sub(#git_root + 1)
 end
 
 local function get_line_range(line1, line2)
@@ -240,222 +216,95 @@ local function get_line_range(line1, line2)
   end
 end
 
-local function format_line_anchor(provider, line_info)
-  if not line_info or line_info == "" then
-    return ""
-  end
-
-  if provider == "GitLab" then
-    -- GitLab uses #L10 or #L10-20
-    if line_info:match("-") then
-      return "#L" .. line_info
-    else
-      return "#L" .. line_info
-    end
-  else
-    -- GitHub/Codeberg use #L10 or #L10-L20
-    if line_info:match("-") then
-      local parts = vim.split(line_info, "-")
-      return "#L" .. parts[1] .. "-L" .. parts[2]
-    else
-      return "#L" .. line_info
-    end
-  end
+local function get_repo_info_from_remote(remote)
+  local provider = detect_provider(remote.domain)
+  local base_url = get_base_url(remote.domain)
+  return {
+    domain = remote.domain,
+    path = remote.path,
+    provider = provider,
+    base_url = base_url,
+  }
 end
 
--- Parse PR/MR number from a given message
-local function parse_pr_mr_number(message, provider)
-  if not message then
+local function get_repo_info()
+  local remote = parse_remote_url()
+  if not remote then
+    warn("Not a git repository or no remote configured")
     return nil
   end
-
-  local pattern
-  if provider == "GitLab" then
-    -- GitLab uses !1234
-    pattern = "!(%d+)"
-  else
-    -- GitHub/Codeberg use #1234
-    pattern = "#(%d+)"
-  end
-
-  local number = message:match(pattern)
-  return number
+  return get_repo_info_from_remote(remote)
 end
 
-local function parse_pr_mr_from_commit(provider)
-  local commit_msg = git_command({ "log", "-1", "--pretty=%B" })
-  return parse_pr_mr_number(commit_msg, provider)
+local function get_all_remotes()
+  local output = git_command({ "remote" })
+  if not output or output == "" then
+    return {}
+  end
+  local result = {}
+  for _, name in ipairs(vim.split(output, "\n", { plain = true, trimempty = true })) do
+    if name ~= "origin" then
+      table.insert(result, name)
+    end
+  end
+  return result
 end
 
-local function get_gitlab_username()
-  local cfg = vim.g.vim_git_open_gitlab_username
-  if cfg and cfg ~= "" then
-    return cfg
+local function get_repo_info_for_remote(remote_name)
+  local remote = parse_remote_url_for_name(remote_name)
+  if not remote then
+    return nil
   end
-  local gitlab_user = vim.fn.getenv("GITLAB_USER")
-  if gitlab_user ~= vim.NIL and gitlab_user ~= "" then
-    return gitlab_user
-  end
-  local glab_user = vim.fn.getenv("GLAB_USER")
-  if glab_user ~= vim.NIL and glab_user ~= "" then
-    return glab_user
-  end
-  return vim.fn.expand("$USER")
+  return get_repo_info_from_remote(remote)
 end
 
--- Parse state flag from command args: -open, -closed, -merged, -all
--- Returns the query string suffix to append to the pulls/MRs URL.
--- GitHub:   uses ?q=is%3Apr+is%3A<state> search query
--- Codeberg: uses ?state=<state> param (Gitea-based, no merged state)
--- GitLab:   uses ?state=<state> param (opened/merged/closed/all)
-local function parse_request_state(args, provider)
-  local arg = vim.trim(args or ""):lower()
-  if provider == "GitLab" then
-    if arg == "-merged" then
-      return "?state=merged"
-    elseif arg == "-closed" then
-      return "?state=closed"
-    elseif arg == "-all" then
-      return "?state=all"
-    end
-  elseif provider == "Codeberg" then
-    if arg == "-closed" or arg == "-merged" then
-      return "?state=closed"
-    end
-  else
-    -- GitHub
-    if arg == "-closed" or arg == "-merged" then
-      return "?q=is%3Apr+is%3Aclosed"
-    elseif arg == "-all" then
-      return "?q=is%3Apr"
-    end
+local function get_visual_selection()
+  if vim.fn.exists("*getregion") == 1 then
+    local lines = vim.fn.getregion(vim.fn.getpos("'<"), vim.fn.getpos("'>"))
+    return vim.trim(table.concat(lines, "\n"))
   end
-  return ""
+  local line = vim.fn.getline("'<")
+  local _, _, c1 = unpack(vim.fn.getpos("'<"))
+  local _, l2, c2 = unpack(vim.fn.getpos("'>"))
+  local _, l1 = unpack(vim.fn.getpos("'<"))
+  if l1 ~= l2 then
+    return vim.trim(line:sub(c1))
+  end
+  return vim.trim(line:sub(c1, c2))
 end
 
 -- ============================================================================
--- URL Builders
+-- Provider Dispatch
+--
+-- Provider modules live in lua/git_open/{github,gitlab,codeberg}.lua.
+-- Each module exports the full provider interface:
+--   parse_request_number(message)
+--   build_repo_url(repo_info)
+--   build_branch_url(repo_info, branch)
+--   build_file_url(repo_info, file, line_info, ref)
+--   build_commit_url(repo_info, commit)
+--   build_request_url(repo_info, number)
+--   build_requests_url(repo_info, state_arg)
+--   build_my_requests_url(repo_info, state_arg)
 -- ============================================================================
 
-local function build_github_url(base_url, path, url_type, extra, line_info, ref)
-  local url = base_url .. "/" .. path
+local providers = {}
 
-  if url_type == "repo" then
-    return url
-  elseif url_type == "branch" then
-    local branch = extra or get_current_branch()
-    return url .. "/tree/" .. branch
-  elseif url_type == "file" then
-    local file = extra or get_relative_path()
-    -- ref is an optional branch/commit; fall back to HEAD commit
-    local commit = (ref and ref ~= "") and ref or get_current_commit()
-    local file_url = url .. "/blob/" .. commit .. "/" .. file
-
-    -- Add line number anchor if provided
-    if line_info and line_info ~= "" then
-      file_url = file_url .. format_line_anchor("GitHub", line_info)
-    end
-
-    return file_url
-  elseif url_type == "commit" then
-    local commit = extra or get_current_commit()
-    return url .. "/commit/" .. commit
-  elseif url_type == "pr" then
-    if not extra or extra == "" then
-      warn("No PR number specified")
-      return nil
-    end
-    return url .. "/pull/" .. extra
+local function get_provider(provider)
+  if not providers[provider] then
+    local mod_name = provider:lower()
+    providers[provider] = require("git_open." .. mod_name)
   end
-
-  return url
+  return providers[provider]
 end
 
--- Codeberg (Gitea/Forgejo) uses different URL paths from GitHub:
---   branch view: /src/branch/{branch}
---   file at commit: /src/commit/{commit}/{file}
---   file at branch: /src/branch/{branch}/{file}
---   single PR: /pulls/{number}  (not /pull/)
---   commit: /commit/{hash}  (same as GitHub)
-local function build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
-  local url = base_url .. "/" .. path
-
-  if url_type == "repo" then
-    return url
-  elseif url_type == "branch" then
-    local branch = extra or get_current_branch()
-    return url .. "/src/branch/" .. branch
-  elseif url_type == "file" then
-    local file = extra or get_relative_path()
-    -- ref is an optional branch/commit; fall back to HEAD commit
-    local resolved_ref = (ref and ref ~= "") and ref or get_current_commit()
-    -- Determine whether ref looks like a commit hash (40 hex chars) or a branch name
-    local ref_type = resolved_ref:match("^[0-9a-f]+$") and #resolved_ref == 40 and "commit" or "branch"
-    local file_url = url .. "/src/" .. ref_type .. "/" .. resolved_ref .. "/" .. file
-
-    -- Add line number anchor if provided
-    if line_info and line_info ~= "" then
-      file_url = file_url .. format_line_anchor("GitHub", line_info)
-    end
-
-    return file_url
-  elseif url_type == "commit" then
-    local commit = extra or get_current_commit()
-    return url .. "/commit/" .. commit
-  elseif url_type == "pr" then
-    if not extra or extra == "" then
-      warn("No PR number specified")
-      return nil
-    end
-    return url .. "/pulls/" .. extra
-  end
-
-  return url
+local function call_provider(provider, func, ...)
+  return get_provider(provider)[func](...)
 end
 
-local function build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
-  local url = base_url .. "/" .. path
-
-  if url_type == "repo" then
-    return url
-  elseif url_type == "branch" then
-    local branch = extra or get_current_branch()
-    return url .. "/-/tree/" .. branch
-  elseif url_type == "file" then
-    local file = extra or get_relative_path()
-    -- ref is an optional branch/commit; fall back to HEAD commit
-    local commit = (ref and ref ~= "") and ref or get_current_commit()
-    local file_url = url .. "/-/blob/" .. commit .. "/" .. file
-
-    -- Add line number anchor if provided
-    if line_info and line_info ~= "" then
-      file_url = file_url .. format_line_anchor("GitLab", line_info)
-    end
-
-    return file_url
-  elseif url_type == "commit" then
-    local commit = extra or get_current_commit()
-    return url .. "/-/commit/" .. commit
-  elseif url_type == "mr" then
-    if not extra or extra == "" then
-      warn("No MR number specified")
-      return nil
-    end
-    return url .. "/-/merge_requests/" .. extra
-  end
-
-  return url
-end
-
-local function build_url(provider, base_url, path, url_type, extra, line_info, ref)
-  if provider == "GitLab" then
-    return build_gitlab_url(base_url, path, url_type, extra, line_info, ref)
-  elseif provider == "Codeberg" then
-    return build_codeberg_url(base_url, path, url_type, extra, line_info, ref)
-  else
-    -- Default to GitHub
-    return build_github_url(base_url, path, url_type, extra, line_info, ref)
-  end
+local function parse_request_number_from_commit(provider)
+  local msg = git_command({ "log", "-1", "--pretty=%B" })
+  return call_provider(provider, "parse_request_number", msg)
 end
 
 -- ============================================================================
@@ -480,8 +329,8 @@ local function open_browser(url)
     cmd = string.format("%s %s > /dev/null 2>&1", browser_cmd, vim.fn.shellescape(url))
   end
 
-  vim.fn.system(cmd)
-  vim.cmd("redraw")
+  system({ "sh", "-c", cmd })
+  vim.cmd("redraw!")
   print("Opened: " .. url)
 end
 
@@ -492,6 +341,7 @@ local function copy_to_clipboard(url)
 
   vim.fn.setreg("+", url)
   vim.fn.setreg("*", url)
+  vim.cmd("redraw!")
   print("Copied: " .. url)
 end
 
@@ -503,72 +353,8 @@ local function open_or_copy(url, copy)
   end
 end
 
-local function get_repo_info()
-  local remote = parse_remote_url()
-  if not remote then
-    warn("Not a git repository or no remote configured")
-    return nil
-  end
-
-  local provider = detect_provider(remote.domain)
-  local base_url = get_base_url(remote.domain)
-
-  return {
-    domain = remote.domain,
-    path = remote.path,
-    provider = provider,
-    base_url = base_url,
-  }
-end
-
-local function get_all_remotes()
-  local output = git_command({ "remote" })
-  if not output or output == "" then
-    return {}
-  end
-  local result = {}
-  for _, name in ipairs(vim.split(output, "\n", { plain = true, trimempty = true })) do
-    if name ~= "origin" then
-      table.insert(result, name)
-    end
-  end
-  return result
-end
-
-local function get_repo_info_for_remote(remote_name)
-  local remote = parse_remote_url_for_name(remote_name)
-  if not remote then
-    return nil
-  end
-
-  local provider = detect_provider(remote.domain)
-  local base_url = get_base_url(remote.domain)
-
-  return {
-    domain = remote.domain,
-    path = remote.path,
-    provider = provider,
-    base_url = base_url,
-  }
-end
-
-local function get_visual_selection()
-  if vim.fn.exists("*getregion") == 1 then
-    local lines = vim.fn.getregion(vim.fn.getpos("'<"), vim.fn.getpos("'>"))
-    return vim.trim(table.concat(lines, "\n"))
-  end
-  local line = vim.fn.getline("'<")
-  local _, _, c1 = unpack(vim.fn.getpos("'<"))
-  local _, l2, c2 = unpack(vim.fn.getpos("'>"))
-  local _, l1 = unpack(vim.fn.getpos("'<"))
-  if l1 ~= l2 then
-    return vim.trim(line:sub(c1))
-  end
-  return vim.trim(line:sub(c1, c2))
-end
-
 -- ============================================================================
--- Completion Functions
+-- Completion Helpers
 -- ============================================================================
 
 local function unique(items)
@@ -611,16 +397,13 @@ local function get_gitk_old_paths(rel_path, git_root)
   if output == "" then
     return { rel_path }
   end
-  local seen = {}
-  local paths = {}
-  for _, p in ipairs(vim.split(output, "\n", { plain = true, trimempty = true })) do
-    if not seen[p] then
-      seen[p] = true
-      table.insert(paths, p)
-    end
-  end
+  local paths = unique(vim.split(output, "\n", { plain = true, trimempty = true }))
   return #paths > 0 and paths or { rel_path }
 end
+
+-- ============================================================================
+-- Completion Functions
+-- ============================================================================
 
 function M.complete_branch(arglead)
   -- Local branches sorted by most recent commit (-committerdate)
@@ -646,7 +429,7 @@ function M.complete_gitk_branch(arglead)
   local local_raw =
     git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=2)'", "refs/heads/" })
   local remote_raw =
-    git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=3)'", "refs/remotes/" })
+    git_command({ "for-each-ref", "--sort=-committerdate", "--format='%(refname:lstrip=2)'", "refs/remotes/" })
   local local_branches = (local_raw and local_raw ~= "")
       and vim.split(local_raw, "\n", { plain = true, trimempty = true })
     or {}
@@ -694,6 +477,10 @@ function M.complete_git_remote(arglead)
   return fuzzy_filter(get_all_remote_names(git_root), arglead)
 end
 
+-- ============================================================================
+-- :OpenGitRemote command
+-- ============================================================================
+
 function M.open_git_remote(name, reset)
   local git_root = get_git_root()
   if not git_root then
@@ -731,230 +518,171 @@ function M.open_git_remote(name, reset)
 end
 
 -- ============================================================================
--- Public API Functions
+-- Public API — primary remote commands
 -- ============================================================================
-
-function M.open_repo(copy)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  local url = build_url(info.provider, info.base_url, info.path, "repo")
-  open_or_copy(url, copy)
-end
-
-function M.open_branch(branch, copy, visual)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  local ref = branch
-  if (not ref or ref == "") and visual then
-    ref = get_visual_selection()
-  end
-  if not ref or ref == "" then
-    ref = get_current_branch()
-  end
-
-  local url = build_url(info.provider, info.base_url, info.path, "branch", ref)
-  open_or_copy(url, copy)
-end
-
-function M.open_file(line1, line2, ref, copy)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  if vim.fn.expand("%") == "" then
-    warn("No file in current buffer")
-    return
-  end
-
-  local line_range = get_line_range(line1, line2)
-
-  -- extra=nil (use current file), line_info=line_range, ref=branch/commit
-  local url = build_url(info.provider, info.base_url, info.path, "file", nil, line_range, ref)
-  open_or_copy(url, copy)
-end
-
-function M.open_commit(commit, copy, visual)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  local ref = commit
-  if (not ref or ref == "") and visual then
-    ref = get_visual_selection()
-  end
-  if not ref or ref == "" then
-    ref = get_current_commit()
-  end
-
-  local url = build_url(info.provider, info.base_url, info.path, "commit", ref)
-  open_or_copy(url, copy)
-end
-
-function M.open_request(number, copy)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  local req = number
-  if not req or req == "" then
-    req = parse_pr_mr_from_commit(info.provider)
-  end
-
-  if not req or req == "" then
-    warn("No request number specified and could not parse from commit message")
-    return
-  end
-
-  local type = info.provider == "GitLab" and "mr" or "pr"
-  local url = build_url(info.provider, info.base_url, info.path, type, req)
-  open_or_copy(url, copy)
-end
-
-function M.open_file_last_change(copy)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  -- Get the file path relative to git root
-  local file_path = get_relative_path()
-  if not file_path then
-    warn("Current file is not in a git repository")
-    return
-  end
-
-  -- Get the latest commit hash for this file
-  local commit = git_command({ "log", "-1", "--format=%H", "--", file_path })
-  if not commit or commit == "" then
-    warn("No commits found for current file")
-    return
-  end
-
-  -- Get the commit message
-  local message = git_command({ "log", "-1", "--format=%B", commit })
-
-  -- Try to parse PR/MR number from commit message
-  local pr_mr_number = parse_pr_mr_number(message, info.provider)
-
-  local url
-  if pr_mr_number then
-    -- Open PR or MR if found
-    if info.provider == "GitLab" then
-      url = build_url(info.provider, info.base_url, info.path, "mr", pr_mr_number)
-    else
-      url = build_url(info.provider, info.base_url, info.path, "pr", pr_mr_number)
-    end
-  else
-    -- Otherwise, open the commit
-    url = build_url(info.provider, info.base_url, info.path, "commit", commit)
-  end
-
-  open_or_copy(url, copy)
-end
-
-function M.open_my_requests(state_arg, copy)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  local state = parse_request_state(state_arg, info.provider)
-  local url
-  if info.provider == "GitLab" then
-    local arg = vim.trim(state_arg or ""):lower()
-    -- Check for -search or -search=<state>
-    if arg:match("^%-search") then
-      local search_state = arg:match("^%-search=(.+)$") or ""
-      local search_url = info.base_url .. "/dashboard/merge_requests/search?author_username=" .. get_gitlab_username()
-      if search_state == "closed" or search_state == "merged" then
-        search_url = search_url .. "&state=" .. search_state
-      elseif search_state == "all" then
-        search_url = search_url .. "&state=all"
-      end
-      url = search_url
-    elseif arg == "-closed" or arg == "-merged" then
-      url = info.base_url .. "/dashboard/merge_requests/merged"
-    else
-      -- no flag / -open / -all: use the default dashboard page
-      url = info.base_url .. "/dashboard/merge_requests"
-    end
-  elseif info.provider == "GitHub" then
-    -- No flag/-open: /pulls is already scoped to current user when logged in
-    -- With state flag: append author:@me to keep scoped to current user
-    url = info.base_url .. "/pulls" .. (state ~= "" and (state .. "+author%3A%40me") or "")
-  else
-    -- Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
-    -- -closed/-merged → ?type=created_by&state=closed
-    local cb_arg = vim.trim(state_arg or ""):lower()
-    if cb_arg == "-closed" or cb_arg == "-merged" then
-      url = info.base_url .. "/pulls?type=created_by&state=closed"
-    elseif cb_arg == "-all" then
-      url = info.base_url .. "/pulls?type=created_by"
-    else
-      url = info.base_url .. "/pulls"
-    end
-  end
-
-  open_or_copy(url, copy)
-end
-
-function M.open_requests(state_arg, copy)
-  local info = get_repo_info()
-  if not info then
-    return
-  end
-
-  local state = parse_request_state(state_arg, info.provider)
-  local repo_url = info.base_url .. "/" .. info.path
-  local url
-  if info.provider == "GitLab" then
-    url = repo_url .. "/-/merge_requests" .. state
-  else
-    -- GitHub and Codeberg: state is already a full query string or empty
-    url = repo_url .. "/pulls" .. state
-  end
-
-  open_or_copy(url, copy)
-end
-
--- ============================================================================
--- Multi-Remote Public API
--- ============================================================================
-
-function M.get_all_remotes()
-  return get_all_remotes()
-end
 
 function M.get_repo_info()
   return get_repo_info()
+end
+
+function M.get_all_remotes()
+  return get_all_remotes()
 end
 
 function M.get_repo_info_for_remote(remote_name)
   return get_repo_info_for_remote(remote_name)
 end
 
+function M.open_repo(copy)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local url = call_provider(repo_info.provider, "build_repo_url", repo_info)
+  open_or_copy(url, copy)
+end
+
+function M.open_branch(branch, copy, visual)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local ref = branch
+  if (not ref or ref == "") and visual then
+    ref = get_visual_selection()
+  end
+  if not ref or ref == "" then
+    ref = get_current_branch()
+  end
+
+  local url = call_provider(repo_info.provider, "build_branch_url", repo_info, ref)
+  open_or_copy(url, copy)
+end
+
+function M.open_file(line1, line2, ref, copy)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  if vim.fn.expand("%") == "" then
+    warn("No file in current buffer")
+    return
+  end
+
+  local line_range = get_line_range(line1, line2)
+  local file = get_relative_path()
+  local resolved_ref = (ref and ref ~= "") and ref or get_current_commit()
+
+  local url = call_provider(repo_info.provider, "build_file_url", repo_info, file, line_range, resolved_ref)
+  open_or_copy(url, copy)
+end
+
+function M.open_commit(commit, copy, visual)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local ref = commit
+  if (not ref or ref == "") and visual then
+    ref = get_visual_selection()
+  end
+  if not ref or ref == "" then
+    ref = get_current_commit()
+  end
+
+  local url = call_provider(repo_info.provider, "build_commit_url", repo_info, ref)
+  open_or_copy(url, copy)
+end
+
+function M.open_request(number, copy)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local req = (number and number ~= "") and number or parse_request_number_from_commit(repo_info.provider)
+
+  if not req or req == "" then
+    warn("No request number specified and could not parse from commit message")
+    return
+  end
+
+  local url = call_provider(repo_info.provider, "build_request_url", repo_info, req)
+  open_or_copy(url, copy)
+end
+
+function M.open_file_last_change(copy)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local file_path = get_relative_path()
+  if not file_path then
+    warn("Current file is not in a git repository")
+    return
+  end
+
+  local commit = git_command({ "log", "-1", "--format=%H", "--", file_path })
+  if not commit or commit == "" then
+    warn("No commits found for current file")
+    return
+  end
+
+  local message = git_command({ "log", "-1", "--format=%B", commit })
+  local pr_mr_number = call_provider(repo_info.provider, "parse_request_number", message)
+
+  local url
+  if pr_mr_number then
+    url = call_provider(repo_info.provider, "build_request_url", repo_info, pr_mr_number)
+  else
+    url = call_provider(repo_info.provider, "build_commit_url", repo_info, commit)
+  end
+
+  open_or_copy(url, copy)
+end
+
+function M.open_requests(state_arg, copy)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local url = call_provider(repo_info.provider, "build_requests_url", repo_info, state_arg)
+  open_or_copy(url, copy)
+end
+
+function M.open_my_requests(state_arg, copy)
+  local repo_info = get_repo_info()
+  if not repo_info then
+    return
+  end
+
+  local url = call_provider(repo_info.provider, "build_my_requests_url", repo_info, state_arg)
+  open_or_copy(url, copy)
+end
+
+-- ============================================================================
+-- Per-Remote Public API
+-- ============================================================================
+
 function M.open_repo_for_remote(remote_name, copy)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
-  local url = build_url(info.provider, info.base_url, info.path, "repo")
+  local url = call_provider(repo_info.provider, "build_repo_url", repo_info)
   open_or_copy(url, copy)
 end
 
 function M.open_branch_for_remote(remote_name, branch, copy, visual)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
@@ -965,13 +693,13 @@ function M.open_branch_for_remote(remote_name, branch, copy, visual)
   if not ref or ref == "" then
     ref = get_current_branch()
   end
-  local url = build_url(info.provider, info.base_url, info.path, "branch", ref)
+  local url = call_provider(repo_info.provider, "build_branch_url", repo_info, ref)
   open_or_copy(url, copy)
 end
 
 function M.open_file_for_remote(remote_name, line1, line2, ref, copy)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
@@ -980,13 +708,15 @@ function M.open_file_for_remote(remote_name, line1, line2, ref, copy)
     return
   end
   local line_range = get_line_range(line1, line2)
-  local url = build_url(info.provider, info.base_url, info.path, "file", nil, line_range, ref)
+  local file = get_relative_path()
+  local resolved_ref = (ref and ref ~= "") and ref or get_current_commit()
+  local url = call_provider(repo_info.provider, "build_file_url", repo_info, file, line_range, resolved_ref)
   open_or_copy(url, copy)
 end
 
 function M.open_commit_for_remote(remote_name, commit, copy, visual)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
@@ -997,86 +727,48 @@ function M.open_commit_for_remote(remote_name, commit, copy, visual)
   if not ref or ref == "" then
     ref = get_current_commit()
   end
-  local url = build_url(info.provider, info.base_url, info.path, "commit", ref)
+  local url = call_provider(repo_info.provider, "build_commit_url", repo_info, ref)
   open_or_copy(url, copy)
 end
 
 function M.open_request_for_remote(remote_name, number, copy)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
-  local req = number
-  if not req or req == "" then
-    req = parse_pr_mr_from_commit(info.provider)
-  end
+  local req = (number and number ~= "") and number or parse_request_number_from_commit(repo_info.provider)
   if not req or req == "" then
     warn("No request number specified and could not parse from commit message")
     return
   end
-  local url_type = info.provider == "GitLab" and "mr" or "pr"
-  local url = build_url(info.provider, info.base_url, info.path, url_type, req)
+  local url = call_provider(repo_info.provider, "build_request_url", repo_info, req)
   open_or_copy(url, copy)
 end
 
 function M.open_requests_for_remote(remote_name, state_arg, copy)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
-  local state = parse_request_state(state_arg, info.provider)
-  local repo_url = info.base_url .. "/" .. info.path
-  local url
-  if info.provider == "GitLab" then
-    url = repo_url .. "/-/merge_requests" .. state
-  else
-    url = repo_url .. "/pulls" .. state
-  end
+  local url = call_provider(repo_info.provider, "build_requests_url", repo_info, state_arg)
   open_or_copy(url, copy)
 end
 
 function M.open_my_requests_for_remote(remote_name, state_arg, copy)
-  local info = get_repo_info_for_remote(remote_name)
-  if not info then
+  local repo_info = get_repo_info_for_remote(remote_name)
+  if not repo_info then
     warn("No remote configured for: " .. remote_name)
     return
   end
-  local state = parse_request_state(state_arg, info.provider)
-  local url
-  if info.provider == "GitLab" then
-    local arg = vim.trim(state_arg or ""):lower()
-    if arg:match("^%-search") then
-      local search_state = arg:match("^%-search=(.+)$") or ""
-      local search_url = info.base_url .. "/dashboard/merge_requests/search?author_username=" .. get_gitlab_username()
-      if search_state == "closed" or search_state == "merged" then
-        search_url = search_url .. "&state=" .. search_state
-      elseif search_state == "all" then
-        search_url = search_url .. "&state=all"
-      end
-      url = search_url
-    elseif arg == "-closed" or arg == "-merged" then
-      url = info.base_url .. "/dashboard/merge_requests/merged"
-    else
-      url = info.base_url .. "/dashboard/merge_requests"
-    end
-  elseif info.provider == "GitHub" then
-    url = info.base_url .. "/pulls" .. (state ~= "" and (state .. "+author%3A%40me") or "")
-  else
-    -- Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
-    -- -closed/-merged → ?type=created_by&state=closed
-    local cb_arg = vim.trim(state_arg or ""):lower()
-    if cb_arg == "-closed" or cb_arg == "-merged" then
-      url = info.base_url .. "/pulls?type=created_by&state=closed"
-    elseif cb_arg == "-all" then
-      url = info.base_url .. "/pulls?type=created_by"
-    else
-      url = info.base_url .. "/pulls"
-    end
-  end
+  local url = call_provider(repo_info.provider, "build_my_requests_url", repo_info, state_arg)
   open_or_copy(url, copy)
 end
+
+-- ============================================================================
+-- Gitk Functions
+-- ============================================================================
 
 function M.open_gitk(args_str)
   local git_root = get_git_root()
@@ -1112,10 +804,13 @@ function M.open_gitk_file(opts_str, history)
   launch_gitk(args, git_root)
 end
 
+-- ============================================================================
+-- Setup
+-- ============================================================================
+
 function M.setup(opts)
   opts = opts or {}
 
-  -- Set default configurations
   if opts.domains then
     vim.g.vim_git_open_domains = opts.domains
   end

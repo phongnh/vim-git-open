@@ -33,7 +33,11 @@ vim-git-open/
 │       ├── gitlab.vim        # Legacy GitLab provider
 │       └── codeberg.vim      # Legacy Codeberg provider
 ├── lua/
-│   └── git_open.lua          # Lua core (~900+ lines)
+│   ├── git_open.lua          # Lua core (~650 lines)
+│   └── git_open/
+│       ├── github.lua        # Lua GitHub provider
+│       ├── gitlab.lua        # Lua GitLab provider
+│       └── codeberg.lua      # Lua Codeberg provider
 ├── doc/
 │   └── git_open.txt          # Vim help documentation
 ├── .opencode/
@@ -132,7 +136,7 @@ When adding any feature or fixing any bug:
 
 1. **Vim9script** (`vim9/autoload/git_open.vim` + `vim9/autoload/git_open/{github,gitlab,codeberg}.vim`)
 2. **Legacy Vimscript** (`autoload/git_open.vim` + `autoload/git_open/{github,gitlab,codeberg}.vim`)
-3. **Lua** (`lua/git_open.lua`)
+3. **Lua** (`lua/git_open.lua` + `lua/git_open/{github,gitlab,codeberg}.lua`)
 4. **Entry points** (only if commands change):
    - `vim9/plugin/git_open.vim`
    - `plugin/git_open.vim`
@@ -256,6 +260,25 @@ enddef
 
 " Usage:
 var url = CallProvider(repo_info.provider, 'BuildFileUrl', [repo_info, file, line_info, ref])
+```
+
+```lua
+-- Lua — provider modules loaded lazily via require
+local providers = {}
+
+local function get_provider(provider)
+  if not providers[provider] then
+    providers[provider] = require("git_open." .. provider:lower())
+  end
+  return providers[provider]
+end
+
+local function call_provider(provider, func, ...)
+  return get_provider(provider)[func](...)
+end
+
+-- Usage:
+local url = call_provider(repo_info.provider, "build_file_url", repo_info, file, line_info, ref)
 ```
 
 ```vim

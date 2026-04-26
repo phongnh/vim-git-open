@@ -38,6 +38,9 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 
 3. **Lua** — for Neovim
    - `lua/git_open.lua` — core logic
+   - `lua/git_open/github.lua` — GitHub provider module
+   - `lua/git_open/gitlab.lua` — GitLab provider module
+   - `lua/git_open/codeberg.lua` — Codeberg provider module
    - `plugin/git_open.lua` — entry point
    - Style: 2-space indentation
 
@@ -191,14 +194,14 @@ redraw!
 43. **`silent` before `system()` in Vim9script/legacy** — `silent` must NOT precede a variable assignment (`silent var output = system(...)` is invalid Vim9). Apply `silent` only to fire-and-forget `system()` calls (e.g. `silent call system(browser_cmd ...)`). Plain `var output = system(cmd)` is correct for capturing output.
 44. **`vim.system` not `vim.fn.system` in Lua** — use `vim.system({...}, {text=true}):wait()` with args as a list for proper subprocess handling and exit-code checking.
 45. **Multi-remote commands embed remote name as string literal** — use `string(r)` to produce `'remote_name'` and interpolate into `execute`d command strings; `<bang>0` etc. expand at invocation.
-46. **Provider modules in `autoload/git_open/{github,gitlab,codeberg}.vim`** — both Vim9script (`vim9/autoload/git_open/`) and Legacy VimL (`autoload/git_open/`) use per-provider modules. Each module implements the full provider interface: `ParseRequestNumber`, `BuildRepoUrl`, `BuildBranchUrl`, `BuildFileUrl`, `BuildCommitUrl`, `BuildRequestUrl`, `BuildRequestsUrl`, `BuildMyRequestsUrl`. All `Build*` functions receive `repo_info` dict as first argument.
+46. **Provider modules in `autoload/git_open/{github,gitlab,codeberg}.vim`** — all three implementations (Vim9script in `vim9/autoload/git_open/`, Legacy VimL in `autoload/git_open/`, Lua in `lua/git_open/`) use per-provider modules. Each module implements the full provider interface: `ParseRequestNumber`/`parse_request_number`, `BuildRepoUrl`/`build_repo_url`, `BuildBranchUrl`/`build_branch_url`, `BuildFileUrl`/`build_file_url`, `BuildCommitUrl`/`build_commit_url`, `BuildRequestUrl`/`build_request_url`, `BuildRequestsUrl`/`build_requests_url`, `BuildMyRequestsUrl`/`build_my_requests_url`. All `Build*`/`build_*` functions receive `repo_info` as first argument.
 47. **`repo_info` dict shape** — `{ base_url, path, provider, domain }`. `base_url` = `https://domain` (or mapped URL). `path` = `user/repo`. Passed as first arg to every provider `Build*` function.
-48. **`ProviderFunction(provider, func)` dispatch** — resolves the fully-qualified autoload function name: `'git_open#gitlab#' .. func` etc. `CallProvider(provider, func, args)` calls it via `call()`. Replaces the old monolithic `BuildUrl(provider, base_url, path, type, ...extra)`.
+48. **`ProviderFunction`/`call_provider` dispatch** — Vim9/legacy resolve the fully-qualified autoload name (`'git_open#gitlab#' .. func`) and call via `call()`. Lua uses `require("git_open." .. provider:lower())[func](...)`. Replaces the old monolithic `BuildUrl`/`build_url`.
 49. **`ParseRequestState` removed** — replaced by per-provider `RequestsQuery`/`MyRequestsQuery` private helpers inside each provider module. The core no longer carries provider-specific URL logic.
 50. **`GetLineRange` returns `string`** — Vim9script `GetLineRange` now returns `string` (not `any`), which allows it to be passed directly to `BuildFileUrl(... line_info: string ...)`.
 51. **`GetRelativePath` dead-code fallback removed** — the `substitute` regex fallback was unreachable because `strpart` always returns the correct relative path when `git_root` ends with `/`. Both Vim9 and legacy implementations now use only `strpart`.
 52. **`GetGitkOldPaths` uses `Unique` helper** — replaced manual seen-dict loop in Vim9 with `Unique(filter(split(output, '\n'), ...))`. Legacy was already using `s:Unique`.
-53. **Vim9script provider modules use `export def FunctionName`** — not the full `git_open#github#FunctionName` prefix. Vim resolves `autoload/git_open/github.vim` → `git_open#github#*` automatically from the file path.
+53. **Vim9script/Lua provider modules use short exported names** — Vim9 uses `export def FunctionName` (not the full autoload prefix); Lua uses `M.function_name`. Vim resolves `vim9/autoload/git_open/github.vim` → `git_open#github#*` automatically from the file path. Lua resolves via `require("git_open.github")`.
 
 ## Key Files
 
@@ -215,6 +218,9 @@ redraw!
 | `autoload/git_open/codeberg.vim` | Legacy Codeberg provider |
 | `plugin/git_open.vim` | Unified dispatcher: routes to Vim9 or legacy |
 | `lua/git_open.lua` | Lua/Neovim core logic |
+| `lua/git_open/github.lua` | Lua GitHub provider |
+| `lua/git_open/gitlab.lua` | Lua GitLab provider |
+| `lua/git_open/codeberg.lua` | Lua Codeberg provider |
 | `plugin/git_open.lua` | Lua entry point (Neovim) |
 | `README.md` | User documentation |
 | `doc/git_open.txt` | Vim help file |

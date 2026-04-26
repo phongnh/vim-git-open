@@ -678,7 +678,27 @@ Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/sk
 
 ---
 
-## Session 12: Lua Provider Modules
+## Session 13: Doc Sync, Keymap Policy, Example Config
+**Date:** 2026-04-27
+
+### Changes
+
+**README.md**
+- Renamed `### Example Keymaps` → `### Keymaps`
+- Added explicit note: plugin sets no keymaps by default
+- Replaced bare Vim block with two blocks: Vim/init.vim and lazy.nvim `keys` spec
+
+**doc/git_open.txt**
+- Renamed `Recommended keymaps:~` → `Optional keymaps (Vim / init.vim):~`; added note that no keymaps are set by default
+- Replaced inline `vim.keymap.set` block with a lazy.nvim spec block (`Neovim Lua configuration (lazy.nvim):~`)
+- `opts` table in spec replaces the bare `require('git_open').setup(...)` call; `browser_command` and `remote` are shown as commented-out optionals
+
+**CONTRIBUTING.md**
+- Extended "Adding New Git Providers" section with Lua provider interface (snake_case `M.*` table), `repo_info` Lua table shape, and wiring steps for all three implementations (VimL + Vim9 + Lua)
+
+**.opencode/agent.md**
+- Added discovery #54: no default keymaps policy
+- Updated Quality Checklist: `CONTRIBUTING.md` added to documentation update line
 **Date:** 2026-04-27
 
 ### Refactor: Extract Lua provider modules

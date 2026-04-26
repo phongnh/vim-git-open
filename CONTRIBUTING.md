@@ -135,22 +135,51 @@ or empty. `ref` is a branch name or a 40-character commit SHA. `state_arg` is
 one of `''`, `'-open'`, `'-closed'`, `'-merged'`, `'-all'` (handling is
 provider-specific).
 
+The same interface must also be implemented in Vim9script and Lua. The Lua
+module (`lua/git_open/bitbucket.lua`) must return a table `M` with snake_case
+equivalents:
+
+```lua
+local M = {}
+
+function M.parse_request_number(message)           ... end
+function M.build_repo_url(repo_info)               ... end
+function M.build_branch_url(repo_info, branch)     ... end
+function M.build_file_url(repo_info, file, line_info, ref) ... end
+function M.build_commit_url(repo_info, commit)     ... end
+function M.build_request_url(repo_info, number)    ... end
+function M.build_requests_url(repo_info, state_arg) ... end
+function M.build_my_requests_url(repo_info, state_arg) ... end
+
+return M
+```
+
+`repo_info` is a Lua table with keys: `domain`, `path`, `provider`,
+`base_url`. `line_info`, `ref`, `state_arg` have the same semantics as the
+VimL versions above.
+
 To wire up the new provider:
 
-1. **Create** `autoload/git_open/bitbucket.vim` implementing the interface above.
+1. **Create** `autoload/git_open/bitbucket.vim` (Legacy VimL) implementing the
+   interface above.
 
-2. **Add provider detection** in `autoload/git_open.vim`:
-   - Add a branch to `s:DetectProvider()` for the new domain.
+2. **Create** `vim9/autoload/git_open/bitbucket.vim` (Vim9script) with
+   `export def` equivalents (PascalCase names).
 
-3. **Register the provider name** in `s:ProviderFunction()` so `s:CallProvider()`
-   can dispatch to it.
+3. **Create** `lua/git_open/bitbucket.lua` (Lua) with the `M` table above.
 
-4. **Update documentation**:
+4. **Add provider detection** in all three core files:
+   - `autoload/git_open.vim` → `s:DetectProvider()` + `s:ProviderFunction()`
+   - `vim9/autoload/git_open.vim` → `DetectProvider()` + `ProviderFunction()`
+   - `lua/git_open.lua` → `detect_provider()` (the `require("git_open." ..
+     provider:lower())` dispatch handles the rest automatically)
+
+5. **Update documentation**:
    - `README.md` — mention the new provider in the features list.
    - `doc/git_open.txt` — add the provider to the `g:vim_git_open_providers`
      supported values list.
 
-5. **Test thoroughly**:
+6. **Test thoroughly**:
    - Test all commands with the new provider.
    - Test with both SSH and HTTPS remote URLs.
 

@@ -344,47 +344,48 @@ changing the global default.
 let g:vim_git_open_remote = 'upstream'
 ```
 
-### Example Keymaps
+### Keymaps
 
-Add to your `.vimrc` or `init.vim`:
+The plugin does not set any keymaps by default. Add your own to `.vimrc` /
+`init.vim` (Vim/Neovim) or inside a `lazy.nvim` spec (Neovim).
+
+**Vim / init.vim:**
 
 ```vim
-" Open repository
 nnoremap <leader>go :OpenGitRepo<CR>
-
-" Copy repository URL
 nnoremap <leader>gO :OpenGitRepo!<CR>
-
-" Open current branch
 nnoremap <leader>gb :OpenGitBranch<CR>
-" Open branch under visual selection
 vnoremap <leader>gb :OpenGitBranch<CR>
-
-" Open current file
 nnoremap <leader>gf :OpenGitFile<CR>
-" Also works in visual mode for line ranges
 vnoremap <leader>gf :OpenGitFile<CR>
-
-" Copy current file URL
 nnoremap <leader>gF :OpenGitFile!<CR>
 vnoremap <leader>gF :OpenGitFile!<CR>
-
-" Open current commit
 nnoremap <leader>gc :OpenGitCommit<CR>
-" Open commit hash under visual selection
 vnoremap <leader>gc :OpenGitCommit<CR>
-
-" Open PR/MR (auto-detects provider)
 nnoremap <leader>gp :OpenGitRequest<CR>
-
-" Open last change for current file
 nnoremap <leader>gl :OpenGitFileLastChange<CR>
-
-" Open my PRs/MRs
 nnoremap <leader>gP :OpenGitMyRequests<CR>
-
-" Open PRs/MRs for current repo
 nnoremap <leader>gR :OpenGitRequests<CR>
+```
+
+**Neovim (lazy.nvim spec):**
+
+```lua
+{
+  'phongnh/vim-git-open',
+  keys = {
+    { '<leader>go', '<cmd>OpenGitRepo<CR>',           desc = 'Open git repo' },
+    { '<leader>gO', '<cmd>OpenGitRepo!<CR>',          desc = 'Copy git repo URL' },
+    { '<leader>gb', '<cmd>OpenGitBranch<CR>',         desc = 'Open git branch',          mode = { 'n', 'v' } },
+    { '<leader>gf', '<cmd>OpenGitFile<CR>',           desc = 'Open git file',            mode = { 'n', 'v' } },
+    { '<leader>gF', '<cmd>OpenGitFile!<CR>',          desc = 'Copy git file URL',        mode = { 'n', 'v' } },
+    { '<leader>gc', '<cmd>OpenGitCommit<CR>',         desc = 'Open git commit',          mode = { 'n', 'v' } },
+    { '<leader>gp', '<cmd>OpenGitRequest<CR>',        desc = 'Open PR/MR' },
+    { '<leader>gl', '<cmd>OpenGitFileLastChange<CR>', desc = 'Open last change' },
+    { '<leader>gP', '<cmd>OpenGitMyRequests<CR>',     desc = 'Open my PRs/MRs' },
+    { '<leader>gR', '<cmd>OpenGitRequests<CR>',       desc = 'Open repo PRs/MRs' },
+  },
+}
 ```
 
 ## How It Works

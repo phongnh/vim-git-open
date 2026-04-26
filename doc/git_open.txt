@@ -595,37 +595,23 @@ Per-buffer remote selection:~
     let g:vim_git_open_remote = 'upstream'
 <
 
-Recommended keymaps:~
+Optional keymaps (Vim / init.vim):~
+
+The plugin does not define any keymaps by default. Add your own:
 >
-    " Open repository
     nnoremap <leader>go :OpenGitRepo<CR>
-    " Copy repository URL
     nnoremap <leader>gO :OpenGitRepo!<CR>
-    
-    " Open current branch
     nnoremap <leader>gb :OpenGitBranch<CR>
-    
-    " Open current file (normal mode - current line)
+    vnoremap <leader>gb :OpenGitBranch<CR>
     nnoremap <leader>gf :OpenGitFile<CR>
-    " Visual mode - line range
     vnoremap <leader>gf :OpenGitFile<CR>
-    " Copy file URL
     nnoremap <leader>gF :OpenGitFile!<CR>
     vnoremap <leader>gF :OpenGitFile!<CR>
-    
-    " Open current commit
     nnoremap <leader>gc :OpenGitCommit<CR>
-    
-    " Open PR/MR (auto-detects provider)
+    vnoremap <leader>gc :OpenGitCommit<CR>
     nnoremap <leader>gp :OpenGitRequest<CR>
-
-    " Open last change for current file
     nnoremap <leader>gl :OpenGitFileLastChange<CR>
-
-    " Open my PRs/MRs
     nnoremap <leader>gP :OpenGitMyRequests<CR>
-
-    " Open PRs/MRs for current repo
     nnoremap <leader>gR :OpenGitRequests<CR>
 <
 
@@ -644,28 +630,33 @@ Enterprise configuration:~
         \ }
 <
 
-Neovim Lua configuration:~
+Neovim Lua configuration (lazy.nvim):~
 >
-    require('git_open').setup({
+    {
+      'phongnh/vim-git-open',
+      opts = {
         domains = {
-            ['git.company.com'] = 'https://github.company.com',
+          ['git.company.com'] = 'https://github.company.com',
         },
         providers = {
-            ['git.company.com'] = 'GitHub',
+          ['git.company.com'] = 'GitHub',
         },
-        browser_command = 'open',
-        remote = 'upstream',  -- optional: default remote preference
-    })
-    
-    -- Keymaps
-    vim.keymap.set('n', '<leader>go', '<cmd>OpenGitRepo<CR>')
-    vim.keymap.set('n', '<leader>gb', '<cmd>OpenGitBranch<CR>')
-    vim.keymap.set('n', '<leader>gf', '<cmd>OpenGitFile<CR>')
-    vim.keymap.set('n', '<leader>gc', '<cmd>OpenGitCommit<CR>')
-    vim.keymap.set('n', '<leader>gp', '<cmd>OpenGitRequest<CR>')
-    vim.keymap.set('n', '<leader>gl', '<cmd>OpenGitFileLastChange<CR>')
-    vim.keymap.set('n', '<leader>gP', '<cmd>OpenGitMyRequests<CR>')
-    vim.keymap.set('n', '<leader>gR', '<cmd>OpenGitRequests<CR>')
+        -- browser_command = 'open',    -- optional: override browser
+        -- remote = 'upstream',         -- optional: default remote
+      },
+      keys = {
+        { '<leader>go', '<cmd>OpenGitRepo<CR>',           desc = 'Open git repo' },
+        { '<leader>gO', '<cmd>OpenGitRepo!<CR>',          desc = 'Copy git repo URL' },
+        { '<leader>gb', '<cmd>OpenGitBranch<CR>',         desc = 'Open git branch',   mode = { 'n', 'v' } },
+        { '<leader>gf', '<cmd>OpenGitFile<CR>',           desc = 'Open git file',     mode = { 'n', 'v' } },
+        { '<leader>gF', '<cmd>OpenGitFile!<CR>',          desc = 'Copy git file URL', mode = { 'n', 'v' } },
+        { '<leader>gc', '<cmd>OpenGitCommit<CR>',         desc = 'Open git commit',   mode = { 'n', 'v' } },
+        { '<leader>gp', '<cmd>OpenGitRequest<CR>',        desc = 'Open PR/MR' },
+        { '<leader>gl', '<cmd>OpenGitFileLastChange<CR>', desc = 'Open last change' },
+        { '<leader>gP', '<cmd>OpenGitMyRequests<CR>',     desc = 'Open my PRs/MRs' },
+        { '<leader>gR', '<cmd>OpenGitRequests<CR>',       desc = 'Open repo PRs/MRs' },
+      },
+    }
 <
 
 ==============================================================================

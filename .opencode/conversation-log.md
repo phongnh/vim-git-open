@@ -675,3 +675,53 @@ Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/sk
 | e2f5372 | Improve loading vim9 |
 | a428232 | silent system() to avoid printing escape sequences in Vim |
 | 5184c95 | Switch vim.fn.system to vim.system |
+
+---
+
+## Session 11: Vim9script Provider Modules
+**Date:** 2026-04-27
+
+### Refactor: Extract Vim9script provider modules
+
+Applied the same provider-dispatch architecture (introduced in the legacy VimL refactor, committed as `47a8ed9`) to the Vim9script implementation.
+
+**New files created:**
+- `vim9/autoload/git_open/github.vim` — GitHub provider (Vim9script)
+- `vim9/autoload/git_open/gitlab.vim` — GitLab provider (Vim9script)
+- `vim9/autoload/git_open/codeberg.vim` — Codeberg provider (Vim9script)
+
+Each provider module implements the full provider interface via `export def` functions
+(Vim resolves them as `git_open#<provider>#*` automatically from the file path):
+`ParseRequestNumber`, `BuildRepoUrl`, `BuildBranchUrl`, `BuildFileUrl`,
+`BuildCommitUrl`, `BuildRequestUrl`, `BuildRequestsUrl`, `BuildMyRequestsUrl`.
+
+Private URL helpers (unexported `def`): `RepoBase`, `BranchPath`, `FilePath`,
+`CommitPath`, `RequestPath`, `RequestsPath`, `MyRequestsPath`, `RequestsQuery`,
+`MyRequestsQuery`, `FormatLineAnchor`.
+
+**`vim9/autoload/git_open.vim` rewritten:**
+- Removed: `BuildGithubUrl`, `BuildCodebergUrl`, `BuildGitlabUrl`, `BuildUrl`,
+  `ParseRequestState`, `FormatLineAnchor`, `ParsePrMrNumber`, `GetGitLabUsername`
+- Added: `ProviderFunction(provider, func)` + `CallProvider(provider, func, args)` dispatch
+- Renamed: `ParsePrMrFromCommit` → `ParseRequestNumberFromCommit`
+- Fixed: `silent var output = system(cmd)` → `var output = system(cmd)` (assignment can't be silenced); fire-and-forget `system()` in `OpenBrowser` → `silent call system(cmd)`
+- Simplified: `GetRelativePath` — removed dead `substitute` fallback (pure `strpart`)
+- Simplified: `GetGitkOldPaths` — uses `Unique` helper instead of manual seen-dict loop
+- Renamed: `info` → `repo_info` in all public functions
+- `GetLineRange` return type changed from `any` to `string`
+- All `BuildUrl(...)` call sites replaced with `CallProvider(...)`
+
+**New discoveries:**
+- #46: Provider modules in `autoload/git_open/` — both Vim9 and legacy use per-provider modules implementing the same interface.
+- #47: `repo_info` dict shape — `{ base_url, path, provider, domain }`.
+- #48: `ProviderFunction` + `CallProvider` dispatch replaces monolithic `BuildUrl`.
+- #49: `ParseRequestState` removed — query logic moved into provider modules.
+- #50: `GetLineRange` returns `string` in Vim9script (not `any`).
+- #51: `GetRelativePath` dead-code fallback removed — `strpart` is always sufficient.
+- #52: `GetGitkOldPaths` refactored to use `Unique` helper.
+- #53: Vim9script provider modules use `export def FunctionName` — not full autoload prefix.
+
+### Docs: Update `.opencode/` files
+- `agent.md`: updated file list, implementation list, working principles, Git command execution note, discoveries #43–53
+- `skill.md`: updated project structure, feature parity workflow, `State Flag Parsing` pattern replaced with `Provider Dispatch` pattern, `Opening Browser` snippet fixed, Important Reminders #21–26 updated/added
+- `conversation-log.md`: added this session entry

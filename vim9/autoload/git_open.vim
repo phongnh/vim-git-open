@@ -45,9 +45,9 @@ def GitCommand(args: string): string
     if empty(git_root)
         return ''
     endif
-    
+
     var cmd = 'git -C ' .. shellescape(git_root) .. ' ' .. args
-    silent var output = system(cmd)
+    var output = system(cmd)
     return substitute(output, '\n\+$', '', '')
 enddef
 
@@ -106,25 +106,23 @@ def ParseRemoteUrl(): dict<string>
     if empty(remote)
         return {}
     endif
-    
-    var result: dict<string> = {domain: '', path: ''}
-    
+    return ParseRemoteUrlString(remote)
+enddef
+
+# Parse a raw remote URL string into {domain, path}
+def ParseRemoteUrlString(remote: string): dict<string>
     # Handle SSH URLs: git@github.com:user/repo.git
     var ssh_match = matchlist(remote, '^\(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
     if !empty(ssh_match)
-        result.domain = ssh_match[2]
-        result.path = ssh_match[3]
-        return result
+        return {domain: ssh_match[2], path: ssh_match[3]}
     endif
-    
+
     # Handle HTTPS URLs: https://github.com/user/repo.git
     var https_match = matchlist(remote, '^\(https\?://\)\([^/]\+\)/\(.*\)\(\.git\)\?$')
     if !empty(https_match)
-        result.domain = https_match[2]
-        result.path = substitute(https_match[3], '\.git$', '', '')
-        return result
+        return {domain: https_match[2], path: substitute(https_match[3], '\.git$', '', '')}
     endif
-    
+
     return {}
 enddef
 
@@ -133,7 +131,7 @@ def DetectProvider(domain: string): string
     if has_key(g:vim_git_open_providers, domain)
         return g:vim_git_open_providers[domain]
     endif
-    
+
     # Auto-detect known providers
     if domain =~# 'github\.com'
         return 'GitHub'
@@ -142,7 +140,7 @@ def DetectProvider(domain: string): string
     elseif domain =~# 'codeberg\.org'
         return 'Codeberg'
     endif
-    
+
     # Default to GitHub
     return 'GitHub'
 enddef
@@ -157,7 +155,7 @@ def GetBaseUrl(domain: string): string
         endif
         return mapped_url
     endif
-    
+
     # Default to https://domain
     return 'https://' .. domain
 enddef
@@ -175,248 +173,103 @@ def GetRelativePath(): string
     if empty(git_root)
         return ''
     endif
-    
+
     var abs_path = expand('%:p')
-    
+
     # Ensure git_root ends with /
     if git_root !~# '/$'
         git_root = git_root .. '/'
     endif
-    
-    # Check if abs_path starts with git_root using string comparison
-    if strpart(abs_path, 0, len(git_root)) ==# git_root
-        return strpart(abs_path, len(git_root))
-    endif
-    
-    # Fallback: try regex method with proper escaping
-    var rel_path = substitute(abs_path, '^' .. escape(git_root, '\/.*[]^$~') .. '/', '', '')
-    return rel_path
+
+    return strpart(abs_path, len(git_root))
 enddef
 
-def GetLineRange(line1: number, line2: number): any
+def GetLineRange(line1: number, line2: number): string
     if line1 == line2
-        return line1
+        return '' .. line1
     else
         return line1 .. '-' .. line2
     endif
 enddef
 
-def FormatLineAnchor(provider: string, line_info: any): string
-    if empty(line_info)
-        return ''
-    endif
-    
-    var line_str = '' .. line_info
-    
-    if provider ==# 'GitLab'
-        # GitLab uses #L10 or #L10-20
-        if line_str =~# '-'
-            return '#L' .. substitute(line_str, '-', '-', '')
-        else
-            return '#L' .. line_str
-        endif
-    else
-        # GitHub/Codeberg use #L10 or #L10-L20
-        if line_str =~# '-'
-            var parts = split(line_str, '-')
-            return '#L' .. parts[0] .. '-L' .. parts[1]
-        else
-            return '#L' .. line_str
-        endif
-    endif
+def GetRepoInfoDict(remote: dict<string>): dict<string>
+    var provider = DetectProvider(remote.domain)
+    var base_url = GetBaseUrl(remote.domain)
+    return {
+        domain:   remote.domain,
+        path:     remote.path,
+        provider: provider,
+        base_url: base_url
+    }
 enddef
 
-# Parse PR/MR number from a given message
-def ParsePrMrNumber(message: string, provider: string): string
-    var match_result: list<string>
-    if provider ==# 'GitLab'
-        # GitLab uses !1234
-        match_result = matchlist(message, '!\(\d\+\)')
-    else
-        # GitHub/Codeberg use #1234
-        match_result = matchlist(message, '#\(\d\+\)')
+# Get repository info (domain, path, provider, base_url) for the current buffer's remote
+def GetRepoInfoPrivate(): dict<string>
+    var remote = ParseRemoteUrl()
+    if empty(remote)
+        Warn('Not a git repository or no remote configured')
+        return {}
     endif
-    
-    if !empty(match_result)
-        return match_result[1]
-    endif
-    
-    return ''
+    return GetRepoInfoDict(remote)
 enddef
 
-def ParsePrMrFromCommit(provider: string): string
-    var commit_msg = GitCommand('log -1 --pretty=%B')
-    return ParsePrMrNumber(commit_msg, provider)
+# Get repository info for a specific named remote (bypasses per-buffer resolution)
+def GetRepoInfoForRemotePrivate(remote_name: string): dict<string>
+    var remote_url = GitCommand('config --get remote.' .. remote_name .. '.url')
+    if empty(remote_url)
+        return {}
+    endif
+    var remote = ParseRemoteUrlString(remote_url)
+    if empty(remote)
+        return {}
+    endif
+    return GetRepoInfoDict(remote)
 enddef
 
-def GetGitLabUsername(): string
-    if exists('g:vim_git_open_gitlab_username') && !empty(g:vim_git_open_gitlab_username)
-        return g:vim_git_open_gitlab_username
+# Get all non-origin remote names
+def GetAllRemotesPrivate(): list<string>
+    var output = GitCommand('remote')
+    if empty(output)
+        return []
     endif
-    if !empty($GITLAB_USER)
-        return $GITLAB_USER
-    elseif !empty($GLAB_USER)
-        return $GLAB_USER
-    endif
-    return $USER
-enddef
-
-# Parse state flag from command args: -open, -closed, -merged, -all
-# Returns the query string suffix to append to the pulls/MRs URL.
-# GitHub:   uses ?q=is%3Apr+is%3A<state> search query
-# Codeberg: uses ?state=<state> param (Gitea-based, no merged state)
-# GitLab:   uses ?state=<state> param (opened/merged/closed/all)
-def ParseRequestState(args: string, provider: string): string
-    var arg = tolower(trim(args))
-    if provider ==# 'GitLab'
-        if arg ==# '-merged'
-            return '?state=merged'
-        elseif arg ==# '-closed'
-            return '?state=closed'
-        elseif arg ==# '-all'
-            return '?state=all'
-        endif
-    elseif provider ==# 'Codeberg'
-        if arg ==# '-closed' || arg ==# '-merged'
-            return '?state=closed'
-        endif
-    else
-        # GitHub
-        if arg ==# '-closed' || arg ==# '-merged'
-            return '?q=is%3Apr+is%3Aclosed'
-        elseif arg ==# '-all'
-            return '?q=is%3Apr'
-        endif
-    endif
-    return ''
+    return filter(split(output, '\n'), (_, v) => v !=# 'origin')
 enddef
 
 # ============================================================================
-# URL Builders
+# Provider Dispatch
+#
+# Each provider module (vim9/autoload/git_open/{github,gitlab,codeberg}.vim)
+# implements the common interface (repo_info = {domain, path, provider, base_url}):
+#   git_open#<provider>#ParseRequestNumber(message)
+#   git_open#<provider>#BuildRepoUrl(repo_info)
+#   git_open#<provider>#BuildBranchUrl(repo_info, branch)
+#   git_open#<provider>#BuildFileUrl(repo_info, file, line_info, ref)
+#   git_open#<provider>#BuildCommitUrl(repo_info, commit)
+#   git_open#<provider>#BuildRequestUrl(repo_info, number)
+#   git_open#<provider>#BuildRequestsUrl(repo_info, state_arg)
+#   git_open#<provider>#BuildMyRequestsUrl(repo_info, state_arg)
+#
+# ProviderFunction(provider, func) resolves the fully-qualified function name.
+# CallProvider(provider, func, args) dispatches the call.
 # ============================================================================
 
-def BuildGithubUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
-    var url = base_url .. '/' .. path
-    
-    if type ==# 'repo'
-        return url
-    elseif type ==# 'branch'
-        var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
-        return url .. '/tree/' .. branch
-    elseif type ==# 'file'
-        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
-        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
-        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
-        var file_url = url .. '/blob/' .. ref .. '/' .. file
-        
-        # Add line number anchor if provided (extra[1])
-        if len(extra) > 1 && !empty(extra[1])
-            file_url ..= FormatLineAnchor('GitHub', extra[1])
-        endif
-        
-        return file_url
-    elseif type ==# 'commit'
-        var commit = len(extra) > 0 ? extra[0] : GetCurrentCommit()
-        return url .. '/commit/' .. commit
-    elseif type ==# 'pr'
-        var pr = len(extra) > 0 ? extra[0] : ''
-        if empty(pr)
-            Warn('No PR number specified')
-            return ''
-        endif
-        return url .. '/pull/' .. pr
-    endif
-    
-    return url
-enddef
-
-# Codeberg (Gitea/Forgejo) uses different URL paths from GitHub:
-#   branch view: /src/branch/{branch}
-#   file at commit: /src/commit/{commit}/{file}
-#   file at branch: /src/branch/{branch}/{file}
-#   single PR: /pulls/{number}  (not /pull/)
-#   commit: /commit/{hash}  (same as GitHub)
-def BuildCodebergUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
-    var url = base_url .. '/' .. path
-
-    if type ==# 'repo'
-        return url
-    elseif type ==# 'branch'
-        var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
-        return url .. '/src/branch/' .. branch
-    elseif type ==# 'file'
-        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
-        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
-        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
-        # Determine whether ref looks like a commit hash (40 hex chars) or a branch name
-        var ref_type = ref =~# '^[0-9a-f]\{40\}$' ? 'commit' : 'branch'
-        var file_url = url .. '/src/' .. ref_type .. '/' .. ref .. '/' .. file
-
-        # Add line number anchor if provided (extra[1])
-        if len(extra) > 1 && !empty(extra[1])
-            file_url ..= FormatLineAnchor('GitHub', extra[1])
-        endif
-
-        return file_url
-    elseif type ==# 'commit'
-        var commit = len(extra) > 0 ? extra[0] : GetCurrentCommit()
-        return url .. '/commit/' .. commit
-    elseif type ==# 'pr'
-        var pr = len(extra) > 0 ? extra[0] : ''
-        if empty(pr)
-            Warn('No PR number specified')
-            return ''
-        endif
-        return url .. '/pulls/' .. pr
-    endif
-
-    return url
-enddef
-
-def BuildGitlabUrl(base_url: string, path: string, type: string, ...extra: list<any>): string
-    var url = base_url .. '/' .. path
-    
-    if type ==# 'repo'
-        return url
-    elseif type ==# 'branch'
-        var branch = len(extra) > 0 ? extra[0] : GetCurrentBranch()
-        return url .. '/-/tree/' .. branch
-    elseif type ==# 'file'
-        var file = (len(extra) > 0 && !empty(extra[0])) ? extra[0] : GetRelativePath()
-        # extra[2] is an optional branch/commit ref; fall back to HEAD commit
-        var ref = (len(extra) > 2 && !empty(extra[2])) ? extra[2] : GetCurrentCommit()
-        var file_url = url .. '/-/blob/' .. ref .. '/' .. file
-        
-        # Add line number anchor if provided (extra[1])
-        if len(extra) > 1 && !empty(extra[1])
-            file_url ..= FormatLineAnchor('GitLab', extra[1])
-        endif
-        
-        return file_url
-    elseif type ==# 'commit'
-        var commit = len(extra) > 0 ? extra[0] : GetCurrentCommit()
-        return url .. '/-/commit/' .. commit
-    elseif type ==# 'mr'
-        var mr = len(extra) > 0 ? extra[0] : ''
-        if empty(mr)
-            Warn('No MR number specified')
-            return ''
-        endif
-        return url .. '/-/merge_requests/' .. mr
-    endif
-    
-    return url
-enddef
-
-def BuildUrl(provider: string, base_url: string, path: string, type: string, ...extra: list<any>): string
+def ProviderFunction(provider: string, func: string): string
     if provider ==# 'GitLab'
-        return call(BuildGitlabUrl, [base_url, path, type] + extra)
+        return 'git_open#gitlab#' .. func
     elseif provider ==# 'Codeberg'
-        return call(BuildCodebergUrl, [base_url, path, type] + extra)
+        return 'git_open#codeberg#' .. func
     else
-        # Default to GitHub
-        return call(BuildGithubUrl, [base_url, path, type] + extra)
+        return 'git_open#github#' .. func
     endif
+enddef
+
+def CallProvider(provider: string, func: string, args: list<any>): any
+    return call(ProviderFunction(provider, func), args)
+enddef
+
+def ParseRequestNumberFromCommit(provider: string): string
+    var msg = GitCommand('log -1 --pretty=%B')
+    return CallProvider(provider, 'ParseRequestNumber', [msg])
 enddef
 
 # ============================================================================
@@ -427,12 +280,12 @@ def OpenBrowser(url: string)
     if empty(url)
         return
     endif
-    
+
     if empty(g:vim_git_open_browser_command)
         Warn('No browser command configured. Set g:vim_git_open_browser_command')
         return
     endif
-    
+
     var cmd = g:vim_git_open_browser_command .. ' ' .. shellescape(url)
 
     if has('win32') || has('win64')
@@ -441,7 +294,7 @@ def OpenBrowser(url: string)
         cmd = cmd .. ' > /dev/null 2>&1'
     endif
 
-    system(cmd)
+    silent call system(cmd)
     redraw!
     echo 'Opened: ' .. url
 enddef
@@ -465,84 +318,9 @@ def OpenOrCopy(url: string, copy: bool)
     endif
 enddef
 
-export def GetRepoInfo(): dict<string>
-    var remote = ParseRemoteUrl()
-    if empty(remote)
-        Warn('Not a git repository or no remote configured')
-        return {}
-    endif
-    
-    var provider = DetectProvider(remote.domain)
-    var base_url = GetBaseUrl(remote.domain)
-    
-    return {
-        domain: remote.domain,
-        path: remote.path,
-        provider: provider,
-        base_url: base_url
-    }
-enddef
-
-# ParseRemoteUrlForName: fetches remote URL for a specific named remote (bypasses per-buffer resolution)
-def ParseRemoteUrlForName(remote_name: string): dict<string>
-    var remote = GitCommand('config --get remote.' .. remote_name .. '.url')
-    if empty(remote)
-        return {}
-    endif
-    
-    var result: dict<string> = {domain: '', path: ''}
-    
-    # Handle SSH URLs: git@github.com:user/repo.git
-    var ssh_match = matchlist(remote, '^\(git@\|ssh://git@\)\([^:/]\+\)[:/]\(.*\)\.git$')
-    if !empty(ssh_match)
-        result.domain = ssh_match[2]
-        result.path = ssh_match[3]
-        return result
-    endif
-    
-    # Handle HTTPS URLs: https://github.com/user/repo.git
-    var https_match = matchlist(remote, '^https\?://\([^/]\+\)/\(.*\)\.git$')
-    if !empty(https_match)
-        result.domain = https_match[1]
-        result.path = https_match[2]
-        return result
-    endif
-    
-    # Handle HTTPS without .git: https://github.com/user/repo
-    var https_no_git = matchlist(remote, '^https\?://\([^/]\+\)/\(.*\)$')
-    if !empty(https_no_git)
-        result.domain = https_no_git[1]
-        result.path = https_no_git[2]
-        return result
-    endif
-    
-    return {}
-enddef
-
-export def GetAllRemotes(): list<string>
-    var output = GitCommand('remote')
-    if empty(output)
-        return []
-    endif
-    return filter(split(output, '\n'), (_, v) => v !=# 'origin')
-enddef
-
-export def GetRepoInfoForRemote(remote_name: string): dict<string>
-    var remote = ParseRemoteUrlForName(remote_name)
-    if empty(remote)
-        return {}
-    endif
-    
-    var provider = DetectProvider(remote.domain)
-    var base_url = GetBaseUrl(remote.domain)
-    
-    return {
-        domain: remote.domain,
-        path: remote.path,
-        provider: provider,
-        base_url: base_url
-    }
-enddef
+# ============================================================================
+# Completion Helpers
+# ============================================================================
 
 def GetVisualSelection(): string
     if exists('*getregion')
@@ -556,10 +334,6 @@ def GetVisualSelection(): string
     endif
     return trim(strpart(line, c1 - 1, c2 - c1 + 1))
 enddef
-
-# ============================================================================
-# Completion Functions
-# ============================================================================
 
 def Unique(items: list<string>): list<string>
     var seen: dict<bool> = {}
@@ -579,6 +353,10 @@ def FuzzyFilter(result: list<string>, arglead: string): list<string>
     endif
     return matchfuzzy(result, arglead)
 enddef
+
+# ============================================================================
+# Completion Functions (public autoload API)
+# ============================================================================
 
 export def CompleteBranch(arglead: string, cmdline: string, cursorpos: number): list<string>
     # Local branches sorted by most recent commit (-committerdate)
@@ -614,7 +392,7 @@ enddef
 
 export def CompleteMyRequestState(arglead: string, cmdline: string, cursorpos: number): list<string>
     return FuzzyFilter(['-open', '-closed', '-merged', '-all',
-                \ '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], arglead)
+                '-search', '-search=open', '-search=closed', '-search=merged', '-search=all'], arglead)
 enddef
 
 export def CompleteGitRemote(arglead: string, cmdline: string, cursorpos: number): list<string>
@@ -624,6 +402,10 @@ export def CompleteGitRemote(arglead: string, cmdline: string, cursorpos: number
     endif
     return FuzzyFilter(GetAllRemoteNames(git_root), arglead)
 enddef
+
+# ============================================================================
+# :OpenGitRemote command
+# ============================================================================
 
 export def OpenGitRemote(name: string = '', reset: bool = false)
     var git_root = GetGitRoot()
@@ -666,22 +448,33 @@ export def OpenGitRemote(name: string = '', reset: bool = false)
 enddef
 
 # ============================================================================
-# Public API Functions
+# Public API — primary remote commands
 # ============================================================================
 
+export def GetRepoInfo(): dict<string>
+    return GetRepoInfoPrivate()
+enddef
+
+export def GetAllRemotes(): list<string>
+    return GetAllRemotesPrivate()
+enddef
+
+export def GetRepoInfoForRemote(remote_name: string): dict<string>
+    return GetRepoInfoForRemotePrivate(remote_name)
+enddef
+
 export def OpenRepo(copy: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
         return
     endif
-    
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'repo')
+    var url = CallProvider(repo_info.provider, 'BuildRepoUrl', [repo_info])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenBranch(branch_arg: string = '', copy: bool = false, visual: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
         return
     endif
 
@@ -693,79 +486,13 @@ export def OpenBranch(branch_arg: string = '', copy: bool = false, visual: bool 
         branch = GetCurrentBranch()
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch)
-    OpenOrCopy(url, copy)
-enddef
-
-export def OpenMyRequests(state_arg: string = '', copy: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
-        return
-    endif
-
-    var state = ParseRequestState(state_arg, info.provider)
-    var url: string
-    if info.provider ==# 'GitLab'
-        var arg = tolower(trim(state_arg))
-        # Check for -search or -search=<state>
-        if arg =~# '^-search'
-            var parts = split(arg, '=')
-            var search_state = len(parts) > 1 ? parts[1] : ''
-            var search_url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername()
-            if search_state ==# 'closed' || search_state ==# 'merged'
-                search_url ..= '&state=' .. search_state
-            elseif search_state ==# 'all'
-                search_url ..= '&state=all'
-            endif
-            url = search_url
-        elseif arg ==# '-closed' || arg ==# '-merged'
-            url = info.base_url .. '/dashboard/merge_requests/merged'
-        else
-            # no flag / -open / -all: use the default dashboard page
-            url = info.base_url .. '/dashboard/merge_requests'
-        endif
-    elseif info.provider ==# 'GitHub'
-        # No flag/-open: /pulls is already scoped to current user when logged in
-        # With state flag: append author:@me to keep scoped to current user
-        url = info.base_url .. '/pulls' .. (empty(state) ? '' : state .. '+author%3A%40me')
-    else
-        # Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
-        # -closed/-merged → ?type=created_by&state=closed
-        var cb_arg = tolower(trim(state_arg))
-        if cb_arg ==# '-closed' || cb_arg ==# '-merged'
-            url = info.base_url .. '/pulls?type=created_by&state=closed'
-        elseif cb_arg ==# '-all'
-            url = info.base_url .. '/pulls?type=created_by'
-        else
-            url = info.base_url .. '/pulls'
-        endif
-    endif
-
-    OpenOrCopy(url, copy)
-enddef
-
-export def OpenRequests(state_arg: string = '', copy: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
-        return
-    endif
-
-    var state = ParseRequestState(state_arg, info.provider)
-    var repo_url = info.base_url .. '/' .. info.path
-    var url: string
-    if info.provider ==# 'GitLab'
-        url = repo_url .. '/-/merge_requests' .. state
-    else
-        # GitHub and Codeberg: state is already a full query string or empty
-        url = repo_url .. '/pulls' .. state
-    endif
-
+    var url = CallProvider(repo_info.provider, 'BuildBranchUrl', [repo_info, branch])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenFile(line1: number, line2: number, ref_arg: string = '', copy: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
         return
     endif
 
@@ -775,15 +502,16 @@ export def OpenFile(line1: number, line2: number, ref_arg: string = '', copy: bo
     endif
 
     var line_range = GetLineRange(line1, line2)
+    var file = GetRelativePath()
+    var ref = empty(ref_arg) ? GetCurrentCommit() : ref_arg
 
-    # extra[0]=file(empty=current), extra[1]=line_range, extra[2]=ref(branch/commit)
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range, ref_arg)
+    var url = CallProvider(repo_info.provider, 'BuildFileUrl', [repo_info, file, line_range, ref])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenCommit(commit_arg: string = '', copy: bool = false, visual: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
         return
     endif
 
@@ -795,67 +523,75 @@ export def OpenCommit(commit_arg: string = '', copy: bool = false, visual: bool 
         commit = GetCurrentCommit()
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
+    var url = CallProvider(repo_info.provider, 'BuildCommitUrl', [repo_info, commit])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenRequest(req_arg: string = '', copy: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
         return
     endif
 
-    var number = !empty(req_arg) ? req_arg : ParsePrMrFromCommit(info.provider)
+    var number = !empty(req_arg) ? req_arg : ParseRequestNumberFromCommit(repo_info.provider)
 
     if empty(number)
         Warn('No request number specified and could not parse from commit message')
         return
     endif
 
-    var type = info.provider ==# 'GitLab' ? 'mr' : 'pr'
-    var url = BuildUrl(info.provider, info.base_url, info.path, type, number)
+    var url = CallProvider(repo_info.provider, 'BuildRequestUrl', [repo_info, number])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenFileLastChange(copy: bool = false)
-    var info = GetRepoInfo()
-    if empty(info)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
         return
     endif
-    
-    # Get the file path relative to git root
+
     var file_path = GetRelativePath()
     if empty(file_path)
         Warn('Current file is not in a git repository')
         return
     endif
-    
-    # Get the latest commit hash for this file
+
     var commit = GitCommand('log -1 --format=%H -- ' .. shellescape(file_path))
     if empty(commit)
         Warn('No commits found for current file')
         return
     endif
-    
-    # Get the commit message
+
     var message = GitCommand('log -1 --format=%B ' .. commit)
-    
-    # Try to parse PR/MR number from commit message
-    var pr_mr_number = ParsePrMrNumber(message, info.provider)
-    
+    var pr_mr_number = CallProvider(repo_info.provider, 'ParseRequestNumber', [message])
+
     var url: string
     if !empty(pr_mr_number)
-        # Open PR or MR if found
-        if info.provider ==# 'GitLab'
-            url = BuildUrl(info.provider, info.base_url, info.path, 'mr', pr_mr_number)
-        else
-            url = BuildUrl(info.provider, info.base_url, info.path, 'pr', pr_mr_number)
-        endif
+        url = CallProvider(repo_info.provider, 'BuildRequestUrl', [repo_info, pr_mr_number])
     else
-        # Otherwise, open the commit
-        url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
+        url = CallProvider(repo_info.provider, 'BuildCommitUrl', [repo_info, commit])
     endif
-    
+
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenRequests(state_arg: string = '', copy: bool = false)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
+        return
+    endif
+
+    var url = CallProvider(repo_info.provider, 'BuildRequestsUrl', [repo_info, state_arg])
+    OpenOrCopy(url, copy)
+enddef
+
+export def OpenMyRequests(state_arg: string = '', copy: bool = false)
+    var repo_info = GetRepoInfoPrivate()
+    if empty(repo_info)
+        return
+    endif
+
+    var url = CallProvider(repo_info.provider, 'BuildMyRequestsUrl', [repo_info, state_arg])
     OpenOrCopy(url, copy)
 enddef
 
@@ -864,19 +600,19 @@ enddef
 # ============================================================================
 
 export def OpenRepoForRemote(remote_name: string, copy: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'repo')
+    var url = CallProvider(repo_info.provider, 'BuildRepoUrl', [repo_info])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenBranchForRemote(remote_name: string, branch_arg: string = '', copy: bool = false, visual: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
@@ -889,13 +625,13 @@ export def OpenBranchForRemote(remote_name: string, branch_arg: string = '', cop
         branch = GetCurrentBranch()
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'branch', branch)
+    var url = CallProvider(repo_info.provider, 'BuildBranchUrl', [repo_info, branch])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenFileForRemote(remote_name: string, line1: number, line2: number, ref_arg: string = '', copy: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
@@ -906,13 +642,16 @@ export def OpenFileForRemote(remote_name: string, line1: number, line2: number, 
     endif
 
     var line_range = GetLineRange(line1, line2)
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'file', '', line_range, ref_arg)
+    var file = GetRelativePath()
+    var ref = empty(ref_arg) ? GetCurrentCommit() : ref_arg
+
+    var url = CallProvider(repo_info.provider, 'BuildFileUrl', [repo_info, file, line_range, ref])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenCommitForRemote(remote_name: string, commit_arg: string = '', copy: bool = false, visual: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
@@ -925,89 +664,47 @@ export def OpenCommitForRemote(remote_name: string, commit_arg: string = '', cop
         commit = GetCurrentCommit()
     endif
 
-    var url = BuildUrl(info.provider, info.base_url, info.path, 'commit', commit)
+    var url = CallProvider(repo_info.provider, 'BuildCommitUrl', [repo_info, commit])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenRequestForRemote(remote_name: string, req_arg: string = '', copy: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
 
-    var number = !empty(req_arg) ? req_arg : ParsePrMrFromCommit(info.provider)
+    var number = !empty(req_arg) ? req_arg : ParseRequestNumberFromCommit(repo_info.provider)
 
     if empty(number)
         Warn('No request number specified and could not parse from commit message')
         return
     endif
 
-    var type = info.provider ==# 'GitLab' ? 'mr' : 'pr'
-    var url = BuildUrl(info.provider, info.base_url, info.path, type, number)
+    var url = CallProvider(repo_info.provider, 'BuildRequestUrl', [repo_info, number])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenRequestsForRemote(remote_name: string, state_arg: string = '', copy: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
 
-    var state = ParseRequestState(state_arg, info.provider)
-    var repo_url = info.base_url .. '/' .. info.path
-    var url: string
-    if info.provider ==# 'GitLab'
-        url = repo_url .. '/-/merge_requests' .. state
-    else
-        url = repo_url .. '/pulls' .. state
-    endif
-
+    var url = CallProvider(repo_info.provider, 'BuildRequestsUrl', [repo_info, state_arg])
     OpenOrCopy(url, copy)
 enddef
 
 export def OpenMyRequestsForRemote(remote_name: string, state_arg: string = '', copy: bool = false)
-    var info = GetRepoInfoForRemote(remote_name)
-    if empty(info)
+    var repo_info = GetRepoInfoForRemotePrivate(remote_name)
+    if empty(repo_info)
         Warn('No remote configured for: ' .. remote_name)
         return
     endif
 
-    var state = ParseRequestState(state_arg, info.provider)
-    var url: string
-    if info.provider ==# 'GitLab'
-        var arg = tolower(trim(state_arg))
-        if arg =~# '^-search'
-            var parts = split(arg, '=')
-            var search_state = len(parts) > 1 ? parts[1] : ''
-            var search_url = info.base_url .. '/dashboard/merge_requests/search?author_username=' .. GetGitLabUsername()
-            if search_state ==# 'closed' || search_state ==# 'merged'
-                search_url ..= '&state=' .. search_state
-            elseif search_state ==# 'all'
-                search_url ..= '&state=all'
-            endif
-            url = search_url
-        elseif arg ==# '-closed' || arg ==# '-merged'
-            url = info.base_url .. '/dashboard/merge_requests/merged'
-        else
-            url = info.base_url .. '/dashboard/merge_requests'
-        endif
-    elseif info.provider ==# 'GitHub'
-        url = info.base_url .. '/pulls' .. (empty(state) ? '' : state .. '+author%3A%40me')
-    else
-        # Codeberg: no flag/-open → bare /pulls; -all → ?type=created_by;
-        # -closed/-merged → ?type=created_by&state=closed
-        var cb_arg = tolower(trim(state_arg))
-        if cb_arg ==# '-closed' || cb_arg ==# '-merged'
-            url = info.base_url .. '/pulls?type=created_by&state=closed'
-        elseif cb_arg ==# '-all'
-            url = info.base_url .. '/pulls?type=created_by'
-        else
-            url = info.base_url .. '/pulls'
-        endif
-    endif
-
+    var url = CallProvider(repo_info.provider, 'BuildMyRequestsUrl', [repo_info, state_arg])
     OpenOrCopy(url, copy)
 enddef
 
@@ -1038,7 +735,7 @@ def LaunchGitk(args: list<string>, git_root: string)
     else
         # Vim 7 fallback: shell background
         var escaped = join(map(copy(args), (_, v) => shellescape(v)))
-        system('cd ' .. shellescape(git_root) .. ' && gitk ' .. escaped .. ' &')
+        silent call system('cd ' .. shellescape(git_root) .. ' && gitk ' .. escaped .. ' &')
         redraw!
     endif
 enddef
@@ -1049,15 +746,7 @@ def GetGitkOldPaths(rel_path: string): list<string>
     if empty(output)
         return [rel_path]
     endif
-    # Split, remove empty lines, deduplicate while preserving order
-    var seen: dict<bool> = {}
-    var paths: list<string> = []
-    for p in split(output, '\n')
-        if !empty(p) && !has_key(seen, p)
-            seen[p] = true
-            paths->add(p)
-        endif
-    endfor
+    var paths = Unique(filter(split(output, '\n'), (_, v) => !empty(v)))
     return empty(paths) ? [rel_path] : paths
 enddef
 
@@ -1085,4 +774,3 @@ export def OpenGitkFile(opts_str: string = '', history: bool = false)
     var extra_args = empty(opts_str) ? [] : split(opts_str)
     LaunchGitk(extra_args + ['--'] + paths, git_root)
 enddef
-

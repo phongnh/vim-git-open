@@ -19,11 +19,19 @@ vim-git-open/
 │   └── git_open.lua          # Lua entry point (Neovim autoloads this)
 ├── vim9/
 │   ├── autoload/
-│   │   └── git_open.vim      # Vim9script core (~1088 lines)
+│   │   ├── git_open.vim      # Vim9script core (~550 lines)
+│   │   └── git_open/
+│   │       ├── github.vim    # Vim9script GitHub provider
+│   │       ├── gitlab.vim    # Vim9script GitLab provider
+│   │       └── codeberg.vim  # Vim9script Codeberg provider
 │   └── plugin/
 │       └── git_open.vim      # Vim9script commands/autocmds
 ├── autoload/
-│   └── git_open.vim          # Legacy Vimscript core (~1093 lines)
+│   ├── git_open.vim          # Legacy Vimscript core (~783 lines)
+│   └── git_open/
+│       ├── github.vim        # Legacy GitHub provider
+│       ├── gitlab.vim        # Legacy GitLab provider
+│       └── codeberg.vim      # Legacy Codeberg provider
 ├── lua/
 │   └── git_open.lua          # Lua core (~900+ lines)
 ├── doc/
@@ -122,8 +130,8 @@ return M
 
 When adding any feature or fixing any bug:
 
-1. **Vim9script** (`vim9/autoload/git_open.vim`)
-2. **Legacy Vimscript** (`autoload/git_open.vim`)
+1. **Vim9script** (`vim9/autoload/git_open.vim` + `vim9/autoload/git_open/{github,gitlab,codeberg}.vim`)
+2. **Legacy Vimscript** (`autoload/git_open.vim` + `autoload/git_open/{github,gitlab,codeberg}.vim`)
 3. **Lua** (`lua/git_open.lua`)
 4. **Entry points** (only if commands change):
    - `vim9/plugin/git_open.vim`
@@ -140,16 +148,16 @@ When adding any feature or fixing any bug:
 
 ### Git Command Execution
 ```vim
-" Vim9script — silent suppresses escape sequences from stderr
-silent var output = system('git -C ' .. shellescape(git_root) .. ' ' .. args)
+" Vim9script — plain system() for capturing output; silent only on fire-and-forget calls
+var output = system('git -C ' .. shellescape(git_root) .. ' ' .. args)
 ```
 ```lua
 -- Lua — use vim.system (not vim.fn.system); pass args as list, not shell string
 local unpack = table.unpack or unpack
 
 local function system(cmd, opts)
-  local result = vim.system(cmd, vim.list_extend(opts or {}, { text = true })):wait()
-  return result.code == 0 and vim.trim(result.stdout) or ""
+    local result = vim.system(cmd, vim.list_extend(opts or {}, { text = true })):wait()
+    return result.code == 0 and vim.trim(result.stdout) or ""
 end
 
 -- Usage (no shellescape needed):
@@ -169,7 +177,8 @@ vim.api.nvim_echo({{'git-open: message', 'ErrorMsg'}}, true, {})
 
 ### Opening Browser
 ```vim
-call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
+" silent suppresses escape sequences on fire-and-forget system() call
+silent call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
 redraw!
 echo 'Opened: ' .. url
 ```
@@ -191,15 +200,79 @@ enddef
 
 ### State Flag Parsing
 ```vim
-" ParseRequestState(state_arg, provider) returns URL query string
-" GitHub:   '-closed' → '?q=is%3Apr+is%3Aclosed'
-" GitLab:   '-closed' → '?state=closed'
-" Codeberg: '-closed' → '?state=closed'  (used by OpenRequests only)
+" ParseRequestState removed — each provider module handles its own query strings internally.
+" Provider URL helpers (private to each module):
+"   RequestsQuery(state_arg)    → query string for repo-scoped list
+"   MyRequestsQuery(state_arg)  → query string for user-scoped list
 "
-" OpenMyRequests Codeberg assembles its own query — does NOT use ParseRequestState output:
-"   no flag / -open → /pulls
-"   -all            → /pulls?type=created_by
-"   -closed/-merged → /pulls?type=created_by&state=closed
+" GitHub:   '-closed'/'-merged' → '?q=is%3Apr+is%3Aclosed'
+" GitLab:   '-closed'           → '?state=closed'
+" Codeberg: '-closed'/'-merged' → '?state=closed'  (no 'merged' param)
+"
+" OpenMyRequests Codeberg assembles its own query via MyRequestsQuery:
+"   no flag / -open → '' (bare /pulls)
+"   -all            → '?type=created_by'
+"   -closed/-merged → '?type=created_by&state=closed'
+```
+
+### Provider Dispatch (Vim9script and Legacy VimL)
+
+Provider modules live in `autoload/git_open/{github,gitlab,codeberg}.vim` and
+`vim9/autoload/git_open/{github,gitlab,codeberg}.vim`. Each module exports the same interface:
+
+```
+ParseRequestNumber(message)                   -> string
+BuildRepoUrl(repo_info)                       -> string
+BuildBranchUrl(repo_info, branch)             -> string
+BuildFileUrl(repo_info, file, line_info, ref) -> string
+BuildCommitUrl(repo_info, commit)             -> string
+BuildRequestUrl(repo_info, number)            -> string
+BuildRequestsUrl(repo_info, state_arg)        -> string
+BuildMyRequestsUrl(repo_info, state_arg)      -> string
+```
+
+`repo_info` dict: `{ base_url, path, provider, domain }`.
+`line_info`: pre-formatted string (`'10'` or `'10-20'`), may be empty.
+`ref`: branch name or 40-char commit SHA.
+`state_arg`: `''`, `'-open'`, `'-closed'`, `'-merged'`, `'-all'` (GitLab also: `'-search'`).
+
+Dispatch via `ProviderFunction` + `CallProvider`:
+
+```vim
+" Vim9script
+def ProviderFunction(provider: string, func: string): string
+    if provider ==# 'GitLab'
+        return 'git_open#gitlab#' .. func
+    elseif provider ==# 'Codeberg'
+        return 'git_open#codeberg#' .. func
+    else
+        return 'git_open#github#' .. func
+    endif
+enddef
+
+def CallProvider(provider: string, func: string, args: list<any>): any
+    return call(ProviderFunction(provider, func), args)
+enddef
+
+" Usage:
+var url = CallProvider(repo_info.provider, 'BuildFileUrl', [repo_info, file, line_info, ref])
+```
+
+```vim
+" Legacy VimL
+function! s:ProviderFunc(provider, func) abort
+    if a:provider ==# 'GitLab'
+        return 'git_open#gitlab#' . a:func
+    elseif a:provider ==# 'Codeberg'
+        return 'git_open#codeberg#' . a:func
+    else
+        return 'git_open#github#' . a:func
+    endif
+endfunction
+
+function! s:CallProvider(provider, func, args) abort
+    return call(s:ProviderFunc(a:provider, a:func), a:args)
+endfunction
 ```
 
 ### GetGitRoot — 3-Step Detection
@@ -404,5 +477,9 @@ When making changes, update:
 18. **Run `stylua` on all modified Lua files before committing** — see `stylua.toml` and the "stylua Formatting" pattern above.
 19. **`vim.system` not `vim.fn.system` in Lua** — use `vim.system({...}, {text=true}):wait()` with args as a list for proper subprocess handling and exit-code checking.
 20. **Vim9script uses relative import** — `import autoload '../autoload/git_open.vim' as GitOpen` resolves from `vim9/plugin/` to `vim9/autoload/`; no extra runtimepath manipulation needed inside the Vim9 files themselves.
-21. **`silent` before `system()` in Vim9script/legacy** — suppresses stderr escape sequences from appearing in the command-line area.
+21. **`silent` only on fire-and-forget `system()` calls** — `silent var output = system(...)` is invalid in Vim9script (can't `silent` an assignment). Use plain `var output = system(cmd)` for capturing output. Use `silent call system(cmd)` for fire-and-forget (e.g. opening the browser).
 22. **Multi-remote commands embed remote name as string literal** — use `string(r)` to produce `'remote_name'` and interpolate into `execute`d command strings; `<bang>0` etc. expand at invocation.
+23. **Provider modules are the source of truth for URL patterns** — `ParseRequestState` no longer exists in the core; all query-string logic lives in `RequestsQuery`/`MyRequestsQuery` private helpers inside each provider module.
+24. **`repo_info` dict is `{ base_url, path, provider, domain }`** — pass as first argument to every provider `Build*` function. Never pass `base_url`+`path` separately.
+25. **`line_info` is a pre-formatted string** (e.g. `'10'` or `'10-20'`), not raw integers. `GetLineRange` returns `string` in Vim9script.
+26. **Vim9script provider modules use `export def FunctionName`** without the full autoload prefix — Vim resolves `vim9/autoload/git_open/github.vim` → `git_open#github#*` automatically.

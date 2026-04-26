@@ -19,14 +19,20 @@ A Vim/Neovim plugin that opens git resources (files, branches, commits, PRs/MRs)
 **Maintainer:** Phong Nguyen
 
 ### Three Implementations (Feature Parity is Sacred)
-1. **Vim9script** — default for Vim 9.0+
+    1. **Vim9script** — default for Vim 9.0+
    - `vim9/autoload/git_open.vim` — core logic (imported via `import autoload`)
+   - `vim9/autoload/git_open/github.vim` — GitHub provider module
+   - `vim9/autoload/git_open/gitlab.vim` — GitLab provider module
+   - `vim9/autoload/git_open/codeberg.vim` — Codeberg provider module
    - `vim9/plugin/git_open.vim` — Vim9script entry point
    - `plugin/git_open.vim` — dispatcher: adds `vim9/` to runtimepath, then `source`s `vim9/plugin/git_open.vim`; falls through to legacy if no vim9script
    - Style: 4-space indentation
 
 2. **Legacy Vimscript** — fallback for Vim 7.0+
    - `autoload/git_open.vim` — core logic
+   - `autoload/git_open/github.vim` — GitHub provider module
+   - `autoload/git_open/gitlab.vim` — GitLab provider module
+   - `autoload/git_open/codeberg.vim` — Codeberg provider module
    - `plugin/git_open.vim` — handles legacy path after Vim9 check
    - Style: 4-space indentation
 
@@ -90,8 +96,8 @@ let g:vim_git_open_remote = ''              " Global default remote name prefere
 
 ### Feature Parity is Non-Negotiable
 When making any change, update **all three implementations** in this order:
-1. `vim9/autoload/git_open.vim` (Vim9script)
-2. `autoload/git_open.vim` (Legacy Vimscript)
+1. `vim9/autoload/git_open.vim` + `vim9/autoload/git_open/{github,gitlab,codeberg}.vim` (Vim9script)
+2. `autoload/git_open.vim` + `autoload/git_open/{github,gitlab,codeberg}.vim` (Legacy Vimscript)
 3. `lua/git_open.lua` (Lua)
 4. Entry points if commands change: `plugin/git_open.vim`, `vim9/plugin/git_open.vim`, `plugin/git_open.lua`
 
@@ -118,8 +124,8 @@ vim.api.nvim_echo({{'git-open: <message>', 'ErrorMsg'}}, true, {})
 
 ### Git Command Execution
 ```vim
-" Vim9script — silent suppresses escape sequences
-silent var output = system(cmd)
+" Vim9script — var output captures result; silent on fire-and-forget system() calls
+var output = system(cmd)
 ```
 ```lua
 -- Lua — use vim.system (not vim.fn.system) for proper subprocess handling
@@ -134,7 +140,7 @@ local output = system({ "git", "-C", git_root, "log", "--oneline" })
 
 Always append `> /dev/null 2>&1` to suppress terminal output, then call `redraw!` (not `redraw`) before any `echo`:
 ```vim
-call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
+silent call system(browser_cmd .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1')
 redraw!
 ```
 
@@ -182,23 +188,38 @@ redraw!
 40. **`.git/hooks/pre-commit`** (not committed — git hooks are local): runs `stylua` on any staged `.lua` file, re-stages after formatting, skips silently if `stylua` not installed.
 41. **Plugin restructure (2cdd899)**: `autoload/git_open/legacy.vim` → `autoload/git_open.vim` (legacy core); `plugin/git_open_legacy.vim` → removed; Vim9script moved to `vim9/autoload/git_open.vim` and `vim9/plugin/git_open.vim`; `plugin/git_open.vim` is now the unified dispatcher that adds `vim9/` to runtimepath and sources the Vim9 entry point.
 42. **`import autoload '../autoload/git_open.vim' as GitOpen`** — Vim9script uses a relative path import so the `vim9/` subdirectory does not need to be on runtimepath for the autoload lookup to work. Relative imports resolve from the importing file's directory.
-43. **`silent var output = system(cmd)` (Vim9script/legacy)** — adding `silent` before `system()` suppresses any incidental terminal output (e.g. escape sequences from stderr) in the Vim command-line area.
-44. **`vim.system` (Neovim Lua)** — use `vim.system(cmd_list, {text=true}):wait()` instead of `vim.fn.system(shell_string)`. Benefits: no shell quoting, proper exit-code checking (`result.code`), stdout/stderr separation, no escape-sequence leakage. Pass args as a Lua list: `{ "git", "-C", root, "log" }`.
-45. **Multi-remote provider-named commands** — at `VimEnter` (deferred via `timer_start(0,...)` / `UIEnter`) the plugin iterates all remotes, skips any that share origin's domain, and registers provider-named commands (e.g. `OpenGitHubRepo`, `OpenGitLabMR`) bound to that remote. If two remotes share the same provider, the last one wins with a `WarningMsg`.
+43. **`silent` before `system()` in Vim9script/legacy** — `silent` must NOT precede a variable assignment (`silent var output = system(...)` is invalid Vim9). Apply `silent` only to fire-and-forget `system()` calls (e.g. `silent call system(browser_cmd ...)`). Plain `var output = system(cmd)` is correct for capturing output.
+44. **`vim.system` not `vim.fn.system` in Lua** — use `vim.system({...}, {text=true}):wait()` with args as a list for proper subprocess handling and exit-code checking.
+45. **Multi-remote commands embed remote name as string literal** — use `string(r)` to produce `'remote_name'` and interpolate into `execute`d command strings; `<bang>0` etc. expand at invocation.
+46. **Provider modules in `autoload/git_open/{github,gitlab,codeberg}.vim`** — both Vim9script (`vim9/autoload/git_open/`) and Legacy VimL (`autoload/git_open/`) use per-provider modules. Each module implements the full provider interface: `ParseRequestNumber`, `BuildRepoUrl`, `BuildBranchUrl`, `BuildFileUrl`, `BuildCommitUrl`, `BuildRequestUrl`, `BuildRequestsUrl`, `BuildMyRequestsUrl`. All `Build*` functions receive `repo_info` dict as first argument.
+47. **`repo_info` dict shape** — `{ base_url, path, provider, domain }`. `base_url` = `https://domain` (or mapped URL). `path` = `user/repo`. Passed as first arg to every provider `Build*` function.
+48. **`ProviderFunction(provider, func)` dispatch** — resolves the fully-qualified autoload function name: `'git_open#gitlab#' .. func` etc. `CallProvider(provider, func, args)` calls it via `call()`. Replaces the old monolithic `BuildUrl(provider, base_url, path, type, ...extra)`.
+49. **`ParseRequestState` removed** — replaced by per-provider `RequestsQuery`/`MyRequestsQuery` private helpers inside each provider module. The core no longer carries provider-specific URL logic.
+50. **`GetLineRange` returns `string`** — Vim9script `GetLineRange` now returns `string` (not `any`), which allows it to be passed directly to `BuildFileUrl(... line_info: string ...)`.
+51. **`GetRelativePath` dead-code fallback removed** — the `substitute` regex fallback was unreachable because `strpart` always returns the correct relative path when `git_root` ends with `/`. Both Vim9 and legacy implementations now use only `strpart`.
+52. **`GetGitkOldPaths` uses `Unique` helper** — replaced manual seen-dict loop in Vim9 with `Unique(filter(split(output, '\n'), ...))`. Legacy was already using `s:Unique`.
+53. **Vim9script provider modules use `export def FunctionName`** — not the full `git_open#github#FunctionName` prefix. Vim resolves `autoload/git_open/github.vim` → `git_open#github#*` automatically from the file path.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `vim9/autoload/git_open.vim` | Vim9script core logic |
+| `vim9/autoload/git_open/github.vim` | Vim9script GitHub provider |
+| `vim9/autoload/git_open/gitlab.vim` | Vim9script GitLab provider |
+| `vim9/autoload/git_open/codeberg.vim` | Vim9script Codeberg provider |
 | `vim9/plugin/git_open.vim` | Vim9script entry point (commands) |
 | `autoload/git_open.vim` | Legacy Vimscript core logic |
+| `autoload/git_open/github.vim` | Legacy GitHub provider |
+| `autoload/git_open/gitlab.vim` | Legacy GitLab provider |
+| `autoload/git_open/codeberg.vim` | Legacy Codeberg provider |
 | `plugin/git_open.vim` | Unified dispatcher: routes to Vim9 or legacy |
 | `lua/git_open.lua` | Lua/Neovim core logic |
 | `plugin/git_open.lua` | Lua entry point (Neovim) |
 | `README.md` | User documentation |
 | `doc/git_open.txt` | Vim help file |
 | `CHANGELOG.md` | Version history |
+| `CONTRIBUTING.md` | Provider interface contract, `repo_info` dict, `ProviderFunction` docs |
 | `example_config.vim` | Configuration examples |
 | `stylua.toml` | Lua formatter config (`column_width=120`, 2-space, double-quotes) |
 | `.opencode/agent.md` | This file |

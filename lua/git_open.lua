@@ -331,7 +331,7 @@ function M.open_browser(url)
 
   system({ "sh", "-c", cmd })
   vim.cmd("redraw!")
-  print("Opened: " .. url)
+  vim.api.nvim_echo({ { "Opened: " .. url } }, false, {})
 end
 
 local function copy_to_clipboard(url)
@@ -341,7 +341,7 @@ local function copy_to_clipboard(url)
 
   vim.fn.setreg("+", url)
   vim.fn.setreg("*", url)
-  print("Copied: " .. url)
+  vim.api.nvim_echo({ { "Copied: " .. url } }, false, {})
 end
 
 local function open_or_copy(url, copy)
@@ -490,7 +490,7 @@ function M.open_git_remote(name, reset)
   if reset then
     vim.b.vim_git_open_remote = nil
     vim.b.vim_git_open_remote_warned = nil
-    print("git-open: remote reset (will re-resolve on next command)")
+    vim.api.nvim_echo({ { "git-open: remote reset (will re-resolve on next command)" } }, false, {})
     return
   end
 
@@ -499,7 +499,7 @@ function M.open_git_remote(name, reset)
     if not current or current == "" then
       warn("git-open: no remotes found")
     else
-      print("git-open: current remote is '" .. current .. "'")
+      vim.api.nvim_echo({ { "git-open: current remote is '" .. current .. "'" } }, false, {})
     end
     return
   end
@@ -509,7 +509,7 @@ function M.open_git_remote(name, reset)
     if r == name then
       vim.b.vim_git_open_remote = name
       vim.b.vim_git_open_remote_warned = nil
-      print("git-open: remote set to '" .. name .. "' for this buffer")
+      vim.api.nvim_echo({ { "git-open: remote set to '" .. name .. "' for this buffer" } }, false, {})
       return
     end
   end

@@ -405,6 +405,10 @@ end
 -- Completion Functions
 -- ============================================================================
 
+function M.open_browser(url)
+  open_browser(url)
+end
+
 function M.complete_branch(arglead)
   -- Local branches sorted by most recent commit (-committerdate)
   local local_raw =

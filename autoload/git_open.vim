@@ -404,6 +404,10 @@ endfunction
 " :OpenGitRemote command
 " ============================================================================
 
+function! git_open#OpenBrowser(url) abort
+    call s:OpenBrowser(a:url)
+endfunction
+
 function! git_open#OpenGitRemote(name, reset) abort
     let l:git_root = s:GetGitRoot()
     if empty(l:git_root)

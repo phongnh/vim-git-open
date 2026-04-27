@@ -64,6 +64,7 @@ command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs OpenGitk call g
 command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch OpenGitkFile call git_open#OpenGitkFile(<q-args>, <bang>0)
 command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs Gitk call git_open#OpenGitk(<q-args>)
 command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch GitkFile call git_open#OpenGitkFile(<q-args>, <bang>0)
+command! -nargs=1 OpenBrowser call git_open#OpenBrowser(<q-args>)
 command! -bang -nargs=? -complete=customlist,git_open#CompleteGitRemote OpenGitRemote call git_open#OpenGitRemote(<q-args>, <bang>0)
 
 " Register provider-named commands for each non-origin remote.

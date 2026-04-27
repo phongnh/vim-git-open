@@ -109,6 +109,10 @@ end, {
   end,
 })
 
+vim.api.nvim_create_user_command("OpenBrowser", function(opts)
+  git_open.open_browser(opts.args)
+end, { nargs = 1 })
+
 vim.api.nvim_create_user_command("OpenGitRemote", function(opts)
   git_open.open_git_remote(opts.args ~= "" and opts.args or nil, opts.bang)
 end, {

@@ -51,6 +51,7 @@ command! -nargs=* -complete=customlist,git_open#CompleteGitkArgs OpenGitk GitOpe
 command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch OpenGitkFile GitOpen.OpenGitkFile(<q-args>, <bang>0)
 command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkArgs Gitk GitOpen.OpenGitk(<q-args>)
 command! -bang -nargs=* -complete=customlist,git_open#CompleteGitkBranch GitkFile GitOpen.OpenGitkFile(<q-args>, <bang>0)
+command! -nargs=1 OpenBrowser GitOpen.OpenBrowser(<q-args>)
 command! -bang -nargs=? -complete=customlist,git_open#CompleteGitRemote OpenGitRemote GitOpen.OpenGitRemote(<q-args>, <bang>0)
 
 # Register provider-named commands for each non-origin remote.

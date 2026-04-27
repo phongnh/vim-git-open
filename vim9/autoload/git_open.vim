@@ -276,7 +276,7 @@ enddef
 # Browser Functions
 # ============================================================================
 
-def OpenBrowser(url: string)
+def LaunchBrowser(url: string)
     if empty(url)
         return
     endif
@@ -314,7 +314,7 @@ def OpenOrCopy(url: string, copy: bool)
     if copy
         CopyToClipboard(url)
     else
-        OpenBrowser(url)
+        LaunchBrowser(url)
     endif
 enddef
 
@@ -404,6 +404,13 @@ export def CompleteGitRemote(arglead: string, cmdline: string, cursorpos: number
 enddef
 
 # ============================================================================
+# :OpenBrowser command
+# ============================================================================
+
+export def OpenBrowser(url: string)
+    LaunchBrowser(url)
+enddef
+
 # :OpenGitRemote command
 # ============================================================================
 

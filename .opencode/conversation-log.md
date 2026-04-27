@@ -800,3 +800,36 @@ Private URL helpers (unexported `def`): `RepoBase`, `BranchPath`, `FilePath`,
 
 Updated `conversation-log.md` and `agent.md` (discovery #55) so future sessions
 can resume from the current state without re-reading history.
+
+---
+
+## Session 15: Refactors + Session Save
+**Date:** 2026-04-27
+
+### Change: Browser command init order (`e1ff337`)
+New logic in all three entry points:
+1. If `g:vim_git_open_browser_command` unset or empty → set from OS (`open` / `start` / `xdg-open` default)
+2. Then if `$BROWSER` set → override unconditionally
+Removed `has('unix')` branch; `xdg-open` is now the catch-all. Removed empty-string fallback.
+
+### Change: `OpenBrowser` user command (`a8805ec`, `5eabfb3`)
+- Added `:OpenBrowser {url}` command to all three implementations.
+- Collapsed to single public function per impl (no private wrapper):
+  - Legacy: `git_open#OpenBrowser`; `s:OpenOrCopy` calls it directly
+  - Vim9: `export def OpenBrowser` (renamed private `LaunchBrowser` → merged in); `OpenOrCopy` calls it directly
+  - Lua: `function M.open_browser`; `open_or_copy` calls `M.open_browser` directly
+- Fixed Windows branch: `!start ""` (ex-command syntax) → `start ""` (shell command)
+
+### Change: Remove `redraw!` from copy functions (`e6ebd1c`)
+`setreg()` needs no `redraw!` — only `system()` calls do. Removed from all three `CopyToClipboard`/`copy_to_clipboard` functions.
+
+### Change: Lua messages via `vim.api.nvim_echo` (`2e064c1`)
+Replaced all `print()` calls with `vim.api.nvim_echo({{msg}}, false, {})` so informational messages (`Opened:`, `Copied:`, `git-open: remote ...`) are shown but not written to `:messages` history.
+
+### Change: Non-capturing groups in `matchlist` patterns (`57bb49a`)
+In `autoload/git_open.vim` and `vim9/autoload/git_open.vim`:
+- SSH: `\(git@\|ssh://git@\)` → `\%(git@\|ssh://git@\)`; indexes: domain `[2]`→`[1]`, path `[3]`→`[2]`
+- HTTPS: `\(https\?://\)` → `\%(https\?://\)`, `\(\.git\)\?` → `\%(\.git\)\?`; same index shift
+
+### Session state saved
+Updated `agent.md` (discoveries #56–60) and `conversation-log.md`.

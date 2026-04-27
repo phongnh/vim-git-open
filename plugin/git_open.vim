@@ -38,19 +38,17 @@ if !exists('g:vim_git_open_remote')
     let g:vim_git_open_remote = ''
 endif
 
-if !exists('g:vim_git_open_browser_command')
-    " Check for $BROWSER environment variable first
-    if !empty($BROWSER)
-        let g:vim_git_open_browser_command = $BROWSER
-    elseif has('mac') || has('macunix')
+if !exists('g:vim_git_open_browser_command') || empty(g:vim_git_open_browser_command)
+    if has('mac') || has('macunix')
         let g:vim_git_open_browser_command = 'open'
-    elseif has('unix')
-        let g:vim_git_open_browser_command = 'xdg-open'
     elseif has('win32') || has('win64')
         let g:vim_git_open_browser_command = 'start'
     else
-        let g:vim_git_open_browser_command = ''
+        let g:vim_git_open_browser_command = 'xdg-open'
     endif
+endif
+if !empty($BROWSER)
+    let g:vim_git_open_browser_command = $BROWSER
 endif
 
 " Commands

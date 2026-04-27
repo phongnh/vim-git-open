@@ -189,7 +189,7 @@ function! s:register_multi_remote_commands() abort
     endfor
 endfunction
 
-augroup git_open_multi_remote
+augroup GitOpenMultiRemote
     autocmd!
     autocmd VimEnter * ++once call timer_start(0, {-> s:register_multi_remote_commands()})
 augroup END

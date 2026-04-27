@@ -178,7 +178,7 @@ def RegisterMultiRemoteCommands()
     endfor
 enddef
 
-augroup git_open_multi_remote
+augroup GitOpenMultiRemote
     autocmd!
     autocmd VimEnter * ++once call timer_start(0, (_) => RegisterMultiRemoteCommands())
 augroup END

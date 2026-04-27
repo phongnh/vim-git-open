@@ -106,15 +106,15 @@ endfunction
 " Parse a raw remote URL string into {domain, path}
 function! s:ParseRemoteUrlString(remote) abort
     " Handle SSH URLs: git@github.com:user/repo.git
-    let l:ssh_match = matchlist(a:remote, '^\(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
+    let l:ssh_match = matchlist(a:remote, '^\%(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
     if !empty(l:ssh_match)
-        return {'domain': l:ssh_match[2], 'path': l:ssh_match[3]}
+        return {'domain': l:ssh_match[1], 'path': l:ssh_match[2]}
     endif
 
     " Handle HTTPS URLs: https://github.com/user/repo.git
-    let l:https_match = matchlist(a:remote, '^\(https\?://\)\([^/]\+\)/\(.*\)\(\.git\)\?$')
+    let l:https_match = matchlist(a:remote, '^\%(https\?://\)\([^/]\+\)/\(.*\)\%(\.git\)\?$')
     if !empty(l:https_match)
-        return {'domain': l:https_match[2], 'path': substitute(l:https_match[3], '\.git$', '', '')}
+        return {'domain': l:https_match[1], 'path': substitute(l:https_match[2], '\.git$', '', '')}
     endif
 
     return {}

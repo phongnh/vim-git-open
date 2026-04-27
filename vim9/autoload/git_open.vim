@@ -112,15 +112,15 @@ enddef
 # Parse a raw remote URL string into {domain, path}
 def ParseRemoteUrlString(remote: string): dict<string>
     # Handle SSH URLs: git@github.com:user/repo.git
-    var ssh_match = matchlist(remote, '^\(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
+    var ssh_match = matchlist(remote, '^\%(git@\|ssh://git@\)\([^:\/]\+\)[:|/]\(.*\)\.git$')
     if !empty(ssh_match)
-        return {domain: ssh_match[2], path: ssh_match[3]}
+        return {domain: ssh_match[1], path: ssh_match[2]}
     endif
 
     # Handle HTTPS URLs: https://github.com/user/repo.git
-    var https_match = matchlist(remote, '^\(https\?://\)\([^/]\+\)/\(.*\)\(\.git\)\?$')
+    var https_match = matchlist(remote, '^\%(https\?://\)\([^/]\+\)/\(.*\)\%(\.git\)\?$')
     if !empty(https_match)
-        return {domain: https_match[2], path: substitute(https_match[3], '\.git$', '', '')}
+        return {domain: https_match[1], path: substitute(https_match[2], '\.git$', '', '')}
     endif
 
     return {}

@@ -203,6 +203,7 @@ redraw!
 52. **`GetGitkOldPaths` uses `Unique` helper** — replaced manual seen-dict loop in Vim9 with `Unique(filter(split(output, '\n'), ...))`. Legacy was already using `s:Unique`.
 53. **Vim9script/Lua provider modules use short exported names** — Vim9 uses `export def FunctionName` (not the full autoload prefix); Lua uses `M.function_name`. Vim resolves `vim9/autoload/git_open/github.vim` → `git_open#github#*` automatically from the file path. Lua resolves via `require("git_open.github")`.
 54. **No default keymaps** — the plugin defines no keymaps. Users add their own in `.vimrc`/`init.vim` or via `lazy.nvim`'s `keys` spec. Document with a Vim block and a lazy.nvim `keys` block in README and `doc/git_open.txt`.
+55. **Augroup names are CamelCase** — `GitOpenMultiRemote` in all three implementations: `augroup GitOpenMultiRemote` in `plugin/git_open.vim` and `vim9/plugin/git_open.vim`; `nvim_create_augroup("GitOpenMultiRemote", ...)` in `plugin/git_open.lua`.
 
 ## Key Files
 

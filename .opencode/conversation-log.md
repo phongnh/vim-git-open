@@ -784,3 +784,19 @@ Private URL helpers (unexported `def`): `RepoBase`, `BranchPath`, `FilePath`,
 - `agent.md`: updated file list, implementation list, working principles, Git command execution note, discoveries #43–53
 - `skill.md`: updated project structure, feature parity workflow, `State Flag Parsing` pattern replaced with `Provider Dispatch` pattern, `Opening Browser` snippet fixed, Important Reminders #21–26 updated/added
 - `conversation-log.md`: added this session entry
+---
+
+## Session 14: Augroup CamelCase Rename + Session Save
+**Date:** 2026-04-27
+
+### Change: Rename augroup to CamelCase across all three implementations
+
+`git_open_multi_remote` → `GitOpenMultiRemote` in:
+- `plugin/git_open.lua` (commit `b9b8d18`) — `nvim_create_augroup("GitOpenMultiRemote", ...)`
+- `plugin/git_open.vim` (commit `8d051ac`) — `augroup GitOpenMultiRemote`
+- `vim9/plugin/git_open.vim` (commit `8d051ac`) — `augroup GitOpenMultiRemote`
+
+### Change: Session state saved to `.opencode/`
+
+Updated `conversation-log.md` and `agent.md` (discovery #55) so future sessions
+can resume from the current state without re-reading history.

@@ -336,7 +336,7 @@ end
 -- so terminal capability queries are already consumed and system() calls
 -- will not leak escape sequences into the display.
 vim.api.nvim_create_autocmd("UIEnter", {
-  group = vim.api.nvim_create_augroup("git_open_multi_remote", { clear = true }),
+  group = vim.api.nvim_create_augroup("GitOpenMultiRemote", { clear = true }),
   once = true,
   callback = register_multi_remote_commands,
 })

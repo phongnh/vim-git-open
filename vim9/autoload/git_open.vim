@@ -305,7 +305,6 @@ def CopyToClipboard(url: string)
 
     setreg('+', url)
     setreg('*', url)
-    redraw!
     echo 'Copied: ' .. url
 enddef
 

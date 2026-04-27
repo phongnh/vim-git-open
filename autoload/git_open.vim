@@ -305,7 +305,6 @@ function! s:CopyToClipboard(url) abort
 
     call setreg('+', a:url)
     call setreg('*', a:url)
-    redraw!
     echo 'Copied: ' . a:url
 endfunction
 

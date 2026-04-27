@@ -341,7 +341,6 @@ local function copy_to_clipboard(url)
 
   vim.fn.setreg("+", url)
   vim.fn.setreg("*", url)
-  vim.cmd("redraw!")
   print("Copied: " .. url)
 end
 

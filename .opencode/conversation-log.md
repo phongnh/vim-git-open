@@ -475,7 +475,7 @@ and re-stages after formatting; skips silently if `stylua` not installed.
 ### Docs: Update all documentation and metadata (this session)
 
 Updated: `CHANGELOG.md`, `doc/git_open.txt`, `.opencode/agent.md`, `.opencode/skill.md`,
-`.opencode/conversation-log.md`, `.opencode/conversation-transcript.md`.
+`.opencode/conversation-log.md`.
 
 ---
 

@@ -43,8 +43,7 @@ vim-git-open/
 ├── .opencode/
 │   ├── agent.md              # Agent instructions and discoveries
 │   ├── conversation-log.md   # Full development history
-│   ├── skill.md              # This file
-│   └── conversation-transcript.md
+│   └── skill.md              # This file
 ├── README.md
 ├── CONTRIBUTING.md
 ├── CHANGELOG.md
@@ -141,12 +140,7 @@ When adding any feature or fixing any bug:
    - `vim9/plugin/git_open.vim`
    - `plugin/git_open.vim`
    - `plugin/git_open.lua`
-5. **Copy to installed locations:**
-   ```bash
-   cp <files> ~/.cache/vim/plugged/vim-git-open/<dest>
-   cp <files> ~/.local/share/nvim/site/pack/core/opt/vim-git-open/<dest>
-   ```
-6. **Commit and push**
+5. **Commit and push**
 
 ## Common Patterns
 
@@ -436,6 +430,9 @@ Key points:
 - `<bang>0`, `<q-args>`, `<line1>`, `<line2>`, `<count>` expand at **invocation time**
 - `GetRepoInfo()` and `GetRepoInfoForRemote(remote)` must be exported from the autoload module
 - Skip remotes sharing origin's domain to avoid duplicate provider commands
+
+Remote resolution order (per buffer, first match wins):
+
 1. `b:vim_git_open_remote` — already cached for this buffer
 2. `g:vim_git_open_remote` — global preference (validated against actual remotes)
 3. `origin` — if present in `git remote` output
@@ -488,21 +485,20 @@ When making changes, update:
 6. **GitLab uses `opened`** (not `open`) in state params
 7. **GitHub PRs use `?q=is%3Apr+...`** — not `?state=` (that hits the issues endpoint)
 8. **`-search` flags** belong only in `CompleteMyRequestState`, not `CompleteRequestState`
-9. **Copy files to both installed locations** before committing
-10. **No emojis** unless explicitly requested
-11. **`exists('*FuncName')` in Vim9 `def` is compile-time** — always `false` for late-loaded plugins. Use `try/catch call('FuncName', [])` instead.
-12. **`GetGitRoot` must use 3-step detection** — FugitiveGitDir (try/catch) → finddir(bufname) → finddir(cwd). See the pattern in Common Patterns section above.
-13. **`OpenBranch`/`OpenCommit` must set fallback explicitly** — do not rely on `BuildUrl`'s internal fallback, which is bypassed when any extra arg (even empty string) is passed.
-14. **`cpoptions` guard not needed in `autoload/` files** — Vim resets `cpoptions` before sourcing autoload files. Only needed in `plugin/`, `ftplugin/`, `syntax/` etc.
-15. **Never run `gg=G` on files with `\` continuation lines** — Vim's indenter re-indents them destructively.
-16. **Defer `system()` calls at startup** — use `timer_start(0, ...)` (Vim) or `UIEnter` autocmd (Neovim) to avoid TUI escape sequence leakage. See "Startup Deferral" pattern above.
-17. **`UIEnter` does not fire in `--headless` mode** — only fires when a UI is attached.
-18. **Run `stylua` on all modified Lua files before committing** — see `stylua.toml` and the "stylua Formatting" pattern above.
-19. **`vim.system` not `vim.fn.system` in Lua** — use `vim.system({...}, {text=true}):wait()` with args as a list for proper subprocess handling and exit-code checking.
-20. **Vim9script uses relative import** — `import autoload '../autoload/git_open.vim' as GitOpen` resolves from `vim9/plugin/` to `vim9/autoload/`; no extra runtimepath manipulation needed inside the Vim9 files themselves.
-21. **`silent` only on fire-and-forget `system()` calls** — `silent var output = system(...)` is invalid in Vim9script (can't `silent` an assignment). Use plain `var output = system(cmd)` for capturing output. Use `silent call system(cmd)` for fire-and-forget (e.g. opening the browser).
-22. **Multi-remote commands embed remote name as string literal** — use `string(r)` to produce `'remote_name'` and interpolate into `execute`d command strings; `<bang>0` etc. expand at invocation.
-23. **Provider modules are the source of truth for URL patterns** — `ParseRequestState` no longer exists in the core; all query-string logic lives in `RequestsQuery`/`MyRequestsQuery` private helpers inside each provider module.
-24. **`repo_info` dict is `{ base_url, path, provider, domain }`** — pass as first argument to every provider `Build*` function. Never pass `base_url`+`path` separately.
-25. **`line_info` is a pre-formatted string** (e.g. `'10'` or `'10-20'`), not raw integers. `GetLineRange` returns `string` in Vim9script.
-26. **Vim9script provider modules use `export def FunctionName`** without the full autoload prefix — Vim resolves `vim9/autoload/git_open/github.vim` → `git_open#github#*` automatically.
+9. **No emojis** unless explicitly requested
+10. **`exists('*FuncName')` in Vim9 `def` is compile-time** — always `false` for late-loaded plugins. Use `try/catch call('FuncName', [])` instead.
+11. **`GetGitRoot` must use 3-step detection** — FugitiveGitDir (try/catch) → finddir(bufname) → finddir(cwd). See the pattern in Common Patterns section above.
+12. **`OpenBranch`/`OpenCommit` must set fallback explicitly** — do not rely on `BuildUrl`'s internal fallback, which is bypassed when any extra arg (even empty string) is passed.
+13. **`cpoptions` guard not needed in `autoload/` files** — Vim resets `cpoptions` before sourcing autoload files. Only needed in `plugin/`, `ftplugin/`, `syntax/` etc.
+14. **Never run `gg=G` on files with `\` continuation lines** — Vim's indenter re-indents them destructively.
+15. **Defer `system()` calls at startup** — use `timer_start(0, ...)` (Vim) or `UIEnter` autocmd (Neovim) to avoid TUI escape sequence leakage. See "Startup Deferral" pattern above.
+16. **`UIEnter` does not fire in `--headless` mode** — only fires when a UI is attached.
+17. **Run `stylua` on all modified Lua files before committing** — see `stylua.toml` and the "stylua Formatting" pattern above.
+18. **`vim.system` not `vim.fn.system` in Lua** — use `vim.system({...}, {text=true}):wait()` with args as a list for proper subprocess handling and exit-code checking.
+19. **Vim9script uses relative import** — `import autoload '../autoload/git_open.vim' as GitOpen` resolves from `vim9/plugin/` to `vim9/autoload/`; no extra runtimepath manipulation needed inside the Vim9 files themselves.
+20. **`silent` only on fire-and-forget `system()` calls** — `silent var output = system(...)` is invalid in Vim9script (can't `silent` an assignment). Use plain `var output = system(cmd)` for capturing output. Use `silent call system(cmd)` for fire-and-forget (e.g. opening the browser).
+21. **Multi-remote commands embed remote name as string literal** — use `string(r)` to produce `'remote_name'` and interpolate into `execute`d command strings; `<bang>0` etc. expand at invocation.
+22. **Provider modules are the source of truth for URL patterns** — `ParseRequestState` no longer exists in the core; all query-string logic lives in `RequestsQuery`/`MyRequestsQuery` private helpers inside each provider module.
+23. **`repo_info` dict is `{ base_url, path, provider, domain }`** — pass as first argument to every provider `Build*` function. Never pass `base_url`+`path` separately.
+24. **`line_info` is a pre-formatted string** (e.g. `'10'` or `'10-20'`), not raw integers. `GetLineRange` returns `string` in Vim9script.
+25. **Vim9script provider modules use `export def FunctionName`** without the full autoload prefix — Vim resolves `vim9/autoload/git_open/github.vim` → `git_open#github#*` automatically.

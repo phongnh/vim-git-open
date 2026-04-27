@@ -276,7 +276,7 @@ enddef
 # Browser Functions
 # ============================================================================
 
-def LaunchBrowser(url: string)
+export def OpenBrowser(url: string)
     if empty(url)
         return
     endif
@@ -286,12 +286,11 @@ def LaunchBrowser(url: string)
         return
     endif
 
-    var cmd = g:vim_git_open_browser_command .. ' ' .. shellescape(url)
-
+    var cmd: string
     if has('win32') || has('win64')
-        cmd = '!start "" ' .. shellescape(url)
+        cmd = 'start "" ' .. shellescape(url)
     else
-        cmd = cmd .. ' > /dev/null 2>&1'
+        cmd = g:vim_git_open_browser_command .. ' ' .. shellescape(url) .. ' > /dev/null 2>&1'
     endif
 
     silent call system(cmd)
@@ -314,7 +313,7 @@ def OpenOrCopy(url: string, copy: bool)
     if copy
         CopyToClipboard(url)
     else
-        LaunchBrowser(url)
+        OpenBrowser(url)
     endif
 enddef
 
@@ -401,14 +400,6 @@ export def CompleteGitRemote(arglead: string, cmdline: string, cursorpos: number
         return []
     endif
     return FuzzyFilter(GetAllRemoteNames(git_root), arglead)
-enddef
-
-# ============================================================================
-# :OpenBrowser command
-# ============================================================================
-
-export def OpenBrowser(url: string)
-    LaunchBrowser(url)
 enddef
 
 # :OpenGitRemote command

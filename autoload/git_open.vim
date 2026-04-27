@@ -277,7 +277,7 @@ endfunction
 " Browser Functions
 " ============================================================================
 
-function! s:OpenBrowser(url) abort
+function! git_open#OpenBrowser(url) abort
     if empty(a:url)
         return
     endif
@@ -288,7 +288,7 @@ function! s:OpenBrowser(url) abort
     endif
 
     if has('win32') || has('win64')
-        let l:cmd = '!start "" ' . shellescape(a:url)
+        let l:cmd = 'start "" ' . shellescape(a:url)
     else
         let l:cmd = g:vim_git_open_browser_command . ' ' . shellescape(a:url) . ' > /dev/null 2>&1'
     endif
@@ -313,7 +313,7 @@ function! s:OpenOrCopy(url, copy) abort
     if a:copy
         call s:CopyToClipboard(a:url)
     else
-        call s:OpenBrowser(a:url)
+        call git_open#OpenBrowser(a:url)
     endif
 endfunction
 
@@ -403,10 +403,6 @@ endfunction
 " ============================================================================
 " :OpenGitRemote command
 " ============================================================================
-
-function! git_open#OpenBrowser(url) abort
-    call s:OpenBrowser(a:url)
-endfunction
 
 function! git_open#OpenGitRemote(name, reset) abort
     let l:git_root = s:GetGitRoot()

@@ -311,7 +311,7 @@ end
 -- Browser Functions
 -- ============================================================================
 
-local function open_browser(url)
+function M.open_browser(url)
   if not url or url == "" then
     return
   end
@@ -349,7 +349,7 @@ local function open_or_copy(url, copy)
   if copy then
     copy_to_clipboard(url)
   else
-    open_browser(url)
+    M.open_browser(url)
   end
 end
 
@@ -404,10 +404,6 @@ end
 -- ============================================================================
 -- Completion Functions
 -- ============================================================================
-
-function M.open_browser(url)
-  open_browser(url)
-end
 
 function M.complete_branch(arglead)
   -- Local branches sorted by most recent commit (-committerdate)

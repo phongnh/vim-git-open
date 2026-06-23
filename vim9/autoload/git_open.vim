@@ -47,12 +47,12 @@ def GitCommand(args: string): string
     endif
 
     var cmd = 'git -C ' .. shellescape(git_root) .. ' ' .. args
-    var output = system(cmd)
+    silent var output = system(cmd)
     return substitute(output, '\n\+$', '', '')
 enddef
 
 def GetAllRemoteNames(git_root: string): list<string>
-    var output = trim(system('git -C ' .. shellescape(git_root) .. ' remote'))
+    silent var output = trim(system('git -C ' .. shellescape(git_root) .. ' remote'))
     if empty(output)
         return []
     endif

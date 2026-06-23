@@ -42,12 +42,12 @@ function! s:GitCommand(args) abort
     endif
 
     let l:cmd = 'git -C ' . shellescape(l:git_root) . ' ' . a:args
-    let l:output = system(l:cmd)
+    silent let l:output = system(l:cmd)
     return substitute(l:output, '\n\+$', '', '')
 endfunction
 
 function! s:GetAllRemoteNames(git_root) abort
-    let l:output = trim(system('git -C ' . shellescape(a:git_root) . ' remote'))
+    silent let l:output = trim(system('git -C ' . shellescape(a:git_root) . ' remote'))
     if empty(l:output)
         return []
     endif
